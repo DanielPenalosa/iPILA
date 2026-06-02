@@ -27,6 +27,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   }
 
   Future<void> _setApproval(String uid, bool accept) async {
+    // Capture the ScaffoldMessenger before async operations
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     if (accept) {
       final confirmed = await AppDialog.confirm(
         context,
@@ -42,29 +45,51 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           'isActive': true,
           'approvalStatus': 'approved',
         });
-        if (!mounted) return;
 
-        // Use addPostFrameCallback to ensure widget tree is stable
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            AppToast.show(
-              context,
-              'Account approved successfully.',
-              type: ToastType.success,
-            );
-          }
-        });
+        // Use captured messenger
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            content: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppTheme.successGreen,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                children: [
+                  Icon(
+                    Icons.check_circle_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Account approved successfully.',
+                      style: TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
       } catch (e) {
-        if (!mounted) return;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            AppToast.show(
-              context,
-              'Approval failed: $e',
-              type: ToastType.error,
-            );
-          }
-        });
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            backgroundColor: AppTheme.primaryRed,
+            content: Text('Approval failed: $e'),
+          ),
+        );
       }
     } else {
       final confirmed = await AppDialog.confirm(
@@ -79,31 +104,56 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
       try {
         await _db.collection('users').doc(uid).delete();
-        if (!mounted) return;
 
-        // Use addPostFrameCallback to ensure widget tree is stable
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            AppToast.show(
-              context,
-              'Registration rejected and deleted.',
-              type: ToastType.error,
-            );
-          }
-        });
+        // Use captured messenger
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            content: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryRed,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.error_rounded, color: Colors.white, size: 20),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Registration rejected and deleted.',
+                      style: TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
       } catch (e) {
-        if (!mounted) return;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            AppToast.show(context, 'Delete failed: $e', type: ToastType.error);
-          }
-        });
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            backgroundColor: AppTheme.primaryRed,
+            content: Text('Delete failed: $e'),
+          ),
+        );
       }
     }
   }
 
   Future<void> _toggleSuspend(UserModel user) async {
+    // Capture the ScaffoldMessenger before async operations
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final willSuspend = user.isActive;
+
     final confirmed = await AppDialog.confirm(
       context,
       title: willSuspend ? 'Suspend Account' : 'Reactivate Account',
@@ -119,27 +169,55 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       await _db.collection('users').doc(user.uid).update({
         'isActive': !willSuspend,
       });
-      if (!mounted) return;
 
-      // Use addPostFrameCallback to ensure widget tree is stable
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          AppToast.show(
-            context,
-            willSuspend
-                ? 'Account suspended successfully.'
-                : 'Account reactivated successfully.',
-            type: willSuspend ? ToastType.error : ToastType.success,
-          );
-        }
-      });
+      // Use captured messenger
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          content: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: willSuspend ? AppTheme.primaryRed : AppTheme.successGreen,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  willSuspend
+                      ? Icons.error_rounded
+                      : Icons.check_circle_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    willSuspend
+                        ? 'Account suspended successfully.'
+                        : 'Account reactivated successfully.',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     } catch (e) {
-      if (!mounted) return;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          AppToast.show(context, 'Action failed: $e', type: ToastType.error);
-        }
-      });
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          backgroundColor: AppTheme.primaryRed,
+          content: Text('Action failed: $e'),
+        ),
+      );
     }
   }
 
