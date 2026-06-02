@@ -62,9 +62,106 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
     return list;
   }
 
+  Future<void> _showConfirmDialog(
+    ReportModel report,
+    String newStatus,
+    String actionLabel,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Text('$actionLabel Report'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to ${actionLabel.toLowerCase()} this report?',
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.info_outline, size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Report #${report.id.substring(0, 6).toUpperCase()}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 16),
+                  _InfoRow('Category', report.category),
+                  _InfoRow('Location', 'Brgy. ${report.barangay}'),
+                  _InfoRow('Reporter', report.userFullName),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: newStatus == AppConstants.statusRejected
+                  ? AppTheme.primaryRed
+                  : AppTheme.successGreen,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(actionLabel),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _updateStatus(report, newStatus);
+    }
+  }
+
   Future<void> _updateStatus(ReportModel report, String newStatus) async {
+    if (!mounted) return;
+
     final auth = context.read<AuthProvider>();
     final adminName = auth.user?.fullName ?? 'Admin';
+
+    // Show loading indicator
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+            SizedBox(width: 12),
+            Text('Updating status...'),
+          ],
+        ),
+        duration: Duration(seconds: 1),
+      ),
+    );
+
     try {
       await _service.updateStatus(
         reportId: report.id,
@@ -72,17 +169,20 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
         updatedBy: adminName,
       );
       if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Report marked as $newStatus'),
             backgroundColor: newStatus == AppConstants.statusRejected
                 ? AppTheme.primaryRed
                 : AppTheme.successGreen,
+            duration: const Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Failed to update status'),
@@ -126,7 +226,11 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
           actions: [
             AdminHoverButton(
               label: 'Cancel',
-              onTap: () => Navigator.pop(ctx),
+              onTap: () {
+                if (Navigator.canPop(ctx)) {
+                  Navigator.pop(ctx);
+                }
+              },
               outlined: true,
               small: true,
             ),
@@ -136,22 +240,40 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
               onTap: selectedStatus == null
                   ? null
                   : () async {
-                      Navigator.pop(ctx);
-                      await _service.updateStatus(
-                        reportId: report.id,
-                        newStatus: selectedStatus!,
-                        updatedBy: adminName,
-                        note: noteCtrl.text.trim().isEmpty
-                            ? null
-                            : noteCtrl.text.trim(),
-                      );
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Status updated to $selectedStatus'),
-                            backgroundColor: AppTheme.successGreen,
-                          ),
+                      final status = selectedStatus!;
+                      final note = noteCtrl.text.trim().isEmpty
+                          ? null
+                          : noteCtrl.text.trim();
+                      if (Navigator.canPop(ctx)) {
+                        Navigator.pop(ctx);
+                      }
+
+                      if (!mounted) return;
+
+                      try {
+                        await _service.updateStatus(
+                          reportId: report.id,
+                          newStatus: status,
+                          updatedBy: adminName,
+                          note: note,
                         );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Status updated to $status'),
+                              backgroundColor: AppTheme.successGreen,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Failed to update status'),
+                              backgroundColor: AppTheme.primaryRed,
+                            ),
+                          );
+                        }
                       }
                     },
               color: AppTheme.primaryBlue,
@@ -289,13 +411,15 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
                         report: filtered[i],
                         onView: () =>
                             context.push('/admin/reports/${filtered[i].id}'),
-                        onValidate: () => _updateStatus(
+                        onValidate: () => _showConfirmDialog(
                           filtered[i],
                           AppConstants.statusValidated,
+                          'Approve',
                         ),
-                        onReject: () => _updateStatus(
+                        onReject: () => _showConfirmDialog(
                           filtered[i],
                           AppConstants.statusRejected,
+                          'Reject',
                         ),
                         onStatusChange: () => _showStatusDialog(filtered[i]),
                       ),
@@ -786,5 +910,40 @@ class _CommunityReportCard extends StatelessWidget {
       default:
         return Colors.grey;
     }
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _InfoRow(this.label, this.value);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppTheme.textMuted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

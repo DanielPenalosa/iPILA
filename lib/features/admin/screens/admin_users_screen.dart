@@ -27,7 +27,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   }
 
   Future<void> _setApproval(String uid, bool accept) async {
-    final messenger = ScaffoldMessenger.of(context);
+    if (!mounted) return;
 
     if (accept) {
       final confirmed = await AppDialog.confirm(
@@ -37,7 +37,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             'Are you sure you want to approve this resident account? They will be able to log in immediately.',
         confirmLabel: 'Approve',
       );
-      if (!confirmed) return;
+      if (!confirmed || !mounted) return;
 
       try {
         await _db.collection('users').doc(uid).update({
@@ -45,20 +45,24 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           'approvalStatus': 'approved',
         });
 
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('✓ Account approved successfully'),
-            backgroundColor: AppTheme.successGreen,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✓ Account approved successfully'),
+              backgroundColor: AppTheme.successGreen,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
       } catch (e) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('✗ Failed: $e'),
-            backgroundColor: AppTheme.primaryRed,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✗ Failed: $e'),
+              backgroundColor: AppTheme.primaryRed,
+            ),
+          );
+        }
       }
     } else {
       final confirmed = await AppDialog.confirm(
@@ -69,31 +73,36 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         confirmLabel: 'Reject & Delete',
         isDanger: true,
       );
-      if (!confirmed) return;
+      if (!confirmed || !mounted) return;
 
       try {
         await _db.collection('users').doc(uid).delete();
 
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('✓ Registration rejected and deleted'),
-            backgroundColor: AppTheme.primaryRed,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✓ Registration rejected and deleted'),
+              backgroundColor: AppTheme.primaryRed,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
       } catch (e) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('✗ Failed: $e'),
-            backgroundColor: AppTheme.primaryRed,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✗ Failed: $e'),
+              backgroundColor: AppTheme.primaryRed,
+            ),
+          );
+        }
       }
     }
   }
 
   Future<void> _toggleSuspend(UserModel user) async {
-    final messenger = ScaffoldMessenger.of(context);
+    if (!mounted) return;
+
     final willSuspend = user.isActive;
 
     final confirmed = await AppDialog.confirm(
@@ -105,31 +114,37 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       confirmLabel: willSuspend ? 'Suspend' : 'Reactivate',
       isDanger: willSuspend,
     );
-    if (!confirmed) return;
+    if (!confirmed || !mounted) return;
 
     try {
       await _db.collection('users').doc(user.uid).update({
         'isActive': !willSuspend,
       });
 
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            willSuspend
-                ? '✓ Account suspended successfully'
-                : '✓ Account reactivated successfully',
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              willSuspend
+                  ? '✓ Account suspended successfully'
+                  : '✓ Account reactivated successfully',
+            ),
+            backgroundColor: willSuspend
+                ? Colors.orange
+                : AppTheme.successGreen,
+            duration: const Duration(seconds: 2),
           ),
-          backgroundColor: willSuspend ? Colors.orange : AppTheme.successGreen,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+        );
+      }
     } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('✗ Failed: $e'),
-          backgroundColor: AppTheme.primaryRed,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✗ Failed: $e'),
+            backgroundColor: AppTheme.primaryRed,
+          ),
+        );
+      }
     }
   }
 

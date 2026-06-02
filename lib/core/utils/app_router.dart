@@ -192,7 +192,6 @@ GoRouter createRouter(AuthProvider authProvider) {
                 routes: [
                   GoRoute(
                     path: ':id',
-                    parentNavigatorKey: _rootNavigatorKey,
                     builder: (_, s) => AdminReportDetailScreen(
                       reportId: s.pathParameters['id']!,
                     ),

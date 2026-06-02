@@ -25,9 +25,11 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
   final _noteCtrl = TextEditingController();
   File? _afterPhoto;
   bool _isUpdating = false;
+  bool _disposed = false;
 
   @override
   void dispose() {
+    _disposed = true;
     _noteCtrl.dispose();
     super.dispose();
   }
@@ -38,7 +40,9 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
       source: ImageSource.camera,
       imageQuality: 70,
     );
-    if (picked != null) setState(() => _afterPhoto = File(picked.path));
+    if (picked != null && !_disposed && mounted) {
+      setState(() => _afterPhoto = File(picked.path));
+    }
   }
 
   Future<void> _updateStatus(
@@ -46,6 +50,8 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
     String newStatus,
     String adminName,
   ) async {
+    if (_disposed || !mounted) return;
+
     setState(() => _isUpdating = true);
     try {
       await _service.updateStatus(
@@ -57,7 +63,7 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
             ? _afterPhoto
             : null,
       );
-      if (mounted) {
+      if (!_disposed && mounted) {
         _noteCtrl.clear();
         setState(() => _afterPhoto = null);
         AppToast.show(
@@ -67,7 +73,7 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
         );
       }
     } catch (e) {
-      if (mounted) {
+      if (!_disposed && mounted) {
         AppToast.show(
           context,
           'Failed to update status. Please try again.',
@@ -75,7 +81,7 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isUpdating = false);
+      if (!_disposed && mounted) setState(() => _isUpdating = false);
     }
   }
 
@@ -156,8 +162,11 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                 onTap: selectedStatus == null
                     ? null
                     : () {
-                        Navigator.pop(ctx);
-                        _updateStatus(report.id, selectedStatus!, adminName);
+                        final status = selectedStatus!;
+                        if (Navigator.canPop(ctx)) {
+                          Navigator.pop(ctx);
+                        }
+                        _updateStatus(report.id, status, adminName);
                       },
                 color: AppTheme.primaryBlue,
               ),
@@ -181,16 +190,25 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
         actions: [
           AdminHoverButton(
             label: 'Cancel',
-            onTap: () => Navigator.pop(context),
+            onTap: () {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
+            },
             outlined: true,
             small: true,
           ),
           const SizedBox(width: 8),
           AdminHoverButton(
             label: 'Assign',
-            onTap: () {
-              _service.assignReport(report.id, ctrl.text.trim());
-              Navigator.pop(context);
+            onTap: () async {
+              final staffName = ctrl.text.trim();
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
+              if (!_disposed && mounted) {
+                await _service.assignReport(report.id, staffName);
+              }
             },
             color: AppTheme.primaryBlue,
             small: true,
@@ -205,272 +223,295 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
     final auth = context.read<AuthProvider>();
     final adminName = auth.user?.fullName ?? 'Admin';
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Report Details'),
-        actions: [
-          if (_isUpdating)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
+    return PopScope(
+      canPop: !_isUpdating,
+      onPopInvoked: (didPop) {
+        if (!didPop && _isUpdating) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please wait for the update to complete'),
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Report Details'),
+          actions: [
+            if (_isUpdating)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
                 ),
               ),
-            ),
-        ],
-      ),
-      body: StreamBuilder<ReportModel?>(
-        stream: _service.getReport(widget.reportId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final report = snapshot.data;
-          if (report == null)
-            return const Center(child: Text('Report not found.'));
+          ],
+        ),
+        body: StreamBuilder<ReportModel?>(
+          stream: _service.getReport(widget.reportId),
+          builder: (context, snapshot) {
+            if (_disposed) {
+              return const SizedBox.shrink();
+            }
 
-          return Stack(
-            children: [
-              SingleChildScrollView(
-                padding: const EdgeInsets.only(bottom: 100),
-                child: Column(
-                  children: [
-                    // Admin action bar
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      color: Colors.grey[100],
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Assigned to',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: AppTheme.textMuted,
-                                  ),
-                                ),
-                                Text(
-                                  report.assignedTo ?? 'Unassigned',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          TextButton.icon(
-                            onPressed: () => _showAssignDialog(report),
-                            icon: const Icon(
-                              Icons.person_add_outlined,
-                              size: 16,
-                            ),
-                            label: const Text('Assign'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ReportStatusBanner(status: report.currentStatus),
-                          const SizedBox(height: 16),
-                          if (report.photoUrls.isNotEmpty) ...[
-                            const Text(
-                              'Photos',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              height: 180,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: report.photoUrls.length,
-                                itemBuilder: (_, i) => Container(
-                                  margin: const EdgeInsets.only(right: 8),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(10),
-                                    child: Image.network(
-                                      report.photoUrls[i],
-                                      width: 200,
-                                      height: 180,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-                          Card(
-                            margin: EdgeInsets.zero,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final report = snapshot.data;
+            if (report == null) {
+              return const Center(child: Text('Report not found.'));
+            }
+
+            return Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.only(bottom: 100),
+                  child: Column(
+                    children: [
+                      // Admin action bar
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        color: Colors.grey[100],
+                        child: Row(
+                          children: [
+                            Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  ReportDetailRow(
-                                    icon: Icons.category_outlined,
-                                    label: 'Category',
-                                    value: report.category,
-                                  ),
-                                  ReportDetailRow(
-                                    icon: Icons.location_on_outlined,
-                                    label: 'Barangay',
-                                    value: 'Brgy. ${report.barangay}',
-                                  ),
-                                  ReportDetailRow(
-                                    icon: Icons.gps_fixed,
-                                    label: 'GPS',
-                                    value:
-                                        '${report.latitude.toStringAsFixed(5)}, ${report.longitude.toStringAsFixed(5)}',
-                                  ),
-                                  ReportDetailRow(
-                                    icon: Icons.person_outlined,
-                                    label: 'Reported by',
-                                    value: report.isAnonymous
-                                        ? 'Anonymous'
-                                        : '${report.userFullName} (Brgy. ${report.userBarangay})',
-                                  ),
-                                  if (report.followerCount > 0) ...[
-                                    const Divider(height: 20),
-                                    Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: _getPriorityColor(
-                                          report.priority,
-                                        ).withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: _getPriorityColor(
-                                            report.priority,
-                                          ).withValues(alpha: 0.3),
-                                        ),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                Icons.people_outline,
-                                                size: 20,
-                                                color: _getPriorityColor(
-                                                  report.priority,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                '${report.followerCount} ${report.followerCount == 1 ? 'Follower' : 'Followers'}',
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: _getPriorityColor(
-                                                    report.priority,
-                                                  ),
-                                                ),
-                                              ),
-                                              const Spacer(),
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 4,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: _getPriorityColor(
-                                                    report.priority,
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                ),
-                                                child: Text(
-                                                  _getPriorityLabel(
-                                                    report.priority,
-                                                  ),
-                                                  style: const TextStyle(
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            'This report has gained community attention. Consider prioritizing this issue.',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey[700],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                  const Divider(height: 20),
                                   const Text(
-                                    'Description',
+                                    'Assigned to',
                                     style: TextStyle(
-                                      fontWeight: FontWeight.w600,
+                                      fontSize: 11,
+                                      color: AppTheme.textMuted,
                                     ),
                                   ),
-                                  const SizedBox(height: 6),
                                   Text(
-                                    report.description,
+                                    report.assignedTo ?? 'Unassigned',
                                     style: const TextStyle(
-                                      color: AppTheme.textMuted,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 20),
-                          const Text(
-                            'Transparency Timeline',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
+                            TextButton.icon(
+                              onPressed: () => _showAssignDialog(report),
+                              icon: const Icon(
+                                Icons.person_add_outlined,
+                                size: 16,
+                              ),
+                              label: const Text('Assign'),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          ReportTimeline(history: report.statusHistory),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ReportStatusBanner(status: report.currentStatus),
+                            const SizedBox(height: 16),
+                            if (report.photoUrls.isNotEmpty) ...[
+                              const Text(
+                                'Photos',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                height: 180,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: report.photoUrls.length,
+                                  itemBuilder: (_, i) => Container(
+                                    margin: const EdgeInsets.only(right: 8),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Image.network(
+                                        report.photoUrls[i],
+                                        width: 200,
+                                        height: 180,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            Card(
+                              margin: EdgeInsets.zero,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    ReportDetailRow(
+                                      icon: Icons.category_outlined,
+                                      label: 'Category',
+                                      value: report.category,
+                                    ),
+                                    ReportDetailRow(
+                                      icon: Icons.location_on_outlined,
+                                      label: 'Barangay',
+                                      value: 'Brgy. ${report.barangay}',
+                                    ),
+                                    ReportDetailRow(
+                                      icon: Icons.gps_fixed,
+                                      label: 'GPS',
+                                      value:
+                                          '${report.latitude.toStringAsFixed(5)}, ${report.longitude.toStringAsFixed(5)}',
+                                    ),
+                                    ReportDetailRow(
+                                      icon: Icons.person_outlined,
+                                      label: 'Reported by',
+                                      value: report.isAnonymous
+                                          ? 'Anonymous'
+                                          : '${report.userFullName} (Brgy. ${report.userBarangay})',
+                                    ),
+                                    if (report.followerCount > 0) ...[
+                                      const Divider(height: 20),
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: _getPriorityColor(
+                                            report.priority,
+                                          ).withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: _getPriorityColor(
+                                              report.priority,
+                                            ).withValues(alpha: 0.3),
+                                          ),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.people_outline,
+                                                  size: 20,
+                                                  color: _getPriorityColor(
+                                                    report.priority,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  '${report.followerCount} ${report.followerCount == 1 ? 'Follower' : 'Followers'}',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: _getPriorityColor(
+                                                      report.priority,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const Spacer(),
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 4,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color: _getPriorityColor(
+                                                      report.priority,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
+                                                  ),
+                                                  child: Text(
+                                                    _getPriorityLabel(
+                                                      report.priority,
+                                                    ),
+                                                    style: const TextStyle(
+                                                      fontSize: 10,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              'This report has gained community attention. Consider prioritizing this issue.',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[700],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                    const Divider(height: 20),
+                                    const Text(
+                                      'Description',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      report.description,
+                                      style: const TextStyle(
+                                        color: AppTheme.textMuted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            const Text(
+                              'Transparency Timeline',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            ReportTimeline(history: report.statusHistory),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Positioned(
-                bottom: 16,
-                left: 16,
-                right: 16,
-                child: AdminHoverButton(
-                  label: 'Update Status',
-                  icon: Icons.update_rounded,
-                  onTap: _isUpdating
-                      ? null
-                      : () => _showUpdateDialog(report, adminName),
-                  color: AppTheme.primaryBlue,
+                Positioned(
+                  bottom: 16,
+                  left: 16,
+                  right: 16,
+                  child: AdminHoverButton(
+                    label: 'Update Status',
+                    icon: Icons.update_rounded,
+                    onTap: _isUpdating
+                        ? null
+                        : () => _showUpdateDialog(report, adminName),
+                    color: AppTheme.primaryBlue,
+                  ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }
