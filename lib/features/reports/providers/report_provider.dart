@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../data/models/report_model.dart';
 import '../../../data/services/report_service.dart';
 
@@ -26,7 +27,8 @@ class ReportProvider extends ChangeNotifier {
     required double latitude,
     required double longitude,
     required String address,
-    required List<File> photos,
+    List<File>? photos,
+    List<XFile>? photosWeb,
     bool isAnonymous = false,
   }) async {
     _submitStatus = ReportSubmitStatus.loading;
@@ -45,6 +47,7 @@ class ReportProvider extends ChangeNotifier {
         longitude: longitude,
         address: address,
         photos: photos,
+        photosWeb: photosWeb,
         isAnonymous: isAnonymous,
       );
       _submitStatus = ReportSubmitStatus.success;

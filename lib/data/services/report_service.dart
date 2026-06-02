@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 import '../models/report_model.dart';
 import '../../core/constants/app_constants.dart';
@@ -23,19 +25,31 @@ class ReportService {
     required double latitude,
     required double longitude,
     required String address,
-    required List<File> photos,
+    List<File>? photos,
+    List<XFile>? photosWeb,
     bool isAnonymous = false,
   }) async {
     final reportId = _uuid.v4();
 
     // Upload photos to Cloudinary
     final photoUrls = <String>[];
-    for (final photo in photos) {
-      final url = await CloudinaryService.uploadImage(
-        photo,
-        folder: 'ipila/reports/$reportId',
-      );
-      if (url != null) photoUrls.add(url);
+
+    if (kIsWeb && photosWeb != null) {
+      for (final photo in photosWeb) {
+        final url = await CloudinaryService.uploadImageWeb(
+          photo,
+          folder: 'ipila/reports/$reportId',
+        );
+        if (url != null) photoUrls.add(url);
+      }
+    } else if (photos != null) {
+      for (final photo in photos) {
+        final url = await CloudinaryService.uploadImage(
+          photo,
+          folder: 'ipila/reports/$reportId',
+        );
+        if (url != null) photoUrls.add(url);
+      }
     }
 
     final now = DateTime.now();

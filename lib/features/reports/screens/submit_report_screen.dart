@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:go_router/go_router.dart';
@@ -28,6 +29,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
   String? _selectedCategory;
   String? _selectedBarangay;
   final List<File> _photos = [];
+  final List<XFile> _photosWeb = [];
   double? _latitude;
   double? _longitude;
   String _address = '';
@@ -43,7 +45,8 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    if (_photos.length >= 3) {
+    final photoCount = kIsWeb ? _photosWeb.length : _photos.length;
+    if (photoCount >= 3) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Maximum 3 photos allowed.')),
       );
@@ -52,18 +55,22 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: source);
     if (picked != null) {
-      final dir = await getTemporaryDirectory();
-      final targetPath =
-          '${dir.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final compressed = await FlutterImageCompress.compressAndGetFile(
-        picked.path,
-        targetPath,
-        quality: 70,
-        minWidth: 1280,
-        minHeight: 720,
-      );
-      if (compressed != null) {
-        setState(() => _photos.add(File(compressed.path)));
+      if (kIsWeb) {
+        setState(() => _photosWeb.add(picked));
+      } else {
+        final dir = await getTemporaryDirectory();
+        final targetPath =
+            '${dir.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final compressed = await FlutterImageCompress.compressAndGetFile(
+          picked.path,
+          targetPath,
+          quality: 70,
+          minWidth: 1280,
+          minHeight: 720,
+        );
+        if (compressed != null) {
+          setState(() => _photos.add(File(compressed.path)));
+        }
       }
     }
   }
@@ -248,7 +255,8 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_photos.isEmpty) {
+    final photoCount = kIsWeb ? _photosWeb.length : _photos.length;
+    if (photoCount == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please add at least one photo.')),
       );
@@ -291,7 +299,8 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
       latitude: _latitude!,
       longitude: _longitude!,
       address: _address,
-      photos: _photos,
+      photos: kIsWeb ? null : _photos,
+      photosWeb: kIsWeb ? _photosWeb : null,
       isAnonymous: _isAnonymous,
     );
     if (success && mounted) {
@@ -351,13 +360,21 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   children: [
-                    ..._photos.map(
-                      (f) => _PhotoThumbnail(
-                        file: f,
-                        onRemove: () => setState(() => _photos.remove(f)),
+                    if (kIsWeb)
+                      ..._photosWeb.map(
+                        (f) => _PhotoThumbnailWeb(
+                          file: f,
+                          onRemove: () => setState(() => _photosWeb.remove(f)),
+                        ),
+                      )
+                    else
+                      ..._photos.map(
+                        (f) => _PhotoThumbnail(
+                          file: f,
+                          onRemove: () => setState(() => _photos.remove(f)),
+                        ),
                       ),
-                    ),
-                    if (_photos.length < 3)
+                    if ((kIsWeb ? _photosWeb.length : _photos.length) < 3)
                       _AddPhotoButton(
                         onCamera: () => _pickImage(ImageSource.camera),
                         onGallery: () => _pickImage(ImageSource.gallery),
@@ -569,6 +586,47 @@ class _PhotoThumbnail extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Image.file(file, width: 90, height: 90, fit: BoxFit.cover),
+          ),
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close, size: 12, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PhotoThumbnailWeb extends StatelessWidget {
+  final XFile file;
+  final VoidCallback onRemove;
+  const _PhotoThumbnailWeb({required this.file, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(right: 10),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              file.path,
+              width: 90,
+              height: 90,
+              fit: BoxFit.cover,
+            ),
           ),
           Positioned(
             top: 4,
