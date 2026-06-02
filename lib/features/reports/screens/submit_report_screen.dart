@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -621,11 +622,26 @@ class _PhotoThumbnailWeb extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              file.path,
-              width: 90,
-              height: 90,
-              fit: BoxFit.cover,
+            child: FutureBuilder<Uint8List>(
+              future: file.readAsBytes(),
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  return Image.memory(
+                    snapshot.data!,
+                    width: 90,
+                    height: 90,
+                    fit: BoxFit.cover,
+                  );
+                }
+                return Container(
+                  width: 90,
+                  height: 90,
+                  color: Colors.grey[300],
+                  child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                );
+              },
             ),
           ),
           Positioned(
