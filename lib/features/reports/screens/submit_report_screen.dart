@@ -1,0 +1,667 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
+import '../../../core/constants/app_constants.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/app_ui.dart';
+import '../../../data/models/report_model.dart';
+import '../../../data/services/geofence_service.dart';
+import '../../../data/services/report_service.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../home/widgets/mobile_shell.dart';
+import '../providers/report_provider.dart';
+
+class SubmitReportScreen extends StatefulWidget {
+  const SubmitReportScreen({super.key});
+
+  @override
+  State<SubmitReportScreen> createState() => _SubmitReportScreenState();
+}
+
+class _SubmitReportScreenState extends State<SubmitReportScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _descCtrl = TextEditingController();
+  String? _selectedCategory;
+  String? _selectedBarangay;
+  final List<File> _photos = [];
+  double? _latitude;
+  double? _longitude;
+  String _address = '';
+  bool _isAnonymous = false;
+  bool _gettingLocation = false;
+  bool _isInsidePila = false;
+  List<ReportModel> _similarReports = [];
+
+  @override
+  void dispose() {
+    _descCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    if (_photos.length >= 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Maximum 3 photos allowed.')),
+      );
+      return;
+    }
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: source);
+    if (picked != null) {
+      final dir = await getTemporaryDirectory();
+      final targetPath =
+          '${dir.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final compressed = await FlutterImageCompress.compressAndGetFile(
+        picked.path,
+        targetPath,
+        quality: 70,
+        minWidth: 1280,
+        minHeight: 720,
+      );
+      if (compressed != null) {
+        setState(() => _photos.add(File(compressed.path)));
+      }
+    }
+  }
+
+  Future<void> _getLocation() async {
+    setState(() => _gettingLocation = true);
+    try {
+      final result = await GeofenceService.checkCurrentLocation();
+
+      if (result.error != null) {
+        throw Exception(result.error);
+      }
+
+      setState(() {
+        _latitude = result.latitude;
+        _longitude = result.longitude;
+        _isInsidePila = result.isInsidePila;
+        _address = result.latitude != null && result.longitude != null
+            ? '${result.latitude!.toStringAsFixed(5)}, ${result.longitude!.toStringAsFixed(5)}'
+            : '';
+      });
+
+      if (!_isInsidePila && mounted) {
+        _showLocationRestrictionDialog();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not get location: $e')));
+      }
+    } finally {
+      setState(() => _gettingLocation = false);
+    }
+  }
+
+  void _showLocationRestrictionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Location Restriction'),
+        content: const Text(
+          'Reporting is only available for users currently located within the Municipality of Pila.\n\nYou can still browse reports and updates, but cannot create new reports from your current location.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _checkForDuplicates() async {
+    if (_selectedCategory == null ||
+        _selectedBarangay == null ||
+        _descCtrl.text.trim().isEmpty) {
+      return;
+    }
+
+    try {
+      final similar = await ReportService().findSimilarReports(
+        category: _selectedCategory!,
+        barangay: _selectedBarangay!,
+        description: _descCtrl.text.trim(),
+        latitude: _latitude,
+        longitude: _longitude,
+      );
+
+      if (similar.isNotEmpty && mounted) {
+        setState(() => _similarReports = similar);
+        _showDuplicateDialog();
+      }
+    } catch (e) {
+      // Silent fail - duplicate check is not critical
+    }
+  }
+
+  void _showDuplicateDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Similar Report Found'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'This concern has already been reported by another resident. Would you like to track or follow up on the existing report instead?',
+            ),
+            const SizedBox(height: 16),
+            if (_similarReports.isNotEmpty) ...[
+              const Text(
+                'Similar reports:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              const SizedBox(height: 8),
+              ..._similarReports
+                  .take(3)
+                  .map(
+                    (report) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${report.category} - ${report.barangay}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              report.description.length > 60
+                                  ? '${report.description.substring(0, 60)}...'
+                                  : report.description,
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${report.followerCount} followers · ${report.currentStatus}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              if (_similarReports.isNotEmpty) {
+                context.go('/report/${_similarReports.first.id}');
+              }
+            },
+            child: const Text('View Report'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              if (_similarReports.isNotEmpty) {
+                final auth = context.read<AuthProvider>();
+                await ReportService().followReport(
+                  _similarReports.first.id,
+                  auth.user!.uid,
+                );
+                if (mounted) {
+                  AppToast.show(
+                    context,
+                    'You are now following this report',
+                    type: ToastType.success,
+                  );
+                  context.go('/report/${_similarReports.first.id}');
+                }
+              }
+            },
+            child: const Text('Follow Report'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_photos.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add at least one photo.')),
+      );
+      return;
+    }
+    if (_latitude == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please get your GPS location first.')),
+      );
+      return;
+    }
+    if (!_isInsidePila) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'You must be within Pila municipality to submit a report.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Check for duplicates before submitting
+    await _checkForDuplicates();
+    if (_similarReports.isNotEmpty) {
+      // User will be shown duplicate dialog, don't proceed with submission
+      return;
+    }
+
+    final auth = context.read<AuthProvider>();
+    final provider = context.read<ReportProvider>();
+    final user = auth.user!;
+    final success = await provider.submitReport(
+      userId: user.uid,
+      userFullName: user.fullName,
+      userBarangay: user.barangay,
+      category: _selectedCategory!,
+      description: _descCtrl.text.trim(),
+      barangay: _selectedBarangay!,
+      latitude: _latitude!,
+      longitude: _longitude!,
+      address: _address,
+      photos: _photos,
+      isAnonymous: _isAnonymous,
+    );
+    if (success && mounted) {
+      AppToast.show(
+        context,
+        'Report submitted successfully!',
+        type: ToastType.success,
+      );
+      context.go('/report/${provider.lastReportId}');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<ReportProvider>();
+    final isLoading = provider.submitStatus == ReportSubmitStatus.loading;
+
+    return MobileShell(
+      title: 'Report an Issue',
+      currentIndex: -1,
+      showBack: true,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Submit a Report',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textDark,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Help us improve Pila by reporting community issues.',
+                style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
+              ),
+              const SizedBox(height: 24),
+
+              // Photos
+              const Text(
+                'PHOTOS *',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textMuted,
+                  letterSpacing: 1,
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 100,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    ..._photos.map(
+                      (f) => _PhotoThumbnail(
+                        file: f,
+                        onRemove: () => setState(() => _photos.remove(f)),
+                      ),
+                    ),
+                    if (_photos.length < 3)
+                      _AddPhotoButton(
+                        onCamera: () => _pickImage(ImageSource.camera),
+                        onGallery: () => _pickImage(ImageSource.gallery),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Category
+              DropdownButtonFormField<String>(
+                initialValue: _selectedCategory,
+                decoration: const InputDecoration(
+                  labelText: 'Issue Category *',
+                  prefixIcon: Icon(Icons.category_outlined),
+                ),
+                items: AppConstants.issueCategories
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedCategory = v),
+                validator: (v) => v == null ? 'Please select a category' : null,
+              ),
+              const SizedBox(height: 16),
+
+              // Barangay
+              DropdownButtonFormField<String>(
+                initialValue: _selectedBarangay,
+                decoration: const InputDecoration(
+                  labelText: 'Barangay *',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                ),
+                items: AppConstants.barangays
+                    .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedBarangay = v),
+                validator: (v) => v == null ? 'Please select a barangay' : null,
+              ),
+              const SizedBox(height: 16),
+
+              // Description
+              TextFormField(
+                controller: _descCtrl,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Description *',
+                  alignLabelWithHint: true,
+                  prefixIcon: Padding(
+                    padding: EdgeInsets.only(bottom: 60),
+                    child: Icon(Icons.description_outlined),
+                  ),
+                ),
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Please describe the issue' : null,
+              ),
+              const SizedBox(height: 16),
+
+              // GPS
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: _latitude != null
+                      ? (_isInsidePila
+                            ? AppTheme.successGreen.withValues(alpha: 0.08)
+                            : AppTheme.primaryRed.withValues(alpha: 0.08))
+                      : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _latitude != null
+                        ? (_isInsidePila
+                              ? AppTheme.successGreen.withValues(alpha: 0.4)
+                              : AppTheme.primaryRed.withValues(alpha: 0.4))
+                        : AppTheme.borderColor,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          _latitude != null
+                              ? Icons.gps_fixed
+                              : Icons.gps_not_fixed,
+                          color: _latitude != null
+                              ? (_isInsidePila
+                                    ? AppTheme.successGreen
+                                    : AppTheme.primaryRed)
+                              : AppTheme.textMuted,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _latitude != null
+                                ? (_isInsidePila
+                                      ? 'Location: $_address'
+                                      : 'Outside Pila municipality')
+                                : 'GPS location not yet captured',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: _latitude != null
+                                  ? (_isInsidePila
+                                        ? AppTheme.successGreen
+                                        : AppTheme.primaryRed)
+                                  : AppTheme.textMuted,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _gettingLocation ? null : _getLocation,
+                          child: _gettingLocation
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(
+                                  _latitude != null ? 'Refresh' : 'Get GPS',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ],
+                    ),
+                    if (_latitude != null && !_isInsidePila) ...[
+                      const SizedBox(height: 8),
+                      const Text(
+                        'You must be within Pila municipality to submit a report. You can still browse existing reports.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.primaryRed,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Anonymous
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.borderColor),
+                ),
+                child: SwitchListTile(
+                  value: _isAnonymous,
+                  onChanged: (v) => setState(() => _isAnonymous = v),
+                  title: const Text(
+                    'Submit Anonymously',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: const Text(
+                    'Your name will not be shown on the report',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  activeColor: AppTheme.primaryBlue,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              if (provider.errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    provider.errorMessage!,
+                    style: const TextStyle(color: AppTheme.primaryRed),
+                  ),
+                ),
+
+              ElevatedButton.icon(
+                onPressed: (isLoading || !_isInsidePila) ? null : _submit,
+                icon: isLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.send_rounded),
+                label: Text(isLoading ? 'Submitting...' : 'Submit Report'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PhotoThumbnail extends StatelessWidget {
+  final File file;
+  final VoidCallback onRemove;
+  const _PhotoThumbnail({required this.file, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(right: 10),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.file(file, width: 90, height: 90, fit: BoxFit.cover),
+          ),
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close, size: 12, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddPhotoButton extends StatelessWidget {
+  final VoidCallback onCamera;
+  final VoidCallback onGallery;
+  const _AddPhotoButton({required this.onCamera, required this.onGallery});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (_) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.borderColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined),
+                title: const Text('Take Photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  onCamera();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  onGallery();
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+      child: Container(
+        width: 90,
+        height: 90,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppTheme.borderColor,
+            style: BorderStyle.solid,
+          ),
+        ),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_a_photo_outlined, color: AppTheme.textMuted),
+            SizedBox(height: 4),
+            Text(
+              'Add Photo',
+              style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
