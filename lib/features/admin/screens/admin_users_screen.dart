@@ -26,99 +26,189 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         .map((s) => s.docs.map((d) => UserModel.fromFirestore(d)).toList());
   }
 
-  Future<void> _setApproval(String uid, bool accept) async {
-    if (!mounted) return;
-
-    // Capture the messenger before any async gaps
-    final messenger = ScaffoldMessenger.of(context);
-
+  void _setApproval(String uid, bool accept) {
     if (accept) {
-      final confirmed = await AppDialog.confirm(
-        context,
-        title: 'Approve Account',
-        message:
-            'Are you sure you want to approve this resident account? They will be able to log in immediately.',
-        confirmLabel: 'Approve',
-      );
-      if (!confirmed) return;
-
-      try {
-        await _db.collection('users').doc(uid).update({
-          'isActive': true,
-          'approvalStatus': 'approved',
-        });
-
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('✓ Account approved successfully'),
-            backgroundColor: AppTheme.successGreen,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      } catch (e) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('✗ Failed: $e'),
-            backgroundColor: AppTheme.primaryRed,
-          ),
-        );
-      }
+      _approveUser(uid);
     } else {
-      final confirmed = await AppDialog.confirm(
-        context,
-        title: 'Reject Registration',
-        message:
-            'Rejecting this account will permanently delete the registration. The resident will need to register again.',
-        confirmLabel: 'Reject & Delete',
-        isDanger: true,
+      _rejectUser(uid);
+    }
+  }
+
+  Future<void> _approveUser(String uid) async {
+    // Get messenger and navigator before dialog
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Approve Account',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Are you sure you want to approve this resident account? They will be able to log in immediately.',
+          style: TextStyle(color: AppTheme.textMuted, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppTheme.textMuted),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Approve'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await _db.collection('users').doc(uid).update({
+        'isActive': true,
+        'approvalStatus': 'approved',
+      });
+
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('✓ Account approved successfully'),
+          backgroundColor: AppTheme.successGreen,
+          duration: Duration(seconds: 2),
+        ),
       );
-      if (!confirmed) return;
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('✗ Failed: $e'),
+          backgroundColor: AppTheme.primaryRed,
+        ),
+      );
+    }
+  }
 
-      try {
-        await _db.collection('users').doc(uid).delete();
+  Future<void> _rejectUser(String uid) async {
+    // Get messenger before dialog
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('✓ Registration rejected and deleted'),
-            backgroundColor: AppTheme.primaryRed,
-            duration: Duration(seconds: 2),
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Reject Registration',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Rejecting this account will permanently delete the registration. The resident will need to register again.',
+          style: TextStyle(color: AppTheme.textMuted, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppTheme.textMuted),
+            ),
           ),
-        );
-      } catch (e) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('✗ Failed: $e'),
-            backgroundColor: AppTheme.primaryRed,
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryRed,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Reject & Delete'),
           ),
-        );
-      }
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await _db.collection('users').doc(uid).delete();
+
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('✓ Registration rejected and deleted'),
+          backgroundColor: AppTheme.primaryRed,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('✗ Failed: $e'),
+          backgroundColor: AppTheme.primaryRed,
+        ),
+      );
     }
   }
 
   Future<void> _toggleSuspend(UserModel user) async {
-    if (!mounted) return;
-
-    // Capture the messenger before any async gaps
-    final messenger = ScaffoldMessenger.of(context);
     final willSuspend = user.isActive;
 
-    final confirmed = await AppDialog.confirm(
-      context,
-      title: willSuspend ? 'Suspend Account' : 'Reactivate Account',
-      message: willSuspend
-          ? 'This will prevent ${user.fullName} from logging in. They can be reactivated later.'
-          : 'This will allow ${user.fullName} to log in again.',
-      confirmLabel: willSuspend ? 'Suspend' : 'Reactivate',
-      isDanger: willSuspend,
+    // Get messenger before dialog
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          willSuspend ? 'Suspend Account' : 'Reactivate Account',
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          willSuspend
+              ? 'This will prevent ${user.fullName} from logging in. They can be reactivated later.'
+              : 'This will allow ${user.fullName} to log in again.',
+          style: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppTheme.textMuted),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: willSuspend
+                  ? Colors.orange
+                  : AppTheme.successGreen,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: Text(willSuspend ? 'Suspend' : 'Reactivate'),
+          ),
+        ],
+      ),
     );
-    if (!confirmed) return;
+
+    if (confirmed != true) return;
 
     try {
       await _db.collection('users').doc(user.uid).update({
         'isActive': !willSuspend,
       });
 
-      messenger.showSnackBar(
+      scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text(
             willSuspend
@@ -130,7 +220,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         ),
       );
     } catch (e) {
-      messenger.showSnackBar(
+      scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text('✗ Failed: $e'),
           backgroundColor: AppTheme.primaryRed,
