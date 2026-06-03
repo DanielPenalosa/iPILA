@@ -62,79 +62,64 @@ class _AdminScaffoldState extends State<AdminScaffold> {
     final currentIndex = widget.navigationShell.currentIndex;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFFAFAFA),
       body: Row(
         children: [
-          // ── Sidebar (never rebuilt) ──────────────────────────────────
+          // ── Minimalist Sidebar ──────────────────────────────────
           Container(
-            width: 240,
+            width: 260,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+              color: Colors.white,
+              border: Border(
+                right: BorderSide(color: Colors.grey[200]!, width: 1),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 20,
-                  offset: const Offset(4, 0),
-                ),
-              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Logo
+                // Simple Logo
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
-                  child: Row(
+                  padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              AppTheme.primaryYellow,
-                              AppTheme.lightYellow,
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.primaryYellow.withValues(
-                                alpha: 0.4,
-                              ),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.account_balance,
-                          color: AppTheme.black,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Row(
                         children: [
-                          Text(
-                            'iPILA',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 17,
-                              color: Colors.white,
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryYellow,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.account_balance,
+                              color: AppTheme.black,
+                              size: 20,
                             ),
                           ),
-                          Text(
-                            'Admin Portal',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF9CA3AF),
-                            ),
+                          const SizedBox(width: 12),
+                          const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'iPILA',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                  color: AppTheme.textDark,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              Text(
+                                'Admin',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppTheme.textMuted,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -142,10 +127,10 @@ class _AdminScaffoldState extends State<AdminScaffold> {
                   ),
                 ),
 
-                Divider(height: 1, color: Colors.white.withValues(alpha: 0.1)),
-                const SizedBox(height: 12),
+                Divider(height: 1, color: Colors.grey[200]),
+                const SizedBox(height: 16),
 
-                // Nav items with live badges
+                // Minimal Nav items
                 Expanded(
                   child: StreamBuilder<List<ReportModel>>(
                     stream: _reportService.getAllReports(),
@@ -163,18 +148,20 @@ class _AdminScaffoldState extends State<AdminScaffold> {
                           .length;
 
                       return ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
                         itemCount: _navItems.length,
                         itemBuilder: (_, i) {
                           int? badge;
                           if (_navItems[i].route == '/admin/reports' &&
-                              newCount > 0)
+                              newCount > 0) {
                             badge = newCount;
+                          }
                           if (_navItems[i].route == '/admin/alerts' &&
-                              alertCount > 0)
+                              alertCount > 0) {
                             badge = alertCount;
+                          }
 
-                          return _SidebarItem(
+                          return _MinimalSidebarItem(
                             item: _navItems[i],
                             isActive: currentIndex == i,
                             badge: badge,
@@ -186,32 +173,18 @@ class _AdminScaffoldState extends State<AdminScaffold> {
                   ),
                 ),
 
-                // Admin footer
-                Divider(height: 1, color: Colors.white.withValues(alpha: 0.1)),
+                // Minimal Admin footer
+                Divider(height: 1, color: Colors.grey[200]),
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   child: Row(
                     children: [
                       Container(
-                        width: 40,
-                        height: 40,
+                        width: 36,
+                        height: 36,
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              AppTheme.primaryYellow,
-                              AppTheme.lightYellow,
-                            ],
-                          ),
+                          color: AppTheme.primaryYellow.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.primaryYellow.withValues(
-                                alpha: 0.3,
-                              ),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
                         ),
                         child: Center(
                           child: Text(
@@ -219,9 +192,9 @@ class _AdminScaffoldState extends State<AdminScaffold> {
                                 ? user!.fullName[0].toUpperCase()
                                 : 'A',
                             style: const TextStyle(
-                              color: AppTheme.black,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textDark,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
@@ -236,26 +209,25 @@ class _AdminScaffoldState extends State<AdminScaffold> {
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                                color: AppTheme.textDark,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
                             Text(
-                              user?.email ?? '',
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: AppTheme.textMuted,
+                              'Administrator',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[500],
                               ),
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(
-                          Icons.logout,
-                          size: 16,
-                          color: AppTheme.textMuted,
+                        icon: Icon(
+                          Icons.logout_outlined,
+                          size: 18,
+                          color: Colors.grey[600],
                         ),
                         onPressed: () => auth.signOut(),
                         padding: EdgeInsets.zero,
@@ -308,6 +280,102 @@ class _NavItem {
   });
 }
 
+// ── Minimal Sidebar Item ──────────────────────────────────────────────────────
+class _MinimalSidebarItem extends StatefulWidget {
+  final _NavItem item;
+  final bool isActive;
+  final int? badge;
+  final VoidCallback onTap;
+
+  const _MinimalSidebarItem({
+    required this.item,
+    required this.isActive,
+    required this.onTap,
+    this.badge,
+  });
+
+  @override
+  State<_MinimalSidebarItem> createState() => _MinimalSidebarItemState();
+}
+
+class _MinimalSidebarItemState extends State<_MinimalSidebarItem> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: widget.isActive
+                ? AppTheme.primaryYellow.withValues(alpha: 0.1)
+                : _hovered
+                ? Colors.grey[100]
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: widget.isActive
+                ? Border.all(
+                    color: AppTheme.primaryYellow.withValues(alpha: 0.3),
+                    width: 1,
+                  )
+                : null,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                widget.item.icon,
+                size: 20,
+                color: widget.isActive ? AppTheme.textDark : Colors.grey[600],
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  widget.item.label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: widget.isActive
+                        ? FontWeight.w600
+                        : FontWeight.normal,
+                    color: widget.isActive
+                        ? AppTheme.textDark
+                        : Colors.grey[700],
+                  ),
+                ),
+              ),
+              if (widget.badge != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryRed,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${widget.badge}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Original Sidebar Item (kept for compatibility) ────────────────────────────
 class _SidebarItem extends StatefulWidget {
   final _NavItem item;
   final bool isActive;
@@ -450,7 +518,7 @@ class _SidebarItemState extends State<_SidebarItem>
   }
 }
 
-// ── Shared page header ────────────────────────────────────────────────────────
+// ── Minimal Page Header ───────────────────────────────────────────────────────
 class AdminPageHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -466,10 +534,10 @@ class AdminPageHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(32, 24, 32, 20),
-      decoration: const BoxDecoration(
+      padding: const EdgeInsets.fromLTRB(32, 28, 32, 24),
+      decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1)),
+        border: Border(bottom: BorderSide(color: Colors.grey[100]!, width: 1)),
       ),
       child: Row(
         children: [
@@ -481,19 +549,20 @@ class AdminPageHeader extends StatelessWidget {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
                     color: AppTheme.textDark,
-                    letterSpacing: -0.5,
+                    letterSpacing: -0.8,
                   ),
                 ),
                 if (subtitle != null) ...[
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     subtitle!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      color: AppTheme.textMuted,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.normal,
                     ),
                   ),
                 ],
