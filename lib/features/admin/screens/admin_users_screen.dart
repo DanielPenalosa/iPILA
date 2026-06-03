@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_ui.dart';
 import '../../../data/models/user_model.dart';
+import '../../../data/services/user_management_service.dart';
 import 'admin_shell.dart';
 
 class AdminUsersScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class AdminUsersScreen extends StatefulWidget {
 
 class _AdminUsersScreenState extends State<AdminUsersScreen> {
   final _db = FirebaseFirestore.instance;
+  final _userService = UserManagementService();
   String _search = '';
 
   Stream<List<UserModel>> _getUsers() {
@@ -26,213 +28,158 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         .map((s) => s.docs.map((d) => UserModel.fromFirestore(d)).toList());
   }
 
-  void _setApproval(String uid, bool accept) {
-    if (accept) {
-      _approveUser(uid);
-    } else {
-      _rejectUser(uid);
-    }
-  }
-
-  Future<void> _approveUser(String uid) async {
-    // Get messenger and navigator before dialog
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Approve Account',
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-        ),
-        content: const Text(
-          'Are you sure you want to approve this resident account? They will be able to log in immediately.',
-          style: TextStyle(color: AppTheme.textMuted, fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: AppTheme.textMuted),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryBlue,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Approve'),
-          ),
-        ],
-      ),
+  void _handleApprove(UserModel user) async {
+    final confirmed = await _showConfirmDialog(
+      title: 'Approve Account',
+      message:
+          'Approve ${user.fullName}? They will be able to log in immediately.',
+      confirmText: 'Approve',
+      isDestructive: false,
     );
 
-    if (confirmed != true) return;
-
-    try {
-      await _db.collection('users').doc(uid).update({
-        'isActive': true,
-        'approvalStatus': 'approved',
-      });
-
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(
-          content: Text('✓ Account approved successfully'),
-          backgroundColor: AppTheme.successGreen,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    } catch (e) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text('✗ Failed: $e'),
-          backgroundColor: AppTheme.primaryRed,
-        ),
-      );
+    if (confirmed) {
+      try {
+        await _userService.approveUser(user.uid);
+        if (mounted) {
+          _userService.showSuccessMessage(
+            context,
+            '✓ ${user.fullName} approved successfully',
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          _userService.showErrorMessage(context, 'Failed to approve: $e');
+        }
+      }
     }
   }
 
-  Future<void> _rejectUser(String uid) async {
-    // Get messenger before dialog
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Reject Registration',
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-        ),
-        content: const Text(
-          'Rejecting this account will permanently delete the registration. The resident will need to register again.',
-          style: TextStyle(color: AppTheme.textMuted, fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: AppTheme.textMuted),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryRed,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Reject & Delete'),
-          ),
-        ],
-      ),
+  void _handleReject(UserModel user) async {
+    final confirmed = await _showConfirmDialog(
+      title: 'Reject Registration',
+      message:
+          'Reject ${user.fullName}? This will permanently delete their registration.',
+      confirmText: 'Reject & Delete',
+      isDestructive: true,
     );
 
-    if (confirmed != true) return;
-
-    try {
-      await _db.collection('users').doc(uid).delete();
-
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(
-          content: Text('✓ Registration rejected and deleted'),
-          backgroundColor: AppTheme.primaryRed,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    } catch (e) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text('✗ Failed: $e'),
-          backgroundColor: AppTheme.primaryRed,
-        ),
-      );
+    if (confirmed) {
+      try {
+        await _userService.rejectUser(user.uid);
+        if (mounted) {
+          _userService.showSuccessMessage(
+            context,
+            '✓ Registration rejected and deleted',
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          _userService.showErrorMessage(context, 'Failed to reject: $e');
+        }
+      }
     }
   }
 
-  Future<void> _toggleSuspend(UserModel user) async {
-    final willSuspend = user.isActive;
+  void _handleSuspend(UserModel user) async {
+    final confirmed = await _showConfirmDialog(
+      title: 'Suspend Account',
+      message:
+          'Suspend ${user.fullName}? They will not be able to log in until reactivated.',
+      confirmText: 'Suspend',
+      isDestructive: true,
+    );
 
-    // Get messenger before dialog
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    if (confirmed) {
+      try {
+        await _userService.suspendUser(user.uid);
+        if (mounted) {
+          _userService.showSuccessMessage(
+            context,
+            '✓ ${user.fullName} suspended successfully',
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          _userService.showErrorMessage(context, 'Failed to suspend: $e');
+        }
+      }
+    }
+  }
 
-    final confirmed = await showDialog<bool>(
+  void _handleReactivate(UserModel user) async {
+    final confirmed = await _showConfirmDialog(
+      title: 'Reactivate Account',
+      message:
+          'Reactivate ${user.fullName}? They will be able to log in again.',
+      confirmText: 'Reactivate',
+      isDestructive: false,
+    );
+
+    if (confirmed) {
+      try {
+        await _userService.reactivateUser(user.uid);
+        if (mounted) {
+          _userService.showSuccessMessage(
+            context,
+            '✓ ${user.fullName} reactivated successfully',
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          _userService.showErrorMessage(context, 'Failed to reactivate: $e');
+        }
+      }
+    }
+  }
+
+  Future<bool> _showConfirmDialog({
+    required String title,
+    required String message,
+    required String confirmText,
+    required bool isDestructive,
+  }) async {
+    final result = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
-          willSuspend ? 'Suspend Account' : 'Reactivate Account',
+          title,
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
         ),
         content: Text(
-          willSuspend
-              ? 'This will prevent ${user.fullName} from logging in. They can be reactivated later.'
-              : 'This will allow ${user.fullName} to log in again.',
+          message,
           style: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
+            onPressed: () => Navigator.of(ctx).pop(false),
             child: const Text(
               'Cancel',
               style: TextStyle(color: AppTheme.textMuted),
             ),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
+            onPressed: () => Navigator.of(ctx).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: willSuspend
-                  ? Colors.orange
+              backgroundColor: isDestructive
+                  ? AppTheme.primaryRed
                   : AppTheme.successGreen,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            child: Text(willSuspend ? 'Suspend' : 'Reactivate'),
+            child: Text(confirmText),
           ),
         ],
       ),
     );
-
-    if (confirmed != true) return;
-
-    try {
-      await _db.collection('users').doc(user.uid).update({
-        'isActive': !willSuspend,
-      });
-
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            willSuspend
-                ? '✓ Account suspended successfully'
-                : '✓ Account reactivated successfully',
-          ),
-          backgroundColor: willSuspend ? Colors.orange : AppTheme.successGreen,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    } catch (e) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text('✗ Failed: $e'),
-          backgroundColor: AppTheme.primaryRed,
-        ),
-      );
-    }
+    return result ?? false;
   }
 
-  void _viewIdPhoto(BuildContext context, String url, String name) {
+  void _viewIdPhoto(String url, String name) {
     showDialog(
       context: context,
-      builder: (_) => Dialog(
+      builder: (ctx) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -242,16 +189,18 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '$name — Valid ID',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                  Expanded(
+                    child: Text(
+                      '$name — Valid ID',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.of(ctx).pop(),
                   ),
                 ],
               ),
@@ -270,10 +219,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 ),
                 errorWidget: (_, __, ___) => const SizedBox(
                   height: 200,
-                  child: Center(child: Icon(Icons.broken_image)),
+                  child: Center(child: Icon(Icons.broken_image, size: 48)),
                 ),
               ),
             ),
+            const SizedBox(height: 12),
           ],
         ),
       ),
@@ -294,6 +244,14 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             child: StreamBuilder<List<UserModel>>(
               stream: _getUsers(),
               builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
                 final all = snapshot.data ?? [];
                 final pending = all
                     .where((u) => u.isPending && u.role == 'resident')
@@ -397,12 +355,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                   ...pending.map(
                                     (u) => _PendingRow(
                                       user: u,
-                                      onAccept: () => _setApproval(u.uid, true),
-                                      onReject: () =>
-                                          _setApproval(u.uid, false),
-                                      onViewId: u.idPhotoUrl != null
+                                      onAccept: () => _handleApprove(u),
+                                      onReject: () => _handleReject(u),
+                                      onViewId:
+                                          u.idPhotoUrl != null &&
+                                              u.idPhotoUrl!.isNotEmpty
                                           ? () => _viewIdPhoto(
-                                              context,
                                               u.idPhotoUrl!,
                                               u.fullName,
                                             )
@@ -494,7 +452,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                   ...filtered.map(
                                     (u) => _ActiveRow(
                                       user: u,
-                                      onToggleSuspend: () => _toggleSuspend(u),
+                                      onToggleSuspend: () => u.isActive
+                                          ? _handleSuspend(u)
+                                          : _handleReactivate(u),
                                     ),
                                   ),
                                 ],
@@ -686,26 +646,30 @@ class _PendingRow extends StatelessWidget {
           SizedBox(
             width: 80,
             child: onViewId != null
-                ? GestureDetector(
-                    onTap: onViewId,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+                ? MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: onViewId,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
                         ),
-                      ),
-                      child: const Text(
-                        'View ID',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.primaryBlue,
-                          fontWeight: FontWeight.w600,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: const Text(
+                          'View ID',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.primaryBlue,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     ),
@@ -719,7 +683,7 @@ class _PendingRow extends StatelessWidget {
             child: Row(
               children: [
                 _ActionBtn(
-                  label: 'Accept',
+                  label: 'Approve',
                   color: AppTheme.successGreen,
                   onTap: onAccept,
                 ),
@@ -816,6 +780,7 @@ class _ActiveRow extends StatelessWidget {
                   color: AppTheme.primaryBlue,
                   fontWeight: FontWeight.w600,
                 ),
+                textAlign: TextAlign.center,
               ),
             ),
           ),
@@ -836,6 +801,7 @@ class _ActiveRow extends StatelessWidget {
                   color: user.isActive ? AppTheme.successGreen : Colors.red,
                   fontWeight: FontWeight.w600,
                 ),
+                textAlign: TextAlign.center,
               ),
             ),
           ),
