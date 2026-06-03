@@ -1,10 +1,19 @@
 # iPILA - Municipal Waste Management System
-# Build: 2026-02-05 - User management fixes
+# Build: 2026-02-05 - User management fixes v3
+# Force rebuild: Clear all caches
 FROM ghcr.io/cirruslabs/flutter:stable AS build
 
 WORKDIR /app
+
+# Copy dependency files first
+COPY pubspec.* ./
+RUN flutter pub get
+
+# Copy all source files
 COPY . .
 
+# Clean and rebuild completely
+RUN flutter clean
 RUN flutter pub get
 RUN flutter build web --release
 
