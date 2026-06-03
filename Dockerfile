@@ -1,3 +1,5 @@
+# iPILA - Municipal Waste Management System
+# Build: 2026-02-05 - User management fixes
 FROM ghcr.io/cirruslabs/flutter:stable AS build
 
 WORKDIR /app
