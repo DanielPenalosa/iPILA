@@ -29,6 +29,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   }
 
   void _handleApprove(UserModel user) async {
+    debugPrint('=== APPROVE USER DEBUG === Starting approval for ${user.uid}');
     final confirmed = await _showConfirmDialog(
       title: 'Approve Account',
       message:
@@ -37,9 +38,13 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       isDestructive: false,
     );
 
+    debugPrint('=== APPROVE USER DEBUG === Confirmed: $confirmed');
+
     if (confirmed) {
       try {
+        debugPrint('=== APPROVE USER DEBUG === Calling approveUser service');
         await _userService.approveUser(user.uid);
+        debugPrint('=== APPROVE USER DEBUG === Success!');
         if (mounted) {
           _userService.showSuccessMessage(
             context,
@@ -47,6 +52,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           );
         }
       } catch (e) {
+        debugPrint('=== APPROVE USER DEBUG === Error: $e');
         if (mounted) {
           _userService.showErrorMessage(context, 'Failed to approve: $e');
         }
@@ -841,9 +847,13 @@ class _ActionBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('=== ACTION BUTTON === Building button: $label');
     return AdminHoverButton(
       label: label,
-      onTap: onTap,
+      onTap: () {
+        debugPrint('=== ACTION BUTTON === Button tapped: $label');
+        onTap();
+      },
       color: color,
       small: true,
     );
