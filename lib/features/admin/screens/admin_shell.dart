@@ -1,6 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/report_model.dart';
 import '../../../data/services/report_service.dart';
@@ -533,6 +535,9 @@ class AdminPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final userId = auth.user?.uid ?? '';
+
     return Container(
       padding: const EdgeInsets.fromLTRB(32, 28, 32, 24),
       decoration: BoxDecoration(
@@ -568,6 +573,57 @@ class AdminPageHeader extends StatelessWidget {
                 ],
               ],
             ),
+          ),
+          // Notification Bell Icon
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection(AppConstants.notificationsCollection)
+                .where('userId', isEqualTo: userId)
+                .where('isRead', isEqualTo: false)
+                .snapshots(),
+            builder: (context, snapshot) {
+              final unread = snapshot.data?.docs.length ?? 0;
+
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.notifications_outlined,
+                      color: Colors.grey[700],
+                      size: 24,
+                    ),
+                    onPressed: () => context.push('/admin/alerts'),
+                    tooltip: 'Notifications',
+                  ),
+                  if (unread > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryRed,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        constraints: const BoxConstraints(minWidth: 18),
+                        child: Text(
+                          unread > 99 ? '99+' : '$unread',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
           if (actions != null) ...actions!,
         ],

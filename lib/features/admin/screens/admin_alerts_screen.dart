@@ -23,13 +23,18 @@ class _AdminAlertsScreenState extends State<AdminAlertsScreen> {
       child: Column(
         children: [
           const AdminPageHeader(
-            title: 'Alerts',
-            subtitle: 'Municipality of Pila, Laguna',
+            title: 'Alerts & Notifications',
+            subtitle:
+                'Stay updated on reports, follow-ups, and system activity',
           ),
           Expanded(
             child: StreamBuilder<List<ReportModel>>(
               stream: ReportService().getAllReports(),
               builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
                 final reports = (snapshot.data ?? [])
                     .where((r) => !_dismissed.contains(r.id))
                     .toList();
@@ -59,7 +64,7 @@ class _AdminAlertsScreenState extends State<AdminAlertsScreen> {
                 return ListView.separated(
                   padding: const EdgeInsets.all(24),
                   itemCount: alerts.length,
-                  separatorBuilder: (_, _x) => const SizedBox(height: 8),
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (_, i) => _AlertRow(
                     alert: alerts[i],
                     onDismiss: () =>
@@ -81,9 +86,58 @@ class _AdminAlertsScreenState extends State<AdminAlertsScreen> {
 
   List<_AlertItem> _buildAlerts(List<ReportModel> reports) {
     final alerts = <_AlertItem>[];
-    for (final r in reports) {
+
+    // Sort reports: high followers first, then by status priority
+    final sortedReports = List<ReportModel>.from(reports);
+    sortedReports.sort((a, b) {
+      // Priority 1: High follower counts first
+      if (a.followerCount >= 5 && b.followerCount < 5) return -1;
+      if (b.followerCount >= 5 && a.followerCount < 5) return 1;
+
+      // Priority 2: Status-based sorting
+      const statusPriority = {
+        'Submitted': 5,
+        'Overdue': 4,
+        'In Progress': 2,
+        'Completed': 1,
+      };
+      final aPriority = statusPriority[a.currentStatus] ?? 3;
+      final bPriority = statusPriority[b.currentStatus] ?? 3;
+      if (aPriority != bPriority) return bPriority.compareTo(aPriority);
+
+      // Priority 3: Most recent first
+      return b.updatedAt.compareTo(a.updatedAt);
+    });
+
+    for (final r in sortedReports) {
       final timeAgo = _timeAgo(r.updatedAt);
-      if (r.currentStatus == 'Submitted') {
+
+      // High priority follow-up alert
+      if (r.followerCount >= 5) {
+        alerts.add(
+          _AlertItem(
+            type: 'followup',
+            message:
+                'HIGH PRIORITY: ${r.category} in Brgy. ${r.barangay} has ${r.followerCount} residents following. Multiple citizens are concerned about this issue.',
+            reportId: r.id,
+            time: timeAgo,
+          ),
+        );
+      }
+      // New report with some followers
+      else if (r.followerCount >= 2 && r.currentStatus == 'Submitted') {
+        alerts.add(
+          _AlertItem(
+            type: 'followup',
+            message:
+                'Follow-Up: ${r.category} in Brgy. ${r.barangay} has ${r.followerCount} residents following. Community interest growing.',
+            reportId: r.id,
+            time: timeAgo,
+          ),
+        );
+      }
+      // Standard alerts
+      else if (r.currentStatus == 'Submitted') {
         alerts.add(
           _AlertItem(
             type: 'new',
@@ -154,6 +208,8 @@ class _AlertRow extends StatelessWidget {
 
   Color get _color {
     switch (alert.type) {
+      case 'followup':
+        return Colors.deepPurple;
       case 'new':
         return Colors.orange;
       case 'overdue':
@@ -167,6 +223,8 @@ class _AlertRow extends StatelessWidget {
 
   String get _typeLabel {
     switch (alert.type) {
+      case 'followup':
+        return 'Community Follow-Up';
       case 'new':
         return 'New Report';
       case 'overdue':
