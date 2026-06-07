@@ -244,8 +244,9 @@ class WebResidentShell extends StatelessWidget {
                         ),
                       ],
                     ),
-                    itemBuilder: (context) => [
+                    itemBuilder: (context) => <PopupMenuEntry>[
                       PopupMenuItem(
+                        onTap: () {},
                         child: const Row(
                           children: [
                             Icon(Icons.person_outline, size: 18),
@@ -253,10 +254,10 @@ class WebResidentShell extends StatelessWidget {
                             Text('Profile'),
                           ],
                         ),
-                        onTap: () {},
                       ),
                       const PopupMenuDivider(),
                       PopupMenuItem(
+                        onTap: () => auth.signOut(),
                         child: const Row(
                           children: [
                             Icon(Icons.logout, size: 18, color: Colors.red),
@@ -267,7 +268,6 @@ class WebResidentShell extends StatelessWidget {
                             ),
                           ],
                         ),
-                        onTap: () => auth.signOut(),
                       ),
                     ],
                   ),
