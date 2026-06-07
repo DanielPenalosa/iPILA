@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -9,6 +10,7 @@ import '../../../data/models/report_model.dart';
 import '../../../data/services/report_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../widgets/mobile_shell.dart';
+import '../widgets/web_resident_shell.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -33,21 +35,18 @@ class HomeScreen extends StatelessWidget {
             .join() ??
         'R';
 
-    return MobileShell(
-      title: 'iPILA',
-      currentIndex: 0,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Greeting row
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+    final content = SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(20, 8, 20, kIsWeb ? 40 : 100),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Greeting row
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                       Text(
                         '${_greeting()}, $firstName',
                         style: const TextStyle(
