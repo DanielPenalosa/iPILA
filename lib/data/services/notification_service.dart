@@ -113,4 +113,59 @@ class NotificationService {
         .doc(notificationId)
         .set(notificationData);
   }
+
+  /// Delete a single notification
+  Future<void> deleteNotification(String notificationId) async {
+    await _db
+        .collection(AppConstants.notificationsCollection)
+        .doc(notificationId)
+        .delete();
+  }
+
+  /// Delete all notifications for a user
+  Future<void> deleteAllNotifications(String userId) async {
+    final batch = _db.batch();
+    final notifications = await _db
+        .collection(AppConstants.notificationsCollection)
+        .where('userId', isEqualTo: userId)
+        .get();
+
+    for (final doc in notifications.docs) {
+      batch.delete(doc.reference);
+    }
+
+    await batch.commit();
+  }
+
+  /// Mark all as read for a user
+  Future<void> markAllAsRead(String userId) async {
+    final batch = _db.batch();
+    final notifications = await _db
+        .collection(AppConstants.notificationsCollection)
+        .where('userId', isEqualTo: userId)
+        .where('isRead', isEqualTo: false)
+        .get();
+
+    for (final doc in notifications.docs) {
+      batch.update(doc.reference, {'isRead': true});
+    }
+
+    await batch.commit();
+  }
+
+  /// Send report status update notification
+  Future<void> sendReportStatusUpdate({
+    required String userId,
+    required String reportId,
+    required String reportTitle,
+    required String newStatus,
+  }) async {
+    await createReportNotification(
+      userId: userId,
+      reportId: reportId,
+      title: 'Report Status Updated',
+      body: 'Your report "$reportTitle" status changed to: $newStatus',
+      type: 'report_update',
+    );
+  }
 }
