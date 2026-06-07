@@ -305,6 +305,24 @@ class ReportService {
     });
   }
 
+  // Get reports with high follower count (follow-ups)
+  Stream<List<ReportModel>> getFollowUpReports({int minFollowers = 2}) {
+    return _db
+        .collection(AppConstants.reportsCollection)
+        .where('followerCount', isGreaterThanOrEqualTo: minFollowers)
+        .snapshots()
+        .map((snap) {
+          final list = snap.docs.map(ReportModel.fromFirestore).toList();
+          // Sort by follower count (descending) then by date (descending)
+          list.sort((a, b) {
+            final followerCompare = b.followerCount.compareTo(a.followerCount);
+            if (followerCompare != 0) return followerCompare;
+            return b.createdAt.compareTo(a.createdAt);
+          });
+          return list;
+        });
+  }
+
   // Find similar reports for duplicate detection
   Future<List<ReportModel>> findSimilarReports({
     required String category,
@@ -444,6 +462,20 @@ class ReportService {
       final reportData = reportDoc.data()!;
       final followerCount = reportData['followerCount'] ?? 0;
       final category = reportData['category'] ?? 'Report';
+      final barangay = reportData['barangay'] ?? 'Unknown';
+      final description = reportData['description'] ?? '';
+      final shortDesc = description.length > 50
+          ? '${description.substring(0, 50)}...'
+          : description;
+
+      // Get user info for personalized notification
+      final userDoc = await _db
+          .collection(AppConstants.usersCollection)
+          .doc(userId)
+          .get();
+      final userName = userDoc.exists
+          ? (userDoc.data()?['fullName'] ?? 'A citizen')
+          : 'A citizen';
 
       // Get all admin users
       final adminsSnap = await _db
@@ -451,18 +483,44 @@ class ReportService {
           .where('role', whereIn: ['admin', 'superadmin'])
           .get();
 
+      // Create appropriate notification based on follower count
+      String title;
+      String body;
+      String notificationType;
+
+      if (followerCount == 1) {
+        title = 'New Report Follow-Up';
+        body =
+            '$userName is following up on a $category report in Brgy. $barangay. "$shortDesc"';
+        notificationType = 'info';
+      } else if (followerCount >= 5) {
+        title = 'High Priority Report';
+        body =
+            '$category report now has $followerCount citizens following. This issue needs attention! Brgy. $barangay: "$shortDesc"';
+        notificationType = 'warning';
+      } else {
+        title = 'Report Follow-Up';
+        body =
+            '$followerCount citizens are now following this $category report in Brgy. $barangay. Consider prioritizing.';
+        notificationType = 'info';
+      }
+
       for (final adminDoc in adminsSnap.docs) {
         await _notificationService.createNotification(
           userId: adminDoc.id,
-          title: 'Report Gaining Attention',
-          body:
-              '$category report now has $followerCount followers. Consider prioritizing this issue.',
-          type: 'info',
-          data: {'reportId': reportId, 'type': 'report_followers'},
+          title: title,
+          body: body,
+          type: notificationType,
+          data: {
+            'reportId': reportId,
+            'type': 'report_follow_up',
+            'followerCount': followerCount.toString(),
+          },
         );
       }
     } catch (e) {
       // Silent fail - notification is not critical
+      debugPrint('Error notifying admin about follower: $e');
     }
   }
 }

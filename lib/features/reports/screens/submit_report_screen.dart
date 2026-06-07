@@ -154,81 +154,171 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
   void _showDuplicateDialog() {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Similar Report Found'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            const Text(
-              'This concern has already been reported by another resident. Would you like to track or follow up on the existing report instead?',
-            ),
-            const SizedBox(height: 16),
-            if (_similarReports.isNotEmpty) ...[
+            const Icon(Icons.info_outline, color: AppTheme.primaryBlue),
+            const SizedBox(width: 8),
+            const Text('Similar Report Exists'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               const Text(
-                'Similar reports:',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                'Good news! This issue has already been reported and is being tracked by the community.',
+                style: TextStyle(fontWeight: FontWeight.w600),
               ),
-              const SizedBox(height: 8),
-              ..._similarReports
-                  .take(3)
-                  .map(
-                    (report) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${report.category} - ${report.barangay}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              report.description.length > 60
-                                  ? '${report.description.substring(0, 60)}...'
-                                  : report.description,
-                              style: const TextStyle(fontSize: 11),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${report.followerCount} followers · ${report.currentStatus}',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlue.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.people_outline,
+                      color: AppTheme.primaryBlue,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Follow the existing report to add your support and get updates on its progress. More followers = higher priority for admin!',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.primaryBlue,
                         ),
                       ),
                     ),
-                  ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (_similarReports.isNotEmpty) ...[
+                const Text(
+                  'Existing reports:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                ..._similarReports
+                    .take(3)
+                    .map(
+                      (report) => GestureDetector(
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.go('/report/${report.id}');
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppTheme.borderColor),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        '${report.category} - Brgy. ${report.barangay}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.statusColor(
+                                          report.currentStatus,
+                                        ).withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        report.currentStatus,
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.statusColor(
+                                            report.currentStatus,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  report.description.length > 70
+                                      ? '${report.description.substring(0, 70)}...'
+                                      : report.description,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.people,
+                                      size: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${report.followerCount} ${report.followerCount == 1 ? 'follower' : 'followers'}',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+              ],
             ],
-          ],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          OutlinedButton.icon(
             onPressed: () {
               Navigator.pop(context);
               if (_similarReports.isNotEmpty) {
                 context.go('/report/${_similarReports.first.id}');
               }
             },
-            child: const Text('View Report'),
+            icon: const Icon(Icons.visibility_outlined, size: 18),
+            label: const Text('View Report'),
           ),
-          ElevatedButton(
+          ElevatedButton.icon(
             onPressed: () async {
               Navigator.pop(context);
               if (_similarReports.isNotEmpty) {
@@ -240,16 +330,23 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                 if (mounted) {
                   AppToast.show(
                     context,
-                    'You are now following this report',
+                    'You\'re now following this report! Admin will be notified.',
                     type: ToastType.success,
                   );
                   context.go('/report/${_similarReports.first.id}');
                 }
               }
             },
-            child: const Text('Follow Report'),
+            icon: const Icon(Icons.notifications_active, size: 18),
+            label: const Text('Follow & Support'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+              foregroundColor: Colors.white,
+            ),
           ),
         ],
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actionsAlignment: MainAxisAlignment.spaceBetween,
       ),
     );
   }
