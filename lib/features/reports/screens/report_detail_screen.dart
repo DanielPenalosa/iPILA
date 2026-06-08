@@ -165,58 +165,176 @@ class ReportDetailScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                 ],
                 if (report.afterPhotoUrl != null) ...[
-                  const Text(
-                    'Before & After',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.successGreen.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppTheme.successGreen.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            const Text(
-                              'Before',
-                              style: TextStyle(color: AppTheme.textMuted),
+                            Icon(
+                              Icons.check_circle,
+                              color: AppTheme.successGreen,
+                              size: 20,
                             ),
-                            const SizedBox(height: 4),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                report.photoUrls.first,
-                                height: 120,
-                                fit: BoxFit.cover,
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Issue Resolved!',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                color: AppTheme.successGreen,
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(
-                        Icons.arrow_forward_rounded,
-                        color: AppTheme.successGreen,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            const Text(
-                              'After',
-                              style: TextStyle(color: AppTheme.successGreen),
+                        if (report.completedAt != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Completed on ${DateFormat('MMM d, yyyy').format(report.completedAt!)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
                             ),
-                            const SizedBox(height: 4),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                report.afterPhotoUrl!,
-                                height: 120,
-                                fit: BoxFit.cover,
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[200],
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'BEFORE',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.textMuted,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(
+                                      report.photoUrls.first,
+                                      height: 150,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              child: Column(
+                                children: [
+                                  const SizedBox(height: 24),
+                                  Icon(
+                                    Icons.arrow_forward_rounded,
+                                    color: AppTheme.successGreen,
+                                    size: 32,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.successGreen,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'AFTER',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(
+                                      report.afterPhotoUrl!,
+                                      height: 150,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
+                        if (report.completionRemarks != null &&
+                            report.completionRemarks!.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          const Divider(),
+                          const SizedBox(height: 8),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.assignment_outlined,
+                                size: 16,
+                                color: Colors.grey[600],
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'What was done',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      report.completionRemarks!,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey[800],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
                 ],
