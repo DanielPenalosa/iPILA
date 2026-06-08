@@ -230,13 +230,19 @@ class ReportDetailScreen extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.network(
-                                      report.photoUrls.first,
-                                      height: 150,
-                                      width: double.infinity,
-                                      fit: BoxFit.cover,
+                                  Container(
+                                    height: 150,
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[100],
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.network(
+                                        report.photoUrls.first,
+                                        fit: BoxFit.contain,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -279,13 +285,19 @@ class ReportDetailScreen extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.network(
-                                      report.afterPhotoUrl!,
-                                      height: 150,
-                                      width: double.infinity,
-                                      fit: BoxFit.cover,
+                                  Container(
+                                    height: 150,
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[100],
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.network(
+                                        report.afterPhotoUrl!,
+                                        fit: BoxFit.contain,
+                                      ),
                                     ),
                                   ),
                                 ],
