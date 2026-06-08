@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -25,6 +26,7 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
   final ReportService _service = ReportService();
   final _noteCtrl = TextEditingController();
   File? _afterPhoto;
+  XFile? _afterPhotoWeb;
   bool _isUpdating = false;
   bool _disposed = false;
 
@@ -38,11 +40,17 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
   Future<void> _pickAfterPhoto() async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
-      source: ImageSource.camera,
+      source: ImageSource.gallery,
       imageQuality: 70,
     );
     if (picked != null && !_disposed && mounted) {
-      setState(() => _afterPhoto = File(picked.path));
+      setState(() {
+        _afterPhotoWeb = picked; // Store XFile for web
+        // Only create File for mobile
+        if (!kIsWeb) {
+          _afterPhoto = File(picked.path);
+        }
+      });
     }
   }
 
@@ -64,13 +72,18 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
         afterPhoto: newStatus == AppConstants.statusCompleted
             ? _afterPhoto
             : null,
-        afterPhotoWeb: null,
+        afterPhotoWeb: newStatus == AppConstants.statusCompleted
+            ? _afterPhotoWeb
+            : null,
       );
 
       if (!_disposed && mounted) {
         if (result['success'] == true) {
           _noteCtrl.clear();
-          setState(() => _afterPhoto = null);
+          setState(() {
+            _afterPhoto = null;
+            _afterPhotoWeb = null;
+          });
           AppToast.show(
             context,
             'Status updated to $newStatus',
@@ -153,7 +166,7 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
               if (selectedStatus == AppConstants.statusCompleted) ...[
                 const SizedBox(height: 12),
                 AdminHoverButton(
-                  label: _afterPhoto != null
+                  label: (_afterPhoto != null || _afterPhotoWeb != null)
                       ? 'After photo added ✓'
                       : 'Add After Photo',
                   icon: Icons.add_a_photo_outlined,
