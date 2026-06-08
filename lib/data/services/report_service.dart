@@ -86,49 +86,89 @@ class ReportService {
     return reportId;
   }
 
-  // Update report status (admin)
-  Future<void> updateStatus({
+  // Update report status (admin) with completion validation
+  Future<Map<String, dynamic>> updateStatus({
     required String reportId,
     required String newStatus,
     required String updatedBy,
     String? note,
+    String? adminRemarks,
     File? afterPhoto,
+    XFile? afterPhotoWeb,
   }) async {
-    // Get the report first to get userId
+    // Get the report first to validate and get data
     final reportDoc = await _db
         .collection(AppConstants.reportsCollection)
         .doc(reportId)
         .get();
 
-    if (!reportDoc.exists) return;
+    if (!reportDoc.exists) {
+      return {'success': false, 'error': 'Report not found'};
+    }
 
     final reportData = reportDoc.data()!;
     final userId = reportData['userId'] as String;
     final category = reportData['category'] as String? ?? 'Report';
+    final photoUrls = List<String>.from(reportData['photoUrls'] ?? []);
 
-    String? afterPhotoUrl;
-    if (afterPhoto != null && newStatus == AppConstants.statusCompleted) {
-      afterPhotoUrl = await CloudinaryService.uploadImage(
-        afterPhoto,
-        folder: 'ipila/reports/$reportId',
-      );
+    // VALIDATION: For completion status, require after photo and before photo exists
+    if (newStatus == AppConstants.statusCompleted) {
+      if (photoUrls.isEmpty) {
+        return {
+          'success': false,
+          'error': 'Cannot complete: No before photo exists for this report',
+        };
+      }
+
+      if (afterPhoto == null && afterPhotoWeb == null) {
+        return {
+          'success': false,
+          'error':
+              'Cannot complete: After photo is required to mark report as completed',
+        };
+      }
     }
 
+    // Upload after photo if provided
+    String? afterPhotoUrl;
+    if (afterPhoto != null || afterPhotoWeb != null) {
+      if (kIsWeb && afterPhotoWeb != null) {
+        afterPhotoUrl = await CloudinaryService.uploadImageWeb(
+          afterPhotoWeb,
+          folder: 'ipila/reports/$reportId/completion',
+        );
+      } else if (afterPhoto != null) {
+        afterPhotoUrl = await CloudinaryService.uploadImage(
+          afterPhoto,
+          folder: 'ipila/reports/$reportId/completion',
+        );
+      }
+    }
+
+    final now = DateTime.now();
     final statusEntry = ReportStatus(
       status: newStatus,
-      timestamp: DateTime.now(),
+      timestamp: now,
       note: note,
       updatedBy: updatedBy,
+      adminRemarks: adminRemarks,
     );
 
     final updateData = <String, dynamic>{
       'currentStatus': newStatus,
-      'updatedAt': Timestamp.fromDate(DateTime.now()),
+      'updatedAt': Timestamp.fromDate(now),
       'statusHistory': FieldValue.arrayUnion([statusEntry.toMap()]),
     };
 
-    if (afterPhotoUrl != null) {
-      updateData['afterPhotoUrl'] = afterPhotoUrl;
+    // Add completion-specific data
+    if (newStatus == AppConstants.statusCompleted) {
+      if (afterPhotoUrl != null) {
+        updateData['afterPhotoUrl'] = afterPhotoUrl;
+      }
+      if (adminRemarks != null && adminRemarks.isNotEmpty) {
+        updateData['completionRemarks'] = adminRemarks;
+      }
+      updateData['completedAt'] = Timestamp.fromDate(now);
     }
 
     await _db
@@ -154,9 +194,9 @@ class ReportService {
         notificationType = 'info';
         break;
       case 'Completed':
-        notificationTitle = 'Report Completed';
+        notificationTitle = 'Report Completed! ✓';
         notificationBody =
-            'Your $category report has been resolved. Thank you for helping improve our community!';
+            'Great news! Your $category report has been resolved. Check the before & after photos to see the improvement. Thank you for helping our community!';
         notificationType = 'success';
         break;
       case 'Rejected':
@@ -174,6 +214,12 @@ class ReportService {
       notificationBody += '\n\nNote: $note';
     }
 
+    if (newStatus == AppConstants.statusCompleted &&
+        adminRemarks != null &&
+        adminRemarks.isNotEmpty) {
+      notificationBody += '\n\nAdmin remarks: $adminRemarks';
+    }
+
     await _notificationService.createReportNotification(
       userId: userId,
       reportId: reportId,
@@ -181,6 +227,26 @@ class ReportService {
       body: notificationBody,
       type: notificationType,
     );
+
+    // Also notify all followers about completion
+    if (newStatus == AppConstants.statusCompleted) {
+      final followers = List<String>.from(reportData['followers'] ?? []);
+      for (final followerId in followers) {
+        if (followerId != userId) {
+          // Don't duplicate for the original reporter
+          await _notificationService.createReportNotification(
+            userId: followerId,
+            reportId: reportId,
+            title: 'Followed Report Completed',
+            body:
+                'A $category report you were following in ${reportData['barangay']} has been completed. Check out the results!',
+            type: 'success',
+          );
+        }
+      }
+    }
+
+    return {'success': true, 'afterPhotoUrl': afterPhotoUrl};
   }
 
   // Assign report to staff

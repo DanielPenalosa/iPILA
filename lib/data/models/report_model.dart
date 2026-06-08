@@ -5,12 +5,14 @@ class ReportStatus {
   final DateTime timestamp;
   final String? note;
   final String? updatedBy;
+  final String? adminRemarks; // Additional remarks for completion
 
   ReportStatus({
     required this.status,
     required this.timestamp,
     this.note,
     this.updatedBy,
+    this.adminRemarks,
   });
 
   factory ReportStatus.fromMap(Map<String, dynamic> map) => ReportStatus(
@@ -18,6 +20,7 @@ class ReportStatus {
     timestamp: (map['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
     note: map['note'],
     updatedBy: map['updatedBy'],
+    adminRemarks: map['adminRemarks'],
   );
 
   Map<String, dynamic> toMap() => {
@@ -25,6 +28,7 @@ class ReportStatus {
     'timestamp': Timestamp.fromDate(timestamp),
     'note': note,
     'updatedBy': updatedBy,
+    'adminRemarks': adminRemarks,
   };
 }
 
@@ -40,7 +44,9 @@ class ReportModel {
   final double longitude;
   final String address;
   final List<String> photoUrls;
-  final String? afterPhotoUrl; // before-and-after
+  final String? afterPhotoUrl; // after photo for completion evidence
+  final String? completionRemarks; // admin remarks when completing
+  final DateTime? completedAt; // timestamp when completed
   final String currentStatus;
   final List<ReportStatus> statusHistory;
   final String? assignedTo;
@@ -64,6 +70,8 @@ class ReportModel {
     required this.address,
     required this.photoUrls,
     this.afterPhotoUrl,
+    this.completionRemarks,
+    this.completedAt,
     required this.currentStatus,
     required this.statusHistory,
     this.assignedTo,
@@ -91,6 +99,8 @@ class ReportModel {
       address: data['address'] ?? '',
       photoUrls: List<String>.from(data['photoUrls'] ?? []),
       afterPhotoUrl: data['afterPhotoUrl'],
+      completionRemarks: data['completionRemarks'],
+      completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
       currentStatus: data['currentStatus'] ?? 'Submitted',
       statusHistory: (data['statusHistory'] as List<dynamic>? ?? [])
           .map((e) => ReportStatus.fromMap(e as Map<String, dynamic>))
@@ -117,6 +127,10 @@ class ReportModel {
     'address': address,
     'photoUrls': photoUrls,
     'afterPhotoUrl': afterPhotoUrl,
+    'completionRemarks': completionRemarks,
+    'completedAt': completedAt != null
+        ? Timestamp.fromDate(completedAt!)
+        : null,
     'currentStatus': currentStatus,
     'statusHistory': statusHistory.map((s) => s.toMap()).toList(),
     'assignedTo': assignedTo,
