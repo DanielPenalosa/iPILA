@@ -55,31 +55,38 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
 
     setState(() => _isUpdating = true);
     try {
-      await _service.updateStatus(
+      final result = await _service.updateStatus(
         reportId: reportId,
         newStatus: newStatus,
         updatedBy: adminName,
         note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+        adminRemarks: null,
         afterPhoto: newStatus == AppConstants.statusCompleted
             ? _afterPhoto
             : null,
+        afterPhotoWeb: null,
       );
+
       if (!_disposed && mounted) {
-        _noteCtrl.clear();
-        setState(() => _afterPhoto = null);
-        AppToast.show(
-          context,
-          'Status updated to $newStatus',
-          type: ToastType.success,
-        );
+        if (result['success'] == true) {
+          _noteCtrl.clear();
+          setState(() => _afterPhoto = null);
+          AppToast.show(
+            context,
+            'Status updated to $newStatus',
+            type: ToastType.success,
+          );
+        } else {
+          AppToast.show(
+            context,
+            result['error'] ?? 'Failed to update status',
+            type: ToastType.error,
+          );
+        }
       }
     } catch (e) {
       if (!_disposed && mounted) {
-        AppToast.show(
-          context,
-          'Failed to update status. Please try again.',
-          type: ToastType.error,
-        );
+        AppToast.show(context, 'Error: ${e.toString()}', type: ToastType.error);
       }
     } finally {
       if (!_disposed && mounted) setState(() => _isUpdating = false);
