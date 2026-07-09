@@ -34,7 +34,6 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
   double? _latitude;
   double? _longitude;
   String _address = '';
-  bool _isAnonymous = false;
   bool _gettingLocation = false;
   bool _isInsidePila = false;
   List<ReportModel> _similarReports = [];
@@ -399,7 +398,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
       address: _address,
       photos: kIsWeb ? null : _photos,
       photosWeb: kIsWeb ? _photosWeb : null,
-      isAnonymous: _isAnonymous,
+      isAnonymous: false, // Always show user's name
     );
     if (success && mounted) {
       AppToast.show(
@@ -611,30 +610,6 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                       ),
                     ],
                   ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Anonymous
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.borderColor),
-                ),
-                child: SwitchListTile(
-                  value: _isAnonymous,
-                  onChanged: (v) => setState(() => _isAnonymous = v),
-                  title: const Text(
-                    'Submit Anonymously',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: const Text(
-                    'Your name will not be shown on the report',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                  activeColor: AppTheme.primaryBlue,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                 ),
               ),
               const SizedBox(height: 24),
