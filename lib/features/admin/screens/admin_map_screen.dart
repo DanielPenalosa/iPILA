@@ -148,142 +148,150 @@ class _AdminMapScreenState extends State<AdminMapScreen> {
           ),
           const Divider(height: 1),
           Expanded(
-            child: StreamBuilder<List<ReportModel>>(
-              stream: ReportService().getAllReports(),
-              builder: (context, snapshot) {
-                final reports = snapshot.data ?? [];
-                final filtered = _applyFilters(reports);
+            child: SingleChildScrollView(
+              child: StreamBuilder<List<ReportModel>>(
+                stream: ReportService().getAllReports(),
+                builder: (context, snapshot) {
+                  final reports = snapshot.data ?? [];
+                  final filtered = _applyFilters(reports);
 
-                return Row(
-                  children: [
-                    // Map
-                    Expanded(
-                      flex: 3,
-                      child: FlutterMap(
-                        key: const ValueKey('admin_map'),
-                        mapController: _mapController,
-                        options: const MapOptions(
-                          initialCenter: _center,
-                          initialZoom: 13,
-                        ),
-                        children: [
-                          TileLayer(
-                            urlTemplate:
-                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.pila.ipila',
-                          ),
-                          MarkerLayer(
-                            markers: filtered.map((r) {
-                              final color = _markerColor(r.currentStatus);
-                              return Marker(
-                                point: LatLng(r.latitude, r.longitude),
-                                width: 36,
-                                height: 36,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (_) => AlertDialog(
-                                        title: Text(r.category),
-                                        content: Text(
-                                          'Brgy. ${r.barangay}\n'
-                                          'Status: ${r.currentStatus}\n'
-                                          'Reported by: ${r.isAnonymous ? "Anonymous" : r.userFullName}',
-                                        ),
-                                        actions: [
-                                          AdminHoverButton(
-                                            label: 'Close',
-                                            onTap: () => Navigator.pop(context),
-                                            outlined: true,
-                                            small: true,
+                  return SizedBox(
+                    height: MediaQuery.of(context).size.height - 200,
+                    child: Row(
+                      children: [
+                        // Map
+                        Expanded(
+                          flex: 3,
+                          child: FlutterMap(
+                            key: const ValueKey('admin_map'),
+                            mapController: _mapController,
+                            options: const MapOptions(
+                              initialCenter: _center,
+                              initialZoom: 13,
+                            ),
+                            children: [
+                              TileLayer(
+                                urlTemplate:
+                                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                userAgentPackageName: 'com.pila.ipila',
+                              ),
+                              MarkerLayer(
+                                markers: filtered.map((r) {
+                                  final color = _markerColor(r.currentStatus);
+                                  return Marker(
+                                    point: LatLng(r.latitude, r.longitude),
+                                    width: 36,
+                                    height: 36,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (_) => AlertDialog(
+                                            title: Text(r.category),
+                                            content: Text(
+                                              'Brgy. ${r.barangay}\n'
+                                              'Status: ${r.currentStatus}\n'
+                                              'Reported by: ${r.isAnonymous ? "Anonymous" : r.userFullName}',
+                                            ),
+                                            actions: [
+                                              AdminHoverButton(
+                                                label: 'Close',
+                                                onTap: () =>
+                                                    Navigator.pop(context),
+                                                outlined: true,
+                                                small: true,
+                                              ),
+                                            ],
                                           ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: color,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.white,
-                                        width: 2,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: color.withValues(alpha: 0.4),
-                                          blurRadius: 6,
-                                          offset: const Offset(0, 2),
+                                        );
+                                      },
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: color,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 2,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: color.withValues(
+                                                alpha: 0.4,
+                                              ),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
                                         ),
-                                      ],
+                                        child: const Icon(
+                                          Icons.location_on,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                      ),
                                     ),
-                                    child: const Icon(
-                                      Icons.location_on,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Side panel
+                        Container(
+                          width: 280,
+                          color: Colors.white,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Text(
+                                  '${filtered.length} reports shown',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
                                   ),
                                 ),
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Side panel
-                    Container(
-                      width: 280,
-                      color: Colors.white,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Text(
-                              '${filtered.length} reports shown',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
                               ),
-                            ),
-                          ),
-                          const Divider(height: 1),
-                          Expanded(
-                            child: filtered.isEmpty
-                                ? const Center(
-                                    child: Text(
-                                      'No reports match filters.',
-                                      style: TextStyle(
-                                        color: AppTheme.textMuted,
-                                      ),
-                                    ),
-                                  )
-                                : ListView.separated(
-                                    itemCount: filtered.length,
-                                    separatorBuilder: (_, __) =>
-                                        const Divider(height: 1),
-                                    itemBuilder: (_, i) {
-                                      final r = filtered[i];
-                                      final color = AppTheme.statusColor(
-                                        r.currentStatus,
-                                      );
-                                      return _ReportListItem(
-                                        report: r,
-                                        color: color,
-                                        onTap: () => _mapController.move(
-                                          LatLng(r.latitude, r.longitude),
-                                          16,
+                              const Divider(height: 1),
+                              Expanded(
+                                child: filtered.isEmpty
+                                    ? const Center(
+                                        child: Text(
+                                          'No reports match filters.',
+                                          style: TextStyle(
+                                            color: AppTheme.textMuted,
+                                          ),
                                         ),
-                                      );
-                                    },
-                                  ),
+                                      )
+                                    : ListView.separated(
+                                        itemCount: filtered.length,
+                                        separatorBuilder: (_, __) =>
+                                            const Divider(height: 1),
+                                        itemBuilder: (_, i) {
+                                          final r = filtered[i];
+                                          final color = AppTheme.statusColor(
+                                            r.currentStatus,
+                                          );
+                                          return _ReportListItem(
+                                            report: r,
+                                            color: color,
+                                            onTap: () => _mapController.move(
+                                              LatLng(r.latitude, r.longitude),
+                                              16,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         ],
