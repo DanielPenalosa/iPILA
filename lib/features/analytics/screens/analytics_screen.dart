@@ -138,10 +138,81 @@ class AnalyticsScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 20),
 
+                            // ── Monthly Trend Analysis ───────────────────
+                            _Card(
+                              title: 'Report Trends (Last 6 Months)',
+                              subtitle:
+                                  'Monthly submission and completion trends',
+                              child: _MonthlyTrendChart(reports: reports),
+                            ),
+                            const SizedBox(height: 20),
+
                             // ── Category breakdown ───────────────────────
                             _Card(
                               title: 'Reports by Category',
                               child: _CategoryChart(reports: reports),
+                            ),
+                            const SizedBox(height: 20),
+
+                            // ── Performance Analysis ─────────────────────
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _Card(
+                                    title: 'Resolution Rate by Category',
+                                    subtitle:
+                                        'Completion percentage per category',
+                                    child: _CategoryResolutionChart(
+                                      reports: reports,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: _Card(
+                                    title: 'Top Performing Barangays',
+                                    subtitle: 'By resolution speed',
+                                    child: _BarangayPerformanceWidget(
+                                      reports: reports,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+
+                            // ── Day of Week Patterns ─────────────────────
+                            _Card(
+                              title: 'Weekly Submission Patterns',
+                              subtitle: 'Reports by day of week',
+                              child: _DayOfWeekChart(reports: reports),
+                            ),
+                            const SizedBox(height: 20),
+
+                            // ── User Engagement ──────────────────────────
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _Card(
+                                    title: 'Most Active Reporters',
+                                    subtitle:
+                                        'Top 5 citizens by reports submitted',
+                                    child: _TopReportersWidget(
+                                      reports: reports,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: _Card(
+                                    title: 'Follow Activity',
+                                    subtitle: 'Community engagement metrics',
+                                    child: _FollowActivityWidget(
+                                      reports: reports,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -918,6 +989,678 @@ class _CategoryChart extends StatelessWidget {
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+}
+
+// ── Monthly Trend Chart ──────────────────────────────────────────────────────
+class _MonthlyTrendChart extends StatelessWidget {
+  final List<ReportModel> reports;
+  const _MonthlyTrendChart({required this.reports});
+
+  @override
+  Widget build(BuildContext context) {
+    if (reports.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text(
+          'No data yet.',
+          style: TextStyle(color: AppTheme.textMuted),
+        ),
+      );
+    }
+
+    // Get last 6 months of data
+    final now = DateTime.now();
+    final months = <DateTime>[];
+    for (int i = 5; i >= 0; i--) {
+      months.add(DateTime(now.year, now.month - i, 1));
+    }
+
+    final submittedData = <FlSpot>[];
+    final completedData = <FlSpot>[];
+
+    for (int i = 0; i < months.length; i++) {
+      final month = months[i];
+      final nextMonth = DateTime(month.year, month.month + 1, 1);
+
+      final submitted = reports.where((r) {
+        return r.createdAt.isAfter(month) && r.createdAt.isBefore(nextMonth);
+      }).length;
+
+      final completed = reports.where((r) {
+        return r.currentStatus == AppConstants.statusCompleted &&
+            r.createdAt.isAfter(month) &&
+            r.createdAt.isBefore(nextMonth);
+      }).length;
+
+      submittedData.add(FlSpot(i.toDouble(), submitted.toDouble()));
+      completedData.add(FlSpot(i.toDouble(), completed.toDouble()));
+    }
+
+    return SizedBox(
+      height: 240,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 16, top: 16),
+        child: LineChart(
+          LineChartData(
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              getDrawingHorizontalLine: (_) =>
+                  FlLine(color: Colors.grey[200]!, strokeWidth: 1),
+            ),
+            titlesData: FlTitlesData(
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  getTitlesWidget: (v, _) {
+                    final i = v.toInt();
+                    if (i < 0 || i >= months.length) return const SizedBox();
+                    final month = months[i];
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        [
+                          'Jan',
+                          'Feb',
+                          'Mar',
+                          'Apr',
+                          'May',
+                          'Jun',
+                          'Jul',
+                          'Aug',
+                          'Sep',
+                          'Oct',
+                          'Nov',
+                          'Dec',
+                        ][month.month - 1],
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 32,
+                  getTitlesWidget: (v, _) => Text(
+                    v.toInt().toString(),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                ),
+              ),
+              topTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+            ),
+            borderData: FlBorderData(show: false),
+            lineBarsData: [
+              LineChartBarData(
+                spots: submittedData,
+                isCurved: true,
+                color: AppTheme.primaryBlue,
+                barWidth: 3,
+                dotData: const FlDotData(show: true),
+                belowBarData: BarAreaData(
+                  show: true,
+                  color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                ),
+              ),
+              LineChartBarData(
+                spots: completedData,
+                isCurved: true,
+                color: AppTheme.successGreen,
+                barWidth: 3,
+                dotData: const FlDotData(show: true),
+                belowBarData: BarAreaData(
+                  show: true,
+                  color: AppTheme.successGreen.withValues(alpha: 0.1),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Category Resolution Chart ────────────────────────────────────────────────
+class _CategoryResolutionChart extends StatelessWidget {
+  final List<ReportModel> reports;
+  const _CategoryResolutionChart({required this.reports});
+
+  @override
+  Widget build(BuildContext context) {
+    final Map<String, Map<String, int>> categoryStats = {};
+
+    for (final r in reports) {
+      categoryStats.putIfAbsent(r.category, () => {'total': 0, 'completed': 0});
+      categoryStats[r.category]!['total'] =
+          categoryStats[r.category]!['total']! + 1;
+      if (r.currentStatus == AppConstants.statusCompleted) {
+        categoryStats[r.category]!['completed'] =
+            categoryStats[r.category]!['completed']! + 1;
+      }
+    }
+
+    if (categoryStats.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text(
+          'No data yet.',
+          style: TextStyle(color: AppTheme.textMuted),
+        ),
+      );
+    }
+
+    final sortedCategories = categoryStats.entries.toList()
+      ..sort((a, b) {
+        final aRate = a.value['completed']! / a.value['total']!;
+        final bRate = b.value['completed']! / b.value['total']!;
+        return bRate.compareTo(aRate);
+      });
+
+    return Column(
+      children: [
+        const SizedBox(height: 12),
+        ...sortedCategories.map((e) {
+          final total = e.value['total']!;
+          final completed = e.value['completed']!;
+          final rate = (completed / total * 100).toStringAsFixed(0);
+          final color = completed / total >= 0.7
+              ? AppTheme.successGreen
+              : completed / total >= 0.4
+              ? Colors.orange
+              : AppTheme.primaryRed;
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 100,
+                  child: Text(
+                    e.key,
+                    style: const TextStyle(fontSize: 11),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: completed / total,
+                      minHeight: 12,
+                      backgroundColor: Colors.grey[200],
+                      valueColor: AlwaysStoppedAnimation(color),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 60,
+                  child: Text(
+                    '$rate% ($completed/$total)',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+// ── Barangay Performance Widget ──────────────────────────────────────────────
+class _BarangayPerformanceWidget extends StatelessWidget {
+  final List<ReportModel> reports;
+  const _BarangayPerformanceWidget({required this.reports});
+
+  @override
+  Widget build(BuildContext context) {
+    final Map<String, List<Duration>> barangayTimes = {};
+
+    for (final r in reports) {
+      if (r.currentStatus == AppConstants.statusCompleted &&
+          r.statusHistory.length > 1) {
+        final duration = r.statusHistory.last.timestamp.difference(r.createdAt);
+        barangayTimes.putIfAbsent(r.barangay, () => []).add(duration);
+      }
+    }
+
+    if (barangayTimes.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text(
+          'No completion data yet.',
+          style: TextStyle(color: AppTheme.textMuted),
+        ),
+      );
+    }
+
+    final avgTimes = barangayTimes.entries.map((e) {
+      final avgMinutes =
+          e.value.map((d) => d.inMinutes).reduce((a, b) => a + b) ~/
+          e.value.length;
+      return MapEntry(e.key, Duration(minutes: avgMinutes));
+    }).toList()..sort((a, b) => a.value.compareTo(b.value));
+
+    return Column(
+      children: [
+        const SizedBox(height: 12),
+        ...avgTimes.take(5).map((e) {
+          final days = e.value.inDays;
+          final hours = e.value.inHours % 24;
+          final timeStr = days > 0 ? '$days days' : '${hours}h';
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: const BoxDecoration(
+                    color: AppTheme.successGreen,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${avgTimes.indexOf(e) + 1}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        e.key,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'Avg. resolution: $timeStr',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '${barangayTimes[e.key]!.length} reports',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+// ── Day of Week Chart ────────────────────────────────────────────────────────
+class _DayOfWeekChart extends StatelessWidget {
+  final List<ReportModel> reports;
+  const _DayOfWeekChart({required this.reports});
+
+  @override
+  Widget build(BuildContext context) {
+    final dayCounts = List.filled(7, 0);
+
+    for (final r in reports) {
+      final day = r.createdAt.weekday - 1; // Mon = 0, Sun = 6
+      dayCounts[day]++;
+    }
+
+    if (reports.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text(
+          'No data yet.',
+          style: TextStyle(color: AppTheme.textMuted),
+        ),
+      );
+    }
+
+    final bars = dayCounts
+        .asMap()
+        .entries
+        .map(
+          (e) => BarChartGroupData(
+            x: e.key,
+            barRods: [
+              BarChartRodData(
+                toY: e.value.toDouble(),
+                color: AppTheme.primaryBlue,
+                width: 32,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(4),
+                ),
+              ),
+            ],
+          ),
+        )
+        .toList();
+
+    return SizedBox(
+      height: 200,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 16, top: 16),
+        child: BarChart(
+          BarChartData(
+            barGroups: bars,
+            titlesData: FlTitlesData(
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  getTitlesWidget: (v, _) {
+                    const labels = [
+                      'Mon',
+                      'Tue',
+                      'Wed',
+                      'Thu',
+                      'Fri',
+                      'Sat',
+                      'Sun',
+                    ];
+                    final i = v.toInt();
+                    if (i < 0 || i >= labels.length) return const SizedBox();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        labels[i],
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 28,
+                  getTitlesWidget: (v, _) => Text(
+                    v.toInt().toString(),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                ),
+              ),
+              topTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+            ),
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: false,
+              getDrawingHorizontalLine: (_) =>
+                  FlLine(color: Colors.grey[200]!, strokeWidth: 1),
+            ),
+            borderData: FlBorderData(show: false),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Top Reporters Widget ─────────────────────────────────────────────────────
+class _TopReportersWidget extends StatelessWidget {
+  final List<ReportModel> reports;
+  const _TopReportersWidget({required this.reports});
+
+  @override
+  Widget build(BuildContext context) {
+    final reporterCounts = <String, int>{};
+
+    for (final r in reports) {
+      final name = r.isAnonymous ? 'Anonymous' : r.userFullName;
+      reporterCounts[name] = (reporterCounts[name] ?? 0) + 1;
+    }
+
+    if (reporterCounts.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text(
+          'No data yet.',
+          style: TextStyle(color: AppTheme.textMuted),
+        ),
+      );
+    }
+
+    final sorted = reporterCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    final topReporters = sorted.take(5).toList();
+
+    return Column(
+      children: [
+        const SizedBox(height: 12),
+        ...topReporters.asMap().entries.map((entry) {
+          final rank = entry.key + 1;
+          final data = entry.value;
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: rank == 1
+                        ? const Color(0xFFFFD700)
+                        : rank == 2
+                        ? const Color(0xFFC0C0C0)
+                        : rank == 3
+                        ? const Color(0xFFCD7F32)
+                        : AppTheme.primaryBlue.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$rank',
+                      style: TextStyle(
+                        color: rank <= 3 ? Colors.white : AppTheme.primaryBlue,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    data.key,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Text(
+                  '${data.value} reports',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryBlue,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+// ── Follow Activity Widget ───────────────────────────────────────────────────
+class _FollowActivityWidget extends StatelessWidget {
+  final List<ReportModel> reports;
+  const _FollowActivityWidget({required this.reports});
+
+  @override
+  Widget build(BuildContext context) {
+    final totalFollows = reports.fold<int>(
+      0,
+      (sum, r) => sum + r.followerIds.length,
+    );
+
+    final reportsWithFollows = reports
+        .where((r) => r.followerIds.isNotEmpty)
+        .length;
+    final avgFollowsPerReport = reports.isEmpty
+        ? 0.0
+        : totalFollows / reports.length;
+
+    final mostFollowed = reports.isEmpty
+        ? null
+        : reports.reduce(
+            (a, b) => a.followerIds.length > b.followerIds.length ? a : b,
+          );
+
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        _MetricRow(
+          label: 'Total follows',
+          value: '$totalFollows',
+          color: AppTheme.primaryBlue,
+        ),
+        _MetricRow(
+          label: 'Reports with followers',
+          value:
+              '$reportsWithFollows (${(reportsWithFollows / (reports.isEmpty ? 1 : reports.length) * 100).toStringAsFixed(0)}%)',
+          color: AppTheme.successGreen,
+        ),
+        _MetricRow(
+          label: 'Avg. follows per report',
+          value: avgFollowsPerReport.toStringAsFixed(1),
+          color: Colors.orange,
+        ),
+        if (mostFollowed != null) ...[
+          const Divider(height: 20),
+          const Text(
+            'Most Followed Report',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textMuted,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryBlue.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  mostFollowed.title,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${mostFollowed.followerIds.length} followers',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppTheme.primaryBlue,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _MetricRow extends StatelessWidget {
+  final String label, value;
+  final Color color;
+  const _MetricRow({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }
