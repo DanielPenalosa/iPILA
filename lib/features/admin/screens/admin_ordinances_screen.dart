@@ -149,6 +149,8 @@ class _AdminOrdinancesScreenState extends State<AdminOrdinancesScreen> {
   }
 
   Future<void> _archive(OrdinanceModel ord) async {
+    final messenger = ScaffoldMessenger.of(context);
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -173,13 +175,50 @@ class _AdminOrdinancesScreenState extends State<AdminOrdinancesScreen> {
         ],
       ),
     );
+
     if (confirm == true) {
-      await _service.updateOrdinance(ord.id, {'isActive': false});
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+      // Show loading
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                ),
+              ),
+              SizedBox(width: 12),
+              Text('Archiving ordinance...'),
+            ],
+          ),
+          duration: Duration(hours: 1),
+        ),
+      );
+
+      try {
+        await _service.updateOrdinance(ord.id, {'isActive': false});
+
+        // Hide loading, show success
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
           const SnackBar(
-            content: Text('Ordinance archived'),
+            content: Text('✓ Ordinance archived'),
+            backgroundColor: AppTheme.successGreen,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } catch (e) {
+        // Hide loading, show error
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Error archiving ordinance: $e'),
             backgroundColor: AppTheme.primaryRed,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
