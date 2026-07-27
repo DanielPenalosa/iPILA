@@ -501,13 +501,13 @@ class _AckRateWidget extends StatelessWidget {
                     '$pct%',
                     style: const TextStyle(
                       fontWeight: FontWeight.w800,
-                      fontSize: 32,
+                      fontSize: 36,
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
+                      horizontal: 10,
+                      vertical: 3,
                     ),
                     decoration: BoxDecoration(
                       color:
@@ -526,7 +526,7 @@ class _AckRateWidget extends StatelessWidget {
                           ? 'Good'
                           : 'Needs Work',
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: stats.ackRate >= 0.8
                             ? AppTheme.successGreen
