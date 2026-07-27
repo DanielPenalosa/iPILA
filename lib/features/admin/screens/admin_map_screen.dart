@@ -156,7 +156,7 @@ class _AdminMapScreenState extends State<AdminMapScreen> {
                   final filtered = _applyFilters(reports);
 
                   return SizedBox(
-                    height: MediaQuery.of(context).size.height - 200,
+                    height: 900, // Fixed large height to enable scrolling
                     child: Row(
                       children: [
                         // Map
