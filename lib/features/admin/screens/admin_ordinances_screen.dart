@@ -150,13 +150,17 @@ class _AdminOrdinancesScreenState extends State<AdminOrdinancesScreen> {
 
   Future<void> _archive(OrdinanceModel ord) async {
     final messenger = ScaffoldMessenger.of(context);
+    final isArchiving =
+        ord.isActive; // If active, we're archiving; if not, we're unarchiving
 
     final confirm = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Archive Ordinance'),
+        title: Text(isArchiving ? 'Archive Ordinance' : 'Unarchive Ordinance'),
         content: Text(
-          'Archive "${ord.title}"? It will be hidden from residents.',
+          isArchiving
+              ? 'Archive "${ord.title}"? It will be hidden from residents.'
+              : 'Unarchive "${ord.title}"? It will be visible to residents again.',
         ),
         actions: [
           AdminHoverButton(
@@ -167,9 +171,9 @@ class _AdminOrdinancesScreenState extends State<AdminOrdinancesScreen> {
           ),
           const SizedBox(width: 8),
           AdminHoverButton(
-            label: 'Archive',
+            label: isArchiving ? 'Archive' : 'Unarchive',
             onTap: () => Navigator.of(dialogContext).pop(true),
-            color: AppTheme.primaryRed,
+            color: isArchiving ? AppTheme.primaryRed : AppTheme.primaryYellow,
             small: true,
           ),
         ],
@@ -179,11 +183,11 @@ class _AdminOrdinancesScreenState extends State<AdminOrdinancesScreen> {
     if (confirm == true) {
       // Show loading
       messenger.showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(
+              const SizedBox(
                 width: 16,
                 height: 16,
                 child: CircularProgressIndicator(
@@ -191,24 +195,30 @@ class _AdminOrdinancesScreenState extends State<AdminOrdinancesScreen> {
                   valueColor: AlwaysStoppedAnimation(Colors.white),
                 ),
               ),
-              SizedBox(width: 12),
-              Text('Archiving ordinance...'),
+              const SizedBox(width: 12),
+              Text(
+                isArchiving
+                    ? 'Archiving ordinance...'
+                    : 'Unarchiving ordinance...',
+              ),
             ],
           ),
-          duration: Duration(hours: 1),
+          duration: const Duration(hours: 1),
         ),
       );
 
       try {
-        await _service.updateOrdinance(ord.id, {'isActive': false});
+        await _service.updateOrdinance(ord.id, {'isActive': !isArchiving});
 
         // Hide loading, show success
         messenger.hideCurrentSnackBar();
         messenger.showSnackBar(
-          const SnackBar(
-            content: Text('✓ Ordinance archived'),
+          SnackBar(
+            content: Text(
+              isArchiving ? '✓ Ordinance archived' : '✓ Ordinance unarchived',
+            ),
             backgroundColor: AppTheme.successGreen,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
           ),
         );
       } catch (e) {
@@ -216,7 +226,7 @@ class _AdminOrdinancesScreenState extends State<AdminOrdinancesScreen> {
         messenger.hideCurrentSnackBar();
         messenger.showSnackBar(
           SnackBar(
-            content: Text('Error archiving ordinance: $e'),
+            content: Text('Error: $e'),
             backgroundColor: AppTheme.primaryRed,
             duration: const Duration(seconds: 3),
           ),
@@ -432,14 +442,18 @@ class _OrdinanceRow extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: AppTheme.successGreen.withValues(alpha: 0.1),
+                color: ordinance.isActive
+                    ? AppTheme.successGreen.withValues(alpha: 0.1)
+                    : Colors.grey.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text(
-                'Published',
+              child: Text(
+                ordinance.isActive ? 'Published' : 'Archived',
                 style: TextStyle(
                   fontSize: 11,
-                  color: AppTheme.successGreen,
+                  color: ordinance.isActive
+                      ? AppTheme.successGreen
+                      : Colors.grey,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -457,9 +471,11 @@ class _OrdinanceRow extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 AdminHoverButton(
-                  label: 'Archive',
+                  label: ordinance.isActive ? 'Archive' : 'Unarchive',
                   onTap: onArchive,
-                  color: AppTheme.primaryRed,
+                  color: ordinance.isActive
+                      ? AppTheme.primaryRed
+                      : AppTheme.primaryYellow,
                   small: true,
                 ),
               ],
