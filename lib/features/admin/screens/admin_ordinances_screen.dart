@@ -153,7 +153,7 @@ class _AdminOrdinancesScreenState extends State<AdminOrdinancesScreen> {
 
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Archive Ordinance'),
         content: Text(
           'Archive "${ord.title}"? It will be hidden from residents.',
@@ -161,14 +161,14 @@ class _AdminOrdinancesScreenState extends State<AdminOrdinancesScreen> {
         actions: [
           AdminHoverButton(
             label: 'Cancel',
-            onTap: () => Navigator.pop(context, false),
+            onTap: () => Navigator.of(dialogContext).pop(false),
             outlined: true,
             small: true,
           ),
           const SizedBox(width: 8),
           AdminHoverButton(
             label: 'Archive',
-            onTap: () => Navigator.pop(context, true),
+            onTap: () => Navigator.of(dialogContext).pop(true),
             color: AppTheme.primaryRed,
             small: true,
           ),
