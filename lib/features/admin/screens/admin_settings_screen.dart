@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:html' as html;
+import 'dart:convert';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/widgets/app_ui.dart';
+import '../../../data/services/report_service.dart';
 import 'admin_shell.dart';
 
 class AdminSettingsScreen extends StatefulWidget {
@@ -347,7 +351,8 @@ class _Toggle extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppTheme.primaryBlue,
+            activeTrackColor: AppTheme.primaryYellow.withValues(alpha: 0.5),
+            activeColor: AppTheme.primaryYellow,
           ),
         ],
       ),
@@ -390,22 +395,18 @@ class _SystemSectionState extends State<_SystemSection> {
               _DangerBtn(
                 label: 'Export All Reports',
                 icon: Icons.download_outlined,
-                color: AppTheme.primaryBlue,
-                onTap: () => _showConfirm(
-                  context,
-                  'Export all report data to CSV?',
-                  () {},
-                ),
+                color: AppTheme.primaryYellow,
+                onTap: () => _exportAllReports(context),
               ),
               const SizedBox(height: 8),
               _DangerBtn(
                 label: 'Clear Completed Reports',
                 icon: Icons.delete_sweep_outlined,
-                color: Colors.orange,
+                color: AppTheme.primaryOrange,
                 onTap: () => _showConfirm(
                   context,
-                  'Archive all completed reports? This cannot be undone.',
-                  () {},
+                  'Archive all completed reports? This will permanently delete them from the database.',
+                  () => _clearCompletedReports(context),
                 ),
               ),
             ],
@@ -453,12 +454,166 @@ class _SystemSectionState extends State<_SystemSection> {
               Navigator.pop(context);
               onConfirm();
             },
-            color: AppTheme.primaryBlue,
+            color: AppTheme.primaryYellow,
             small: true,
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _exportAllReports(BuildContext context) async {
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Exporting reports...'),
+            ],
+          ),
+        ),
+      );
+
+      // Fetch all reports
+      final reports = await ReportService().getAllReports().first;
+
+      // Create CSV content
+      final csvLines = <String>[];
+
+      // Header
+      csvLines.add(
+        'ID,Category,Description,Barangay,Address,Latitude,Longitude,'
+        'Status,Reporter,Anonymous,Created,Updated,Followers',
+      );
+
+      // Data rows
+      for (final report in reports) {
+        csvLines.add(
+          '"${report.id}",'
+          '"${_escapeCsv(report.category)}",'
+          '"${_escapeCsv(report.description)}",'
+          '"${_escapeCsv(report.barangay)}",'
+          '"${_escapeCsv(report.address)}",'
+          '${report.latitude},'
+          '${report.longitude},'
+          '"${report.currentStatus}",'
+          '"${report.isAnonymous ? "Anonymous" : _escapeCsv(report.userFullName)}",'
+          '${report.isAnonymous},'
+          '"${report.createdAt.toIso8601String()}",'
+          '"${report.updatedAt.toIso8601String()}",'
+          '${report.followerCount}',
+        );
+      }
+
+      final csvContent = csvLines.join('\n');
+      final bytes = utf8.encode(csvContent);
+      final blob = html.Blob([bytes]);
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      html.AnchorElement(href: url)
+        ..setAttribute(
+          'download',
+          'ipila_reports_${DateTime.now().toIso8601String()}.csv',
+        )
+        ..click();
+      html.Url.revokeObjectUrl(url);
+
+      // Close loading dialog
+      if (context.mounted) Navigator.pop(context);
+
+      // Show success
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✓ Exported ${reports.length} reports to CSV'),
+            backgroundColor: AppTheme.successGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog
+      if (context.mounted) Navigator.pop(context);
+
+      // Show error
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error exporting reports: $e'),
+            backgroundColor: AppTheme.primaryRed,
+          ),
+        );
+      }
+    }
+  }
+
+  String _escapeCsv(String value) {
+    return value.replaceAll('"', '""');
+  }
+
+  Future<void> _clearCompletedReports(BuildContext context) async {
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Clearing completed reports...'),
+            ],
+          ),
+        ),
+      );
+
+      // Get all completed reports
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('reports')
+          .where('currentStatus', isEqualTo: AppConstants.statusCompleted)
+          .get();
+
+      // Delete in batches (Firestore limit is 500 per batch)
+      final batch = FirebaseFirestore.instance.batch();
+      int count = 0;
+
+      for (final doc in querySnapshot.docs) {
+        batch.delete(doc.reference);
+        count++;
+      }
+
+      await batch.commit();
+
+      // Close loading dialog
+      if (context.mounted) Navigator.pop(context);
+
+      // Show success
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✓ Cleared $count completed reports'),
+            backgroundColor: AppTheme.successGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog
+      if (context.mounted) Navigator.pop(context);
+
+      // Show error
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error clearing reports: $e'),
+            backgroundColor: AppTheme.primaryRed,
+          ),
+        );
+      }
+    }
   }
 }
 
