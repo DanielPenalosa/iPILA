@@ -450,15 +450,15 @@ class _AckRateWidget extends StatelessWidget {
       children: [
         const SizedBox(height: 16),
         SizedBox(
-          width: 130,
-          height: 130,
+          width: 160,
+          height: 160,
           child: Stack(
             alignment: Alignment.center,
             children: [
               // Background shadow circle
               Container(
-                width: 130,
-                height: 130,
+                width: 160,
+                height: 160,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   boxShadow: [
@@ -483,7 +483,7 @@ class _AckRateWidget extends StatelessWidget {
                 curve: Curves.easeOutCubic,
                 builder: (_, value, __) => CircularProgressIndicator(
                   value: value,
-                  strokeWidth: 12,
+                  strokeWidth: 14,
                   backgroundColor: Colors.grey[100],
                   valueColor: AlwaysStoppedAnimation(
                     stats.ackRate >= 0.8
