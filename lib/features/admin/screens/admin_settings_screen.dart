@@ -514,12 +514,20 @@ class _SystemSectionState extends State<_SystemSection> {
       final bytes = utf8.encode(csvContent);
       final blob = html.Blob([bytes]);
       final url = html.Url.createObjectUrlFromBlob(blob);
-      html.AnchorElement(href: url)
-        ..setAttribute(
-          'download',
-          'ipila_reports_${DateTime.now().toIso8601String()}.csv',
-        )
-        ..click();
+
+      // Create and trigger download without navigation
+      final anchor = html.document.createElement('a') as html.AnchorElement
+        ..href = url
+        ..style.display = 'none'
+        ..download =
+            'ipila_reports_${DateTime.now().millisecondsSinceEpoch}.csv';
+
+      html.document.body?.children.add(anchor);
+      anchor.click();
+      html.document.body?.children.remove(anchor);
+
+      // Small delay before revoking URL
+      await Future.delayed(const Duration(milliseconds: 100));
       html.Url.revokeObjectUrl(url);
 
       // Close loading dialog
