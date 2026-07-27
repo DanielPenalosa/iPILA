@@ -463,23 +463,28 @@ class _SystemSectionState extends State<_SystemSection> {
   }
 
   Future<void> _exportAllReports(BuildContext context) async {
-    // Store references before async operations
-    final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
 
     try {
-      // Show loading dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const AlertDialog(
+      // Show loading in SnackBar (no dialog!)
+      messenger.showSnackBar(
+        const SnackBar(
           content: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                ),
+              ),
+              SizedBox(width: 12),
               Text('Exporting reports...'),
             ],
           ),
+          duration: Duration(hours: 1), // Long duration, will hide manually
         ),
       );
 
@@ -534,10 +539,8 @@ class _SystemSectionState extends State<_SystemSection> {
       await Future.delayed(const Duration(milliseconds: 100));
       html.Url.revokeObjectUrl(url);
 
-      // Close loading dialog - use stored navigator
-      navigator.pop();
-
-      // Show success - use stored messenger
+      // Hide loading, show success
+      messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         SnackBar(
           content: Text('✓ Exported ${reports.length} reports to CSV'),
@@ -546,10 +549,8 @@ class _SystemSectionState extends State<_SystemSection> {
         ),
       );
     } catch (e) {
-      // Close loading dialog
-      navigator.pop();
-
-      // Show error
+      // Hide loading, show error
+      messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         SnackBar(
           content: Text('Error exporting reports: $e'),
@@ -565,23 +566,28 @@ class _SystemSectionState extends State<_SystemSection> {
   }
 
   Future<void> _clearCompletedReports(BuildContext context) async {
-    // Store references before async operations
-    final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
 
     try {
-      // Show loading dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const AlertDialog(
+      // Show loading in SnackBar (no dialog!)
+      messenger.showSnackBar(
+        const SnackBar(
           content: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                ),
+              ),
+              SizedBox(width: 12),
               Text('Clearing completed reports...'),
             ],
           ),
+          duration: Duration(hours: 1), // Long duration, will hide manually
         ),
       );
 
@@ -602,10 +608,8 @@ class _SystemSectionState extends State<_SystemSection> {
 
       await batch.commit();
 
-      // Close loading dialog - use stored navigator
-      navigator.pop();
-
-      // Show success - use stored messenger
+      // Hide loading, show success
+      messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         SnackBar(
           content: Text('✓ Cleared $count completed reports'),
@@ -614,10 +618,8 @@ class _SystemSectionState extends State<_SystemSection> {
         ),
       );
     } catch (e) {
-      // Close loading dialog
-      navigator.pop();
-
-      // Show error
+      // Hide loading, show error
+      messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         SnackBar(
           content: Text('Error clearing reports: $e'),
