@@ -349,85 +349,30 @@ class _Card extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Colors.white, Color(0xFFFFFDF8)],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppTheme.primaryYellow.withValues(alpha: 0.15),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryYellow.withValues(alpha: 0.08),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.borderColor, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppTheme.primaryYellow, AppTheme.primaryOrange],
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryYellow.withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.insights_rounded,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: AppTheme.textDark,
-                      ),
-                    ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle!,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.textMuted,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+              color: AppTheme.textDark,
+            ),
           ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              subtitle!,
+              style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+            ),
+          ],
           child,
         ],
       ),
@@ -451,98 +396,46 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white,
-              (valueColor ?? AppTheme.primaryYellow).withValues(alpha: 0.02),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: (valueColor ?? AppTheme.primaryYellow).withValues(
-              alpha: 0.2,
-            ),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: (valueColor ?? AppTheme.primaryYellow).withValues(
-                alpha: 0.15,
-              ),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppTheme.borderColor, width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: (valueColor ?? AppTheme.primaryYellow).withValues(
-                  alpha: 0.1,
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                _getStatIcon(label),
-                color: valueColor ?? AppTheme.primaryYellow,
-                size: 20,
-              ),
-            ),
-            const SizedBox(height: 12),
             Text(
               value,
               style: TextStyle(
-                fontSize: 36,
-                fontWeight: FontWeight.w800,
+                fontSize: 32,
+                fontWeight: FontWeight.w700,
                 color: valueColor ?? AppTheme.textDark,
-                height: 1.1,
+                height: 1,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               label,
               style: const TextStyle(
-                fontSize: 13,
+                fontSize: 12,
                 color: AppTheme.textMuted,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
             ),
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: subColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                sub,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: subColor,
-                  fontWeight: FontWeight.w600,
-                ),
+            Text(
+              sub,
+              style: TextStyle(
+                fontSize: 11,
+                color: subColor,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
       ),
     );
-  }
-
-  IconData _getStatIcon(String label) {
-    if (label.contains('Total')) return Icons.analytics_rounded;
-    if (label.contains('Resolved')) return Icons.check_circle_rounded;
-    if (label.contains('Progress')) return Icons.autorenew_rounded;
-    if (label.contains('Pending')) return Icons.schedule_rounded;
-    if (label.contains('Overdue')) return Icons.warning_rounded;
-    return Icons.bar_chart_rounded;
   }
 }
 
