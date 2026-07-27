@@ -463,6 +463,10 @@ class _SystemSectionState extends State<_SystemSection> {
   }
 
   Future<void> _exportAllReports(BuildContext context) async {
+    // Store references before async operations
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
     try {
       // Show loading dialog
       showDialog(
@@ -530,31 +534,29 @@ class _SystemSectionState extends State<_SystemSection> {
       await Future.delayed(const Duration(milliseconds: 100));
       html.Url.revokeObjectUrl(url);
 
-      // Close loading dialog
-      if (context.mounted) Navigator.pop(context);
+      // Close loading dialog - use stored navigator
+      navigator.pop();
 
-      // Show success
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('✓ Exported ${reports.length} reports to CSV'),
-            backgroundColor: AppTheme.successGreen,
-          ),
-        );
-      }
+      // Show success - use stored messenger
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('✓ Exported ${reports.length} reports to CSV'),
+          backgroundColor: AppTheme.successGreen,
+          duration: const Duration(seconds: 2),
+        ),
+      );
     } catch (e) {
       // Close loading dialog
-      if (context.mounted) Navigator.pop(context);
+      navigator.pop();
 
       // Show error
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error exporting reports: $e'),
-            backgroundColor: AppTheme.primaryRed,
-          ),
-        );
-      }
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Error exporting reports: $e'),
+          backgroundColor: AppTheme.primaryRed,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -563,6 +565,10 @@ class _SystemSectionState extends State<_SystemSection> {
   }
 
   Future<void> _clearCompletedReports(BuildContext context) async {
+    // Store references before async operations
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
     try {
       // Show loading dialog
       showDialog(
@@ -596,31 +602,29 @@ class _SystemSectionState extends State<_SystemSection> {
 
       await batch.commit();
 
-      // Close loading dialog
-      if (context.mounted) Navigator.pop(context);
+      // Close loading dialog - use stored navigator
+      navigator.pop();
 
-      // Show success
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('✓ Cleared $count completed reports'),
-            backgroundColor: AppTheme.successGreen,
-          ),
-        );
-      }
+      // Show success - use stored messenger
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('✓ Cleared $count completed reports'),
+          backgroundColor: AppTheme.successGreen,
+          duration: const Duration(seconds: 2),
+        ),
+      );
     } catch (e) {
       // Close loading dialog
-      if (context.mounted) Navigator.pop(context);
+      navigator.pop();
 
       // Show error
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error clearing reports: $e'),
-            backgroundColor: AppTheme.primaryRed,
-          ),
-        );
-      }
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Error clearing reports: $e'),
+          backgroundColor: AppTheme.primaryRed,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 }
