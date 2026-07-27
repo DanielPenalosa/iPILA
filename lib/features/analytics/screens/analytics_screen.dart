@@ -450,15 +450,15 @@ class _AckRateWidget extends StatelessWidget {
       children: [
         const SizedBox(height: 16),
         SizedBox(
-          width: 160,
-          height: 160,
+          width: 180,
+          height: 180,
           child: Stack(
             alignment: Alignment.center,
             children: [
               // Background shadow circle
               Container(
-                width: 160,
-                height: 160,
+                width: 180,
+                height: 180,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   boxShadow: [
@@ -477,20 +477,24 @@ class _AckRateWidget extends StatelessWidget {
                 ),
               ),
               // Animated progress
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: stats.ackRate),
-                duration: const Duration(milliseconds: 1500),
-                curve: Curves.easeOutCubic,
-                builder: (_, value, __) => CircularProgressIndicator(
-                  value: value,
-                  strokeWidth: 14,
-                  backgroundColor: Colors.grey[100],
-                  valueColor: AlwaysStoppedAnimation(
-                    stats.ackRate >= 0.8
-                        ? AppTheme.successGreen
-                        : stats.ackRate >= 0.5
-                        ? AppTheme.primaryYellow
-                        : AppTheme.primaryRed,
+              SizedBox(
+                width: 170,
+                height: 170,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: stats.ackRate),
+                  duration: const Duration(milliseconds: 1500),
+                  curve: Curves.easeOutCubic,
+                  builder: (_, value, __) => CircularProgressIndicator(
+                    value: value,
+                    strokeWidth: 16,
+                    backgroundColor: Colors.grey[100],
+                    valueColor: AlwaysStoppedAnimation(
+                      stats.ackRate >= 0.8
+                          ? AppTheme.successGreen
+                          : stats.ackRate >= 0.5
+                          ? AppTheme.primaryYellow
+                          : AppTheme.primaryRed,
+                    ),
                   ),
                 ),
               ),
@@ -501,13 +505,14 @@ class _AckRateWidget extends StatelessWidget {
                     '$pct%',
                     style: const TextStyle(
                       fontWeight: FontWeight.w800,
-                      fontSize: 36,
+                      fontSize: 40,
                     ),
                   ),
+                  const SizedBox(height: 4),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 3,
+                      horizontal: 12,
+                      vertical: 4,
                     ),
                     decoration: BoxDecoration(
                       color:
@@ -526,7 +531,7 @@ class _AckRateWidget extends StatelessWidget {
                           ? 'Good'
                           : 'Needs Work',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: stats.ackRate >= 0.8
                             ? AppTheme.successGreen
