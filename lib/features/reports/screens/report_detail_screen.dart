@@ -47,7 +47,7 @@ class ReportDetailScreen extends StatelessWidget {
                 ReportStatusBanner(status: report.currentStatus),
                 const SizedBox(height: 16),
 
-                // Follow/Unfollow button (not for own reports)
+                // Follow Up button (not for own reports)
                 if (!isOwnReport && currentUserId != null) ...[
                   SizedBox(
                     width: double.infinity,
@@ -61,7 +61,7 @@ class ReportDetailScreen extends StatelessWidget {
                           if (context.mounted) {
                             AppToast.show(
                               context,
-                              'You unfollowed this report',
+                              'You stopped following up on this report',
                               type: ToastType.info,
                             );
                           }
@@ -73,7 +73,7 @@ class ReportDetailScreen extends StatelessWidget {
                           if (context.mounted) {
                             AppToast.show(
                               context,
-                              'You are now following this report',
+                              'You are now following up on this report',
                               type: ToastType.success,
                             );
                           }
@@ -86,8 +86,8 @@ class ReportDetailScreen extends StatelessWidget {
                       ),
                       label: Text(
                         isFollowing
-                            ? 'Following (${report.followerCount})'
-                            : 'Follow Report',
+                            ? 'Following Up (${report.followerCount})'
+                            : 'Follow Up Report',
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: isFollowing

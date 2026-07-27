@@ -518,7 +518,7 @@ class _CommunityReportCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${report.followerCount} ${report.followerCount == 1 ? 'follower' : 'followers'}',
+                          '${report.followerCount} ${report.followerCount == 1 ? 'follow-up' : 'follow-ups'}',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
