@@ -38,29 +38,22 @@ class MobileShell extends StatelessWidget {
                 icon: const Icon(Icons.arrow_back, color: AppTheme.textDark),
                 onPressed: () => context.pop(),
               )
-            : Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.account_balance,
-                      size: 20,
-                      color: AppTheme.textDark,
-                    ),
-                  ],
-                ),
-              ),
-        leadingWidth: showBack ? 56 : 48,
+            : null,
+        leadingWidth: showBack ? 56 : 16,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (!showBack)
-              const Icon(
-                Icons.account_balance,
-                size: 18,
-                color: AppTheme.textDark,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  width: 24,
+                  height: 24,
+                  fit: BoxFit.cover,
+                ),
               ),
-            if (!showBack) const SizedBox(width: 6),
+            if (!showBack) const SizedBox(width: 8),
             Text(
               title,
               style: const TextStyle(

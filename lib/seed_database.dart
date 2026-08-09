@@ -131,7 +131,7 @@ class _SeedScreenState extends State<SeedScreen> {
       {
         'question': 'Can I submit a report anonymously?',
         'answer':
-            'Yes. When submitting a report, toggle the Submit Anonymously switch. Your name will not be visible to the public.',
+            'No. All reports require user authentication to ensure accountability and enable effective follow-up communication. This helps the LGU verify report authenticity, prevent spam or duplicate submissions, and maintain direct contact with you for updates, clarifications, or resolution confirmation.',
         'order': 3,
       },
       {
@@ -151,6 +151,54 @@ class _SeedScreenState extends State<SeedScreen> {
         'answer':
             'Go to the My Reports tab. Each report shows a live progress tracker: Submitted → Validated → Queued → In Progress → Completed.',
         'order': 6,
+      },
+      {
+        'question': 'Can I edit or delete my report after submission?',
+        'answer':
+            'No. Once submitted, reports cannot be edited or deleted to maintain data integrity. If you need to update information, contact the Municipal Hall directly or add a comment in the report details.',
+        'order': 7,
+      },
+      {
+        'question': 'What is the Community Reports section?',
+        'answer':
+            'Community Reports lets you see all public reports submitted by other residents in your area. You can follow-up on reports to show support and track progress on issues affecting your community.',
+        'order': 8,
+      },
+      {
+        'question': 'How do I view municipal ordinances?',
+        'answer':
+            'Tap the Laws tab at the bottom navigation. You can browse all municipal ordinances, search by keyword or category, and view full ordinance details including enforcement dates and penalties.',
+        'order': 9,
+      },
+      {
+        'question': 'What does it mean to follow-up on a report?',
+        'answer':
+            'Following-up on a report shows your support for that issue and helps prioritize community concerns. You will also receive notifications when the report status changes.',
+        'order': 10,
+      },
+      {
+        'question': 'Will I receive notifications about my reports?',
+        'answer':
+            'Yes. You will receive push notifications when your report status changes (validated, queued, in progress, completed) or when administrators add comments or updates.',
+        'order': 11,
+      },
+      {
+        'question': 'Is my personal information safe?',
+        'answer':
+            'Yes. iPILA uses Firebase Authentication and Firestore security rules to protect your data. Your personal information is only visible to LGU administrators and is never shared publicly.',
+        'order': 12,
+      },
+      {
+        'question': 'Can I attach photos to my report?',
+        'answer':
+            'Yes. You can attach up to 3 photos when submitting a report. Clear photos help administrators assess the issue and prioritize response. Make sure images are relevant and show the problem clearly.',
+        'order': 13,
+      },
+      {
+        'question': 'What if my report location is incorrect?',
+        'answer':
+            'Make sure location services are enabled on your device. The app automatically captures your GPS coordinates when you submit a report. If the pin is slightly off, administrators can still identify the general area.',
+        'order': 14,
       },
     ];
 

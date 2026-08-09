@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -26,6 +27,7 @@ class _PilaBotWidgetState extends State<PilaBotWidget> {
     'Track my report',
     'Find an ordinance',
     'Contact Munisipyo',
+    'View all FAQs',
   ];
 
   static const _replies = {
@@ -42,6 +44,14 @@ class _PilaBotWidgetState extends State<PilaBotWidget> {
   void _send([String? preset]) {
     final text = preset ?? _msgCtrl.text.trim();
     if (text.isEmpty) return;
+
+    // Special handling for FAQ navigation
+    if (text == 'View all FAQs') {
+      setState(() => _open = false);
+      context.push('/faq');
+      return;
+    }
+
     setState(() {
       _messages.add(_ChatMsg(text: text, isBot: false, time: DateTime.now()));
       _msgCtrl.clear();

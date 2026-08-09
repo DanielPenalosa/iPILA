@@ -326,7 +326,7 @@ class _AdminOrdinancesScreenState extends State<AdminOrdinancesScreen> {
                             child: Text('STATUS', style: _hStyle),
                           ),
                           SizedBox(
-                            width: 120,
+                            width: 150,
                             child: Text('ACTIONS', style: _hStyle),
                           ),
                         ],
@@ -460,7 +460,7 @@ class _OrdinanceRow extends StatelessWidget {
             ),
           ),
           SizedBox(
-            width: 120,
+            width: 150,
             child: Row(
               children: [
                 AdminHoverButton(

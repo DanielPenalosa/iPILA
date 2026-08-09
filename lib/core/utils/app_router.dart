@@ -22,6 +22,7 @@ import '../../features/admin/screens/admin_map_screen.dart';
 import '../../features/admin/screens/admin_settings_screen.dart';
 import '../../features/analytics/screens/analytics_screen.dart';
 import '../../features/alerts/screens/alerts_screen.dart';
+import '../../features/help/screens/faq_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -162,6 +163,10 @@ GoRouter createRouter(AuthProvider authProvider) {
       GoRoute(
         path: '/profile',
         pageBuilder: (_, s) => _fadePage(const ProfileScreen(), s),
+      ),
+      GoRoute(
+        path: '/faq',
+        pageBuilder: (_, s) => _fadePage(const FaqScreen(), s),
       ),
       GoRoute(
         path: '/pending-approval',

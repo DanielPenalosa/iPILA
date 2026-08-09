@@ -91,7 +91,7 @@ order:    2
 ### Document 3 (auto-ID)
 ```
 question: "Can I submit a report anonymously?"
-answer:   "Yes. When submitting a report, toggle the Submit Anonymously switch. Your name will not be visible to the public."
+answer:   "No. All reports require user authentication to ensure accountability and enable effective follow-up communication. This helps the LGU verify report authenticity, prevent spam or duplicate submissions, and maintain direct contact with you for updates, clarifications, or resolution confirmation."
 order:    3
 ```
 
@@ -101,6 +101,9 @@ question: "How do I contact the Municipal Hall?"
 answer:   "You can reach the Municipality of Pila at (049) 559-0000 or visit the Municipal Hall at Pila, Laguna (8AM-5PM, Mon-Fri)."
 order:    4
 ```
+
+### Document 5-14 (auto-ID)
+Additional FAQs covering report editing, community reports, ordinances viewing, follow-up feature, notifications, privacy, photo attachments, and location accuracy. See `seed_database.dart` for complete list.
 
 ---
 

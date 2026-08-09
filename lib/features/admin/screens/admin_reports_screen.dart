@@ -24,6 +24,10 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
   String _search = '';
   late TabController _tabController;
 
+  // Bulk selection state
+  bool _selectionMode = false;
+  final Set<String> _selectedReportIds = {};
+
   static const _filters = ['All', 'New', 'In Progress', 'Completed', 'Overdue'];
 
   @override
@@ -60,6 +64,141 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
           .toList();
     }
     return list;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BULK SELECTION METHODS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  void _toggleSelection(String reportId) {
+    setState(() {
+      if (_selectedReportIds.contains(reportId)) {
+        _selectedReportIds.remove(reportId);
+        if (_selectedReportIds.isEmpty) {
+          _selectionMode = false;
+        }
+      } else {
+        _selectedReportIds.add(reportId);
+        _selectionMode = true;
+      }
+    });
+  }
+
+  void _selectAll(List<ReportModel> reports) {
+    setState(() {
+      _selectedReportIds.addAll(reports.map((r) => r.id));
+      _selectionMode = true;
+    });
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selectedReportIds.clear();
+      _selectionMode = false;
+    });
+  }
+
+  Future<void> _bulkChangeStatus(String newStatus) async {
+    if (_selectedReportIds.isEmpty) return;
+
+    final auth = context.read<AuthProvider>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Change Status for ${_selectedReportIds.length} Reports'),
+        content: Text('Set status to "$newStatus" for all selected reports?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await _service.bulkUpdateStatus(
+        reportIds: _selectedReportIds.toList(),
+        newStatus: newStatus,
+        adminEmail: auth.user?.email ?? '',
+      );
+
+      _clearSelection();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✓ Updated ${_selectedReportIds.length} reports'),
+            backgroundColor: AppTheme.successGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppTheme.primaryRed,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _bulkDelete() async {
+    if (_selectedReportIds.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete ${_selectedReportIds.length} Reports'),
+        content: const Text('This action cannot be undone. Continue?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryRed,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await _service.bulkDeleteReports(_selectedReportIds.toList());
+      _clearSelection();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ Reports deleted'),
+            backgroundColor: AppTheme.successGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppTheme.primaryRed,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _showConfirmDialog(
@@ -658,9 +797,18 @@ class _ReportRow extends StatelessWidget {
                     ),
                   ] else
                     _Btn(
-                      label: 'Update',
-                      onTap: onStatusChange,
-                      color: AppTheme.primaryBlue,
+                      label:
+                          report.currentStatus == AppConstants.statusCompleted
+                          ? 'Locked'
+                          : 'Update',
+                      onTap:
+                          report.currentStatus == AppConstants.statusCompleted
+                          ? () {} // No-op for completed reports
+                          : onStatusChange,
+                      color:
+                          report.currentStatus == AppConstants.statusCompleted
+                          ? Colors.grey
+                          : AppTheme.primaryBlue,
                     ),
                 ],
               ),

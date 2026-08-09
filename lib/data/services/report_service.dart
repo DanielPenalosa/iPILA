@@ -589,4 +589,120 @@ class ReportService {
       debugPrint('Error notifying admin about follower: $e');
     }
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BULK ACTIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Bulk update status for multiple reports
+  Future<void> bulkUpdateStatus({
+    required List<String> reportIds,
+    required String newStatus,
+    required String adminEmail,
+    String? note,
+  }) async {
+    final batch = _db.batch();
+    final now = DateTime.now();
+
+    for (final reportId in reportIds) {
+      final reportRef = _db.collection('reports').doc(reportId);
+
+      batch.update(reportRef, {
+        'currentStatus': newStatus,
+        'updatedAt': Timestamp.fromDate(now),
+        'statusHistory': FieldValue.arrayUnion([
+          {
+            'status': newStatus,
+            'timestamp': Timestamp.fromDate(now),
+            'updatedBy': adminEmail,
+            'note': note,
+          },
+        ]),
+      });
+    }
+
+    await batch.commit();
+  }
+
+  /// Bulk delete reports
+  Future<void> bulkDeleteReports(List<String> reportIds) async {
+    final batch = _db.batch();
+
+    for (final reportId in reportIds) {
+      final reportRef = _db.collection('reports').doc(reportId);
+      batch.delete(reportRef);
+    }
+
+    await batch.commit();
+  }
+
+  /// Bulk assign reports to admin
+  Future<void> bulkAssignReports({
+    required List<String> reportIds,
+    required String assignedTo,
+  }) async {
+    final batch = _db.batch();
+    final now = DateTime.now();
+
+    for (final reportId in reportIds) {
+      final reportRef = _db.collection('reports').doc(reportId);
+
+      batch.update(reportRef, {
+        'assignedTo': assignedTo,
+        'updatedAt': Timestamp.fromDate(now),
+      });
+    }
+
+    await batch.commit();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CITIZEN ACTIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Delete a report (citizen can delete own reports with restrictions)
+  Future<Map<String, dynamic>> deleteReport({
+    required String reportId,
+    required String userId,
+  }) async {
+    // Get report first to validate
+    final reportDoc = await _db
+        .collection(AppConstants.reportsCollection)
+        .doc(reportId)
+        .get();
+
+    if (!reportDoc.exists) {
+      return {'success': false, 'error': 'Report not found'};
+    }
+
+    final reportData = reportDoc.data()!;
+    final reportUserId = reportData['userId'] as String;
+    final currentStatus = reportData['currentStatus'] as String;
+
+    // Validation: Only owner can delete
+    if (reportUserId != userId) {
+      return {
+        'success': false,
+        'error': 'You can only delete your own reports',
+      };
+    }
+
+    // Validation: Check if deletion is allowed based on status
+    final canDelete =
+        currentStatus == AppConstants.statusSubmitted ||
+        currentStatus == AppConstants.statusCompleted;
+
+    if (!canDelete) {
+      return {
+        'success': false,
+        'error':
+            'Cannot delete report with status "$currentStatus". Reports in progress cannot be deleted to avoid disrupting ongoing work.',
+      };
+    }
+
+    // Delete the report
+    await _db.collection(AppConstants.reportsCollection).doc(reportId).delete();
+
+    return {'success': true};
+  }
 }

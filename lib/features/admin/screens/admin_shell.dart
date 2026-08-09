@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/report_model.dart';
 import '../../../data/services/report_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import 'admin_scaffold.dart';
 
 // Persistent admin scaffold — sidebar stays alive, only content fades
 class AdminScaffold extends StatefulWidget {
@@ -20,6 +21,7 @@ class AdminScaffold extends StatefulWidget {
 
 class _AdminScaffoldState extends State<AdminScaffold> {
   final ReportService _reportService = ReportService();
+  bool _isSidebarCollapsed = false;
 
   static const _navItems = [
     _NavItem(label: 'Overview', icon: Icons.grid_view_rounded, route: '/admin'),
@@ -68,8 +70,10 @@ class _AdminScaffoldState extends State<AdminScaffold> {
       body: Row(
         children: [
           // ── Minimalist Sidebar ──────────────────────────────────
-          Container(
-            width: 260,
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            width: _isSidebarCollapsed ? 80 : 260,
             decoration: BoxDecoration(
               color: Colors.white,
               border: Border(
@@ -79,52 +83,99 @@ class _AdminScaffoldState extends State<AdminScaffold> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Simple Logo
+                // Logo with toggle button
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+                  padding: EdgeInsets.fromLTRB(
+                    _isSidebarCollapsed ? 12 : 24,
+                    32,
+                    _isSidebarCollapsed ? 12 : 24,
+                    24,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryYellow,
+                      if (!_isSidebarCollapsed)
+                        Row(
+                          children: [
+                            ClipRRect(
                               borderRadius: BorderRadius.circular(8),
+                              child: Image.asset(
+                                'assets/images/logo.png',
+                                width: 40,
+                                height: 40,
+                                fit: BoxFit.cover,
+                              ),
                             ),
-                            child: const Icon(
-                              Icons.account_balance,
-                              color: AppTheme.black,
-                              size: 20,
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'iPILA',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                      color: AppTheme.textDark,
+                                      letterSpacing: -0.5,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Admin',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: AppTheme.textMuted,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          const Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            IconButton(
+                              icon: Icon(
+                                Icons.menu_open,
+                                color: Colors.grey[600],
+                                size: 20,
+                              ),
+                              onPressed: () => setState(() {
+                                _isSidebarCollapsed = !_isSidebarCollapsed;
+                              }),
+                              tooltip: 'Collapse sidebar',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        )
+                      else
+                        Center(
+                          child: Column(
                             children: [
-                              Text(
-                                'iPILA',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  color: AppTheme.textDark,
-                                  letterSpacing: -0.5,
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.asset(
+                                  'assets/images/logo.png',
+                                  width: 40,
+                                  height: 40,
+                                  fit: BoxFit.cover,
                                 ),
                               ),
-                              Text(
-                                'Admin',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: AppTheme.textMuted,
-                                  letterSpacing: 0.5,
+                              const SizedBox(height: 12),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.menu,
+                                  color: Colors.grey[600],
+                                  size: 20,
                                 ),
+                                onPressed: () => setState(() {
+                                  _isSidebarCollapsed = !_isSidebarCollapsed;
+                                }),
+                                tooltip: 'Expand sidebar',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
                               ),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
                     ],
                   ),
                 ),
@@ -167,6 +218,7 @@ class _AdminScaffoldState extends State<AdminScaffold> {
                             item: _navItems[i],
                             isActive: currentIndex == i,
                             badge: badge,
+                            isCollapsed: _isSidebarCollapsed,
                             onTap: () => _navigate(i),
                           );
                         },
@@ -177,68 +229,86 @@ class _AdminScaffoldState extends State<AdminScaffold> {
 
                 // Minimal Admin footer
                 Divider(height: 1, color: Colors.grey[200]),
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryYellow.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            user?.fullName.isNotEmpty == true
-                                ? user!.fullName[0].toUpperCase()
-                                : 'A',
-                            style: const TextStyle(
-                              color: AppTheme.textDark,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                if (!_isSidebarCollapsed)
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryYellow.withValues(
+                              alpha: 0.1,
+                            ),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              user?.fullName.isNotEmpty == true
+                                  ? user!.fullName[0].toUpperCase()
+                                  : 'A',
+                              style: const TextStyle(
+                                color: AppTheme.textDark,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              user?.fullName ?? 'Admin User',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.textDark,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user?.fullName ?? 'Admin User',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.textDark,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              'Administrator',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey[500],
+                              Text(
+                                'Administrator',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[500],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      IconButton(
+                        IconButton(
+                          icon: Icon(
+                            Icons.logout_outlined,
+                            size: 18,
+                            color: Colors.grey[600],
+                          ),
+                          onPressed: () => auth.signOut(),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          tooltip: 'Sign out',
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Center(
+                      child: IconButton(
                         icon: Icon(
                           Icons.logout_outlined,
-                          size: 18,
+                          size: 20,
                           color: Colors.grey[600],
                         ),
                         onPressed: () => auth.signOut(),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
                         tooltip: 'Sign out',
                       ),
-                    ],
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -287,12 +357,14 @@ class _MinimalSidebarItem extends StatefulWidget {
   final _NavItem item;
   final bool isActive;
   final int? badge;
+  final bool isCollapsed;
   final VoidCallback onTap;
 
   const _MinimalSidebarItem({
     required this.item,
     required this.isActive,
     required this.onTap,
+    required this.isCollapsed,
     this.badge,
   });
 
@@ -311,65 +383,114 @@ class _MinimalSidebarItemState extends State<_MinimalSidebarItem> {
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
         onTap: widget.onTap,
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: widget.isActive
-                ? AppTheme.primaryYellow.withValues(alpha: 0.1)
-                : _hovered
-                ? Colors.grey[100]
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: widget.isActive
-                ? Border.all(
-                    color: AppTheme.primaryYellow.withValues(alpha: 0.3),
-                    width: 1,
-                  )
-                : null,
-          ),
-          child: Row(
-            children: [
-              Icon(
-                widget.item.icon,
-                size: 20,
-                color: widget.isActive ? AppTheme.textDark : Colors.grey[600],
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  widget.item.label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: widget.isActive
-                        ? FontWeight.w600
-                        : FontWeight.normal,
-                    color: widget.isActive
-                        ? AppTheme.textDark
-                        : Colors.grey[700],
-                  ),
-                ),
-              ),
-              if (widget.badge != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryRed,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${widget.badge}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
+        child: Tooltip(
+          message: widget.isCollapsed ? widget.item.label : '',
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
+            padding: EdgeInsets.symmetric(
+              horizontal: widget.isCollapsed ? 0 : 16,
+              vertical: 12,
+            ),
+            decoration: BoxDecoration(
+              color: widget.isActive
+                  ? AppTheme.primaryYellow.withValues(alpha: 0.1)
+                  : _hovered
+                  ? Colors.grey[100]
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: widget.isActive
+                  ? Border.all(
+                      color: AppTheme.primaryYellow.withValues(alpha: 0.3),
+                      width: 1,
+                    )
+                  : null,
+            ),
+            child: widget.isCollapsed
+                ? Center(
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Icon(
+                          widget.item.icon,
+                          size: 20,
+                          color: widget.isActive
+                              ? AppTheme.textDark
+                              : Colors.grey[600],
+                        ),
+                        if (widget.badge != null)
+                          Positioned(
+                            right: -8,
+                            top: -8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: AppTheme.primaryRed,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${widget.badge}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
+                  )
+                : Row(
+                    children: [
+                      Icon(
+                        widget.item.icon,
+                        size: 20,
+                        color: widget.isActive
+                            ? AppTheme.textDark
+                            : Colors.grey[600],
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          widget.item.label,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: widget.isActive
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                            color: widget.isActive
+                                ? AppTheme.textDark
+                                : Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                      if (widget.badge != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryRed,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '${widget.badge}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                ),
-            ],
           ),
         ),
       ),
@@ -539,7 +660,7 @@ class AdminPageHeader extends StatelessWidget {
     final userId = auth.user?.uid ?? '';
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(32, 28, 32, 24),
+      padding: const EdgeInsets.fromLTRB(24, 28, 32, 24),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(bottom: BorderSide(color: Colors.grey[100]!, width: 1)),
@@ -574,6 +695,16 @@ class AdminPageHeader extends StatelessWidget {
               ],
             ),
           ),
+          // Toggle sidebar button
+          IconButton(
+            icon: Icon(Icons.menu, color: Colors.grey[700], size: 24),
+            onPressed: () {
+              // Toggle sidebar using the static method
+              AdminScaffoldWidget.toggleSidebar();
+            },
+            tooltip: 'Toggle sidebar',
+          ),
+          const SizedBox(width: 8),
           // Notification Bell Icon
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance

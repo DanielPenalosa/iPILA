@@ -107,6 +107,32 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
   }
 
   void _showUpdateDialog(ReportModel report, String adminName) {
+    // Prevent updating completed reports
+    if (report.currentStatus == AppConstants.statusCompleted) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.lock_outline, color: AppTheme.successGreen),
+              const SizedBox(width: 8),
+              const Text('Report Locked'),
+            ],
+          ),
+          content: const Text(
+            'This report is marked as completed and locked. No further status updates can be made to maintain data integrity.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     String? selectedStatus;
     showModalBottomSheet(
       context: context,
@@ -165,21 +191,57 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
               ),
               if (selectedStatus == AppConstants.statusCompleted) ...[
                 const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryYellow.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppTheme.primaryYellow.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: AppTheme.primaryYellow,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Warning: This will lock the report permanently',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.primaryYellow,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
                 AdminHoverButton(
                   label: (_afterPhoto != null || _afterPhotoWeb != null)
                       ? 'After photo added ✓'
-                      : 'Add After Photo',
+                      : 'Add After Photo (Required)',
                   icon: Icons.add_a_photo_outlined,
                   onTap: () async {
                     await _pickAfterPhoto();
                     setModalState(() {});
                   },
                   outlined: true,
+                  color: (_afterPhoto != null || _afterPhotoWeb != null)
+                      ? AppTheme.successGreen
+                      : null,
                 ),
               ],
               const SizedBox(height: 16),
               AdminHoverButton(
-                label: 'Update Status',
+                label: selectedStatus == AppConstants.statusCompleted
+                    ? 'Confirm Completion'
+                    : 'Update Status',
                 onTap: selectedStatus == null
                     ? null
                     : () {
@@ -187,13 +249,121 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                         if (Navigator.canPop(ctx)) {
                           Navigator.pop(ctx);
                         }
-                        _updateStatus(report.id, status, adminName);
+                        // Show extra confirmation for completion
+                        if (status == AppConstants.statusCompleted) {
+                          _showCompletionConfirmation(
+                            report,
+                            status,
+                            adminName,
+                          );
+                        } else {
+                          _updateStatus(report.id, status, adminName);
+                        }
                       },
-                color: AppTheme.primaryBlue,
+                color: selectedStatus == AppConstants.statusCompleted
+                    ? AppTheme.successGreen
+                    : AppTheme.primaryBlue,
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showCompletionConfirmation(
+    ReportModel report,
+    String status,
+    String adminName,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppTheme.primaryYellow),
+            const SizedBox(width: 8),
+            const Text('Final Confirmation'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'You are about to mark this report as COMPLETED.',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'This means:',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              _bulletPoint('The issue has been fully resolved'),
+              _bulletPoint('Before & after photos will be published'),
+              _bulletPoint('Citizens will be notified of completion'),
+              _bulletPoint('The report will be LOCKED (no further edits)'),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.coral.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppTheme.coral.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.lock_outline, color: AppTheme.coral, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'This action cannot be undone. Are you absolutely sure?',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.coral,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _updateStatus(report.id, status, adminName);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.successGreen,
+            ),
+            child: const Text('Yes, Mark as Completed'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bulletPoint(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('• ', style: TextStyle(fontSize: 16)),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
+        ],
       ),
     );
   }
@@ -339,6 +509,45 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                           children: [
                             ReportStatusBanner(status: report.currentStatus),
                             const SizedBox(height: 16),
+                            // Lock indicator for completed reports
+                            if (report.currentStatus ==
+                                AppConstants.statusCompleted) ...[
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.successGreen.withValues(
+                                    alpha: 0.1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: AppTheme.successGreen.withValues(
+                                      alpha: 0.3,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.lock_outline,
+                                      color: AppTheme.successGreen,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'This report is completed and locked. No further status updates can be made.',
+                                        style: TextStyle(
+                                          color: AppTheme.successGreen,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
                             if (report.photoUrls.isNotEmpty) ...[
                               const Text(
                                 'Photos',
@@ -711,12 +920,20 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                   left: 16,
                   right: 16,
                   child: AdminHoverButton(
-                    label: 'Update Status',
-                    icon: Icons.update_rounded,
-                    onTap: _isUpdating
+                    label: report.currentStatus == AppConstants.statusCompleted
+                        ? 'Report Locked'
+                        : 'Update Status',
+                    icon: report.currentStatus == AppConstants.statusCompleted
+                        ? Icons.lock_outline
+                        : Icons.update_rounded,
+                    onTap:
+                        (report.currentStatus == AppConstants.statusCompleted ||
+                            _isUpdating)
                         ? null
                         : () => _showUpdateDialog(report, adminName),
-                    color: AppTheme.primaryBlue,
+                    color: report.currentStatus == AppConstants.statusCompleted
+                        ? Colors.grey
+                        : AppTheme.primaryBlue,
                   ),
                 ),
               ],

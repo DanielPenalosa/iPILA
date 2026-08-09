@@ -14,6 +14,73 @@ class ReportDetailScreen extends StatelessWidget {
   final String reportId;
   const ReportDetailScreen({super.key, required this.reportId});
 
+  Future<void> _deleteReport(
+    BuildContext context,
+    String reportId,
+    String userId,
+  ) async {
+    final result = await ReportService().deleteReport(
+      reportId: reportId,
+      userId: userId,
+    );
+
+    if (context.mounted) {
+      if (result['success'] == true) {
+        AppToast.show(
+          context,
+          'Report deleted successfully',
+          type: ToastType.success,
+        );
+        Navigator.pop(context); // Go back to reports list
+      } else {
+        AppToast.show(
+          context,
+          result['error'] ?? 'Failed to delete report',
+          type: ToastType.error,
+        );
+      }
+    }
+  }
+
+  void _showDeleteDialog(
+    BuildContext context,
+    ReportModel report,
+    String userId,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppTheme.coral),
+            const SizedBox(width: 8),
+            const Text('Delete Report?'),
+          ],
+        ),
+        content: Text(
+          report.currentStatus == AppConstants.statusCompleted
+              ? 'This completed report will be permanently deleted from your list. This action cannot be undone.'
+              : 'Are you sure you want to delete this report? You can only delete reports that haven\'t been reviewed yet.',
+          style: const TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _deleteReport(context, report.id, userId);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.coral),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.read<ReportProvider>();
@@ -98,6 +165,32 @@ class ReportDetailScreen extends StatelessWidget {
                               ? AppTheme.primaryBlue
                               : AppTheme.borderColor,
                         ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // Delete button for own reports (only for Pending or Completed)
+                if (isOwnReport &&
+                    currentUserId != null &&
+                    (report.currentStatus == AppConstants.statusSubmitted ||
+                        report.currentStatus ==
+                            AppConstants.statusCompleted)) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () =>
+                          _showDeleteDialog(context, report, currentUserId),
+                      icon: const Icon(Icons.delete_outline),
+                      label: Text(
+                        report.currentStatus == AppConstants.statusCompleted
+                            ? 'Remove Completed Report'
+                            : 'Delete Report',
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.coral,
+                        side: const BorderSide(color: AppTheme.coral),
                       ),
                     ),
                   ),

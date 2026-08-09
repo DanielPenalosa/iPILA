@@ -130,12 +130,18 @@ class _LoginScreenState extends State<LoginScreen>
 
     if (isWeb) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF2F2F2),
-        body: Center(
-          child: FadeTransition(
-            opacity: _fadeAnim,
-            child: SingleChildScrollView(child: _webLayout(auth)),
-          ),
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset('assets/images/pila.png', fit: BoxFit.cover),
+            Container(color: Colors.black.withValues(alpha: 0.45)),
+            Center(
+              child: FadeTransition(
+                opacity: _fadeAnim,
+                child: SingleChildScrollView(child: _webLayout(auth)),
+              ),
+            ),
+          ],
         ),
       );
     }

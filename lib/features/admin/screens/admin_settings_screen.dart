@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:html' as html;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/widgets/app_ui.dart';
+import '../../../core/utils/download_helper.dart' as download_helper;
 import '../../../data/services/report_service.dart';
 import 'admin_shell.dart';
 
@@ -22,6 +24,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     'Issue Categories',
     'Barangays',
     'Notifications',
+    'Account',
     'System',
   ];
 
@@ -83,6 +86,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       case 2:
         return const _NotificationsSection();
       case 3:
+        return const _AccountSection();
+      case 4:
         return const _SystemSection();
       default:
         return const SizedBox();
@@ -360,6 +365,245 @@ class _Toggle extends StatelessWidget {
   }
 }
 
+class _AccountSection extends StatefulWidget {
+  const _AccountSection();
+
+  @override
+  State<_AccountSection> createState() => _AccountSectionState();
+}
+
+class _AccountSectionState extends State<_AccountSection> {
+  final _currentPasswordCtrl = TextEditingController();
+  final _newPasswordCtrl = TextEditingController();
+  final _confirmPasswordCtrl = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  bool _obscureCurrent = true;
+  bool _obscureNew = true;
+  bool _obscureConfirm = true;
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _currentPasswordCtrl.dispose();
+    _newPasswordCtrl.dispose();
+    _confirmPasswordCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _changePassword() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Import firebase_auth to get current user and re-authenticate
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('No user logged in');
+
+      // Re-authenticate with current password
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: _currentPasswordCtrl.text,
+      );
+      await user.reauthenticateWithCredential(credential);
+
+      // Change to new password
+      await user.updatePassword(_newPasswordCtrl.text);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ Password changed successfully'),
+            backgroundColor: AppTheme.successGreen,
+          ),
+        );
+
+        // Clear form
+        _currentPasswordCtrl.clear();
+        _newPasswordCtrl.clear();
+        _confirmPasswordCtrl.clear();
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        String message = 'Error changing password';
+        if (e.code == 'wrong-password') {
+          message = 'Current password is incorrect';
+        } else if (e.code == 'weak-password') {
+          message = 'New password is too weak';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: AppTheme.primaryRed,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppTheme.primaryRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionCard(
+      title: 'Change Password',
+      subtitle: 'Update your admin account password.',
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Current Password
+            TextFormField(
+              controller: _currentPasswordCtrl,
+              obscureText: _obscureCurrent,
+              decoration: InputDecoration(
+                labelText: 'Current Password',
+                hintText: 'Enter your current password',
+                prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureCurrent
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    size: 20,
+                  ),
+                  onPressed: () =>
+                      setState(() => _obscureCurrent = !_obscureCurrent),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              validator: (v) => v == null || v.isEmpty
+                  ? 'Current password is required'
+                  : null,
+            ),
+            const SizedBox(height: 12),
+
+            // New Password
+            TextFormField(
+              controller: _newPasswordCtrl,
+              obscureText: _obscureNew,
+              decoration: InputDecoration(
+                labelText: 'New Password',
+                hintText: 'Enter new password (min. 6 characters)',
+                prefixIcon: const Icon(Icons.lock_reset, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureNew
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    size: 20,
+                  ),
+                  onPressed: () => setState(() => _obscureNew = !_obscureNew),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              validator: (v) {
+                if (v == null || v.isEmpty) {
+                  return 'New password is required';
+                }
+                if (v.length < 6) {
+                  return 'Password must be at least 6 characters';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+
+            // Confirm Password
+            TextFormField(
+              controller: _confirmPasswordCtrl,
+              obscureText: _obscureConfirm,
+              decoration: InputDecoration(
+                labelText: 'Confirm New Password',
+                hintText: 'Re-enter new password',
+                prefixIcon: const Icon(Icons.lock_outlined, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureConfirm
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    size: 20,
+                  ),
+                  onPressed: () =>
+                      setState(() => _obscureConfirm = !_obscureConfirm),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              validator: (v) {
+                if (v == null || v.isEmpty) {
+                  return 'Please confirm your new password';
+                }
+                if (v != _newPasswordCtrl.text) {
+                  return 'Passwords do not match';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 20),
+
+            // Change Password Button
+            if (_isLoading)
+              Row(
+                children: [
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppTheme.primaryBlue,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Changing Password...',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                  ),
+                ],
+              )
+            else
+              AdminHoverButton(
+                label: 'Change Password',
+                onTap: _changePassword,
+                color: AppTheme.primaryBlue,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SystemSection extends StatefulWidget {
   const _SystemSection();
 
@@ -392,6 +636,13 @@ class _SystemSectionState extends State<_SystemSection> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _DangerBtn(
+                label: 'Update FAQs',
+                icon: Icons.help_outline,
+                color: AppTheme.primaryBlue,
+                onTap: () => _updateFaqs(context),
+              ),
+              const SizedBox(height: 8),
               _DangerBtn(
                 label: 'Export All Reports',
                 icon: Icons.download_outlined,
@@ -462,11 +713,173 @@ class _SystemSectionState extends State<_SystemSection> {
     );
   }
 
+  Future<void> _updateFaqs(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final db = FirebaseFirestore.instance;
+
+    try {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                ),
+              ),
+              SizedBox(width: 12),
+              Text('Updating FAQs...'),
+            ],
+          ),
+          duration: Duration(hours: 1),
+        ),
+      );
+
+      final faqs = [
+        {
+          'question': 'How do I report an issue?',
+          'answer':
+              'Tap the + button at the bottom of the home screen, fill in the category, add a photo, capture your GPS location, then tap Submit Report.',
+          'order': 1,
+        },
+        {
+          'question': 'How long does it take to resolve a report?',
+          'answer':
+              'The LGU aims to respond within 3–5 business days. You can track the live status of your report in the My Reports tab.',
+          'order': 2,
+        },
+        {
+          'question': 'Can I submit a report anonymously?',
+          'answer':
+              'No. All reports require user authentication to ensure accountability and enable effective follow-up communication. This helps the LGU verify report authenticity, prevent spam or duplicate submissions, and maintain direct contact with you for updates, clarifications, or resolution confirmation.',
+          'order': 3,
+        },
+        {
+          'question': 'How do I contact the Municipal Hall?',
+          'answer':
+              'You can reach the Municipality of Pila at (049) 559-0000 or visit the Municipal Hall at Pila, Laguna (8AM–5PM, Mon–Fri).',
+          'order': 4,
+        },
+        {
+          'question': 'What types of issues can I report?',
+          'answer':
+              'You can report Road Damage, Drainage/Flooding, Broken Streetlights, Garbage/Waste, Public Facility issues, Water Supply problems, Illegal Structures, and more.',
+          'order': 5,
+        },
+        {
+          'question': 'How do I track my report status?',
+          'answer':
+              'Go to the My Reports tab. Each report shows a live progress tracker: Submitted → Validated → Queued → In Progress → Completed.',
+          'order': 6,
+        },
+        {
+          'question': 'Can I edit or delete my report after submission?',
+          'answer':
+              'No. Once submitted, reports cannot be edited or deleted to maintain data integrity. If you need to update information, contact the Municipal Hall directly or add a comment in the report details.',
+          'order': 7,
+        },
+        {
+          'question': 'What is the Community Reports section?',
+          'answer':
+              'Community Reports lets you see all public reports submitted by other residents in your area. You can follow-up on reports to show support and track progress on issues affecting your community.',
+          'order': 8,
+        },
+        {
+          'question': 'How do I view municipal ordinances?',
+          'answer':
+              'Tap the Laws tab at the bottom navigation. You can browse all municipal ordinances, search by keyword or category, and view full ordinance details including enforcement dates and penalties.',
+          'order': 9,
+        },
+        {
+          'question': 'What does it mean to follow-up on a report?',
+          'answer':
+              'Following-up on a report shows your support for that issue and helps prioritize community concerns. You will also receive notifications when the report status changes.',
+          'order': 10,
+        },
+        {
+          'question': 'Will I receive notifications about my reports?',
+          'answer':
+              'Yes. You will receive push notifications when your report status changes (validated, queued, in progress, completed) or when administrators add comments or updates.',
+          'order': 11,
+        },
+        {
+          'question': 'Is my personal information safe?',
+          'answer':
+              'Yes. iPILA uses Firebase Authentication and Firestore security rules to protect your data. Your personal information is only visible to LGU administrators and is never shared publicly.',
+          'order': 12,
+        },
+        {
+          'question': 'Can I attach photos to my report?',
+          'answer':
+              'Yes. You can attach up to 3 photos when submitting a report. Clear photos help administrators assess the issue and prioritize response. Make sure images are relevant and show the problem clearly.',
+          'order': 13,
+        },
+        {
+          'question': 'What if my report location is incorrect?',
+          'answer':
+              'Make sure location services are enabled on your device. The app automatically captures your GPS coordinates when you submit a report. If the pin is slightly off, administrators can still identify the general area.',
+          'order': 14,
+        },
+      ];
+
+      int updated = 0;
+      int added = 0;
+
+      for (final faq in faqs) {
+        final existing = await db
+            .collection('faqs')
+            .where('order', isEqualTo: faq['order'])
+            .get();
+
+        if (existing.docs.isEmpty) {
+          await db.collection('faqs').add(faq);
+          added++;
+        } else {
+          await existing.docs.first.reference.update(faq);
+          updated++;
+        }
+      }
+
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('✓ Updated $updated FAQs, added $added new FAQs'),
+          backgroundColor: AppTheme.successGreen,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Error updating FAQs: $e'),
+          backgroundColor: AppTheme.primaryRed,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   Future<void> _exportAllReports(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
 
+    // Check if running on web
+    if (!kIsWeb) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Export feature is only available on web'),
+          backgroundColor: AppTheme.primaryOrange,
+        ),
+      );
+      return;
+    }
+
     try {
-      // Show loading in SnackBar (no dialog!)
+      // Show loading in SnackBar
       messenger.showSnackBar(
         const SnackBar(
           content: Row(
@@ -484,7 +897,7 @@ class _SystemSectionState extends State<_SystemSection> {
               Text('Exporting reports...'),
             ],
           ),
-          duration: Duration(hours: 1), // Long duration, will hide manually
+          duration: Duration(hours: 1),
         ),
       );
 
@@ -521,25 +934,12 @@ class _SystemSectionState extends State<_SystemSection> {
 
       final csvContent = csvLines.join('\n');
       final bytes = utf8.encode(csvContent);
-      final blob = html.Blob([bytes]);
-      final url = html.Url.createObjectUrlFromBlob(blob);
 
-      // Create and trigger download without navigation
-      final anchor = html.document.createElement('a') as html.AnchorElement
-        ..href = url
-        ..style.display = 'none'
-        ..download =
-            'ipila_reports_${DateTime.now().millisecondsSinceEpoch}.csv';
+      // Download file using helper
+      final filename =
+          'ipila_reports_${DateTime.now().millisecondsSinceEpoch}.csv';
+      download_helper.downloadFile(filename, bytes);
 
-      html.document.body?.children.add(anchor);
-      anchor.click();
-      html.document.body?.children.remove(anchor);
-
-      // Small delay before revoking URL
-      await Future.delayed(const Duration(milliseconds: 100));
-      html.Url.revokeObjectUrl(url);
-
-      // Hide loading, show success
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         SnackBar(
@@ -549,7 +949,6 @@ class _SystemSectionState extends State<_SystemSection> {
         ),
       );
     } catch (e) {
-      // Hide loading, show error
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         SnackBar(
