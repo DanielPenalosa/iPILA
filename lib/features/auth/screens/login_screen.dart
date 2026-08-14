@@ -238,6 +238,7 @@ class _LoginScreenState extends State<LoginScreen>
                   TextFormField(
                     controller: _passwordCtrl,
                     obscureText: _obscurePassword,
+                    onFieldSubmitted: (_) => _login(),
                     decoration: InputDecoration(
                       hintText: 'Password',
                       prefixIcon: const Icon(Icons.lock_outline),
@@ -459,6 +460,7 @@ class _LoginScreenState extends State<LoginScreen>
               TextFormField(
                 controller: _passwordCtrl,
                 obscureText: _obscurePassword,
+                onFieldSubmitted: (_) => _login(),
                 decoration: InputDecoration(
                   labelText: 'Password',
                   prefixIcon: const Icon(Icons.lock_outlined),
