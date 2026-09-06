@@ -35,6 +35,12 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
   File? _afterPhoto;
   XFile? _afterPhotoWeb;
 
+  // Date range filter state
+  DateTimeRange? _dateRange;
+  String _dateRangeLabel = 'All Time';
+  final GlobalKey _dateButtonKey = GlobalKey();
+  OverlayEntry? _calendarOverlay;
+
   static const _filters = ['All', 'New', 'In Progress', 'Completed', 'Overdue'];
 
   @override
@@ -46,11 +52,14 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _calendarOverlay?.remove();
     super.dispose();
   }
 
   List<ReportModel> _applyFilter(List<ReportModel> reports) {
     var list = reports;
+
+    // Apply status filter
     if (_filter != 'All') {
       list = list.where((r) {
         if (_filter == 'New')
@@ -59,6 +68,19 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
         return r.currentStatus == _filter;
       }).toList();
     }
+
+    // Apply date range filter
+    if (_dateRange != null) {
+      list = list.where((r) {
+        final reportDate = r.createdAt;
+        return reportDate.isAfter(
+              _dateRange!.start.subtract(const Duration(days: 1)),
+            ) &&
+            reportDate.isBefore(_dateRange!.end.add(const Duration(days: 1)));
+      }).toList();
+    }
+
+    // Apply search filter
     if (_search.isNotEmpty) {
       final q = _search.toLowerCase();
       list = list
@@ -71,6 +93,108 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
           .toList();
     }
     return list;
+  }
+
+  void _showDateRangePicker() {
+    if (_calendarOverlay != null) {
+      _hideDateRangePicker();
+      return;
+    }
+
+    final renderBox =
+        _dateButtonKey.currentContext!.findRenderObject() as RenderBox;
+    final position = renderBox.localToGlobal(Offset.zero);
+    final size = renderBox.size;
+
+    _calendarOverlay = OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: _hideDateRangePicker,
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+          Positioned(
+            right:
+                (MediaQuery.of(context).size.width - position.dx - size.width)
+                    .clamp(8.0, MediaQuery.of(context).size.width - 328),
+            top: position.dy + size.height + 8,
+            child: Material(
+              elevation: 8,
+              borderRadius: BorderRadius.circular(12),
+              child: _DateRangeCalendar(
+                initialRange: _dateRange,
+                onRangeSelected: (range) {
+                  setState(() {
+                    _dateRange = range;
+                    _dateRangeLabel = range == null
+                        ? 'All Time'
+                        : '${DateFormat('MMM d').format(range.start)} - ${DateFormat('MMM d, y').format(range.end)}';
+                  });
+                  _hideDateRangePicker();
+                },
+                onClear: () {
+                  setState(() {
+                    _dateRange = null;
+                    _dateRangeLabel = 'All Time';
+                  });
+                  _hideDateRangePicker();
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    Overlay.of(context).insert(_calendarOverlay!);
+  }
+
+  void _hideDateRangePicker() {
+    _calendarOverlay?.remove();
+    _calendarOverlay = null;
+  }
+
+  void _applyQuickRange(String range) {
+    final now = DateTime.now();
+    DateTimeRange dateRange;
+
+    switch (range) {
+      case 'Today':
+        dateRange = DateTimeRange(
+          start: DateTime(now.year, now.month, now.day),
+          end: now,
+        );
+        break;
+      case 'This Week':
+        final weekStart = now.subtract(Duration(days: now.weekday - 1));
+        dateRange = DateTimeRange(
+          start: DateTime(weekStart.year, weekStart.month, weekStart.day),
+          end: now,
+        );
+        break;
+      case 'This Month':
+        dateRange = DateTimeRange(
+          start: DateTime(now.year, now.month, 1),
+          end: now,
+        );
+        break;
+      case 'Last 30 Days':
+        dateRange = DateTimeRange(
+          start: now.subtract(const Duration(days: 30)),
+          end: now,
+        );
+        break;
+      default:
+        return;
+    }
+
+    setState(() {
+      _dateRange = dateRange;
+      _dateRangeLabel = range;
+    });
+    _hideDateRangePicker();
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -730,6 +854,90 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
                     ),
                   ),
                   const Spacer(),
+                  // Date range filter button
+                  InkWell(
+                    key: _dateButtonKey,
+                    onTap: _showDateRangePicker,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 9,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: _dateRange != null
+                              ? AppTheme.primaryBlue
+                              : const Color(0xFFE0E0E0),
+                          width: _dateRange != null ? 1.5 : 1,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        color: _dateRange != null
+                            ? AppTheme.primaryBlue.withValues(alpha: 0.08)
+                            : Colors.white,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.calendar_today_rounded,
+                            size: 16,
+                            color: _dateRange != null
+                                ? AppTheme.primaryBlue
+                                : Colors.grey[600],
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _dateRangeLabel,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: _dateRange != null
+                                  ? FontWeight.w600
+                                  : FontWeight.w500,
+                              color: _dateRange != null
+                                  ? AppTheme.primaryBlue
+                                  : Colors.grey[700],
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_drop_down,
+                            size: 20,
+                            color: _dateRange != null
+                                ? AppTheme.primaryBlue
+                                : Colors.grey[600],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (_dateRange != null) ...[
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _dateRange = null;
+                          _dateRangeLabel = 'All Time';
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryRed.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppTheme.primaryRed.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.clear,
+                          size: 16,
+                          color: AppTheme.primaryRed,
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(width: 12),
                   SizedBox(
                     width: 200,
                     height: 36,
@@ -1334,6 +1542,493 @@ class _InfoRow extends StatelessWidget {
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DateRangeCalendar extends StatefulWidget {
+  final DateTimeRange? initialRange;
+  final Function(DateTimeRange?) onRangeSelected;
+  final VoidCallback onClear;
+
+  const _DateRangeCalendar({
+    required this.initialRange,
+    required this.onRangeSelected,
+    required this.onClear,
+  });
+
+  @override
+  State<_DateRangeCalendar> createState() => _DateRangeCalendarState();
+}
+
+class _DateRangeCalendarState extends State<_DateRangeCalendar> {
+  DateTime _focusedMonth = DateTime.now();
+  DateTime? _rangeStart;
+  DateTime? _rangeEnd;
+
+  // null = calendar, 'month' = month picker, 'year' = year picker
+  String? _pickerMode;
+
+  static const _months = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _rangeStart = widget.initialRange?.start;
+    _rangeEnd = widget.initialRange?.end;
+    if (_rangeStart != null) {
+      _focusedMonth = DateTime(_rangeStart!.year, _rangeStart!.month, 1);
+    }
+  }
+
+  void _selectDate(DateTime date) {
+    setState(() {
+      if (_rangeStart == null || (_rangeStart != null && _rangeEnd != null)) {
+        _rangeStart = date;
+        _rangeEnd = null;
+      } else if (date.isBefore(_rangeStart!)) {
+        _rangeEnd = _rangeStart;
+        _rangeStart = date;
+      } else {
+        _rangeEnd = date;
+      }
+    });
+  }
+
+  void _previousMonth() {
+    setState(() {
+      _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month - 1, 1);
+    });
+  }
+
+  void _nextMonth() {
+    setState(() {
+      _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1, 1);
+    });
+  }
+
+  void _applySelection() {
+    if (_rangeStart != null && _rangeEnd != null) {
+      widget.onRangeSelected(
+        DateTimeRange(start: _rangeStart!, end: _rangeEnd!),
+      );
+    }
+  }
+
+  Widget _buildMonthPicker() {
+    return SizedBox(
+      height: 220,
+      child: GridView.builder(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          childAspectRatio: 2.2,
+          crossAxisSpacing: 6,
+          mainAxisSpacing: 6,
+        ),
+        itemCount: 12,
+        itemBuilder: (_, i) {
+          final isCurrent = i + 1 == _focusedMonth.month;
+          final isFuture = DateTime(
+            _focusedMonth.year,
+            i + 1,
+          ).isAfter(DateTime.now());
+          return GestureDetector(
+            onTap: isFuture
+                ? null
+                : () {
+                    setState(() {
+                      _focusedMonth = DateTime(_focusedMonth.year, i + 1, 1);
+                      _pickerMode = null;
+                    });
+                  },
+            child: Container(
+              decoration: BoxDecoration(
+                color: isCurrent ? AppTheme.primaryBlue : Colors.transparent,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: isCurrent ? AppTheme.primaryBlue : Colors.grey[300]!,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                _months[i].substring(0, 3),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: isFuture
+                      ? Colors.grey[300]
+                      : isCurrent
+                      ? Colors.white
+                      : AppTheme.textDark,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildYearPicker() {
+    final currentYear = DateTime.now().year;
+    final years = List.generate(currentYear - 2019, (i) => currentYear - i);
+    return SizedBox(
+      height: 220,
+      child: GridView.builder(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          childAspectRatio: 2.2,
+          crossAxisSpacing: 6,
+          mainAxisSpacing: 6,
+        ),
+        itemCount: years.length,
+        itemBuilder: (_, i) {
+          final year = years[i];
+          final isCurrent = year == _focusedMonth.year;
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                _focusedMonth = DateTime(year, _focusedMonth.month, 1);
+                _pickerMode = null;
+              });
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: isCurrent ? AppTheme.primaryBlue : Colors.transparent,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: isCurrent ? AppTheme.primaryBlue : Colors.grey[300]!,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '$year',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: isCurrent ? Colors.white : AppTheme.textDark,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final daysInMonth = DateUtils.getDaysInMonth(
+      _focusedMonth.year,
+      _focusedMonth.month,
+    );
+    final firstDayOfMonth = DateTime(
+      _focusedMonth.year,
+      _focusedMonth.month,
+      1,
+    );
+    final firstWeekday = firstDayOfMonth.weekday % 7;
+
+    return Container(
+      width: 340,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header with tappable month and year
+          Row(
+            children: [
+              if (_pickerMode == null)
+                IconButton(
+                  icon: const Icon(Icons.chevron_left),
+                  onPressed: _previousMonth,
+                  iconSize: 20,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              if (_pickerMode != null)
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, size: 18),
+                  onPressed: () => setState(() => _pickerMode = null),
+                  iconSize: 20,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    GestureDetector(
+                      onTap: () => setState(
+                        () => _pickerMode = _pickerMode == 'month'
+                            ? null
+                            : 'month',
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _pickerMode == 'month'
+                              ? AppTheme.primaryBlue.withValues(alpha: 0.1)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              DateFormat('MMMM').format(_focusedMonth),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const Icon(Icons.arrow_drop_down, size: 18),
+                          ],
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => setState(
+                        () =>
+                            _pickerMode = _pickerMode == 'year' ? null : 'year',
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _pickerMode == 'year'
+                              ? AppTheme.primaryBlue.withValues(alpha: 0.1)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              '${_focusedMonth.year}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const Icon(Icons.arrow_drop_down, size: 18),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_pickerMode == null)
+                IconButton(
+                  icon: const Icon(Icons.chevron_right),
+                  onPressed:
+                      _focusedMonth.year < DateTime.now().year ||
+                          (_focusedMonth.year == DateTime.now().year &&
+                              _focusedMonth.month < DateTime.now().month)
+                      ? _nextMonth
+                      : null,
+                  iconSize: 20,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              if (_pickerMode != null) const SizedBox(width: 28),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Month or year picker overlay
+          if (_pickerMode == 'month') _buildMonthPicker(),
+          if (_pickerMode == 'year') _buildYearPicker(),
+          if (_pickerMode != null) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                if (widget.initialRange != null)
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: widget.onClear,
+                      icon: const Icon(Icons.clear, size: 16),
+                      label: const Text('Clear'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.primaryRed,
+                      ),
+                    ),
+                  ),
+                if (widget.initialRange != null) const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: (_rangeStart != null && _rangeEnd != null)
+                        ? _applySelection
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Apply'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          if (_pickerMode == null) ...[
+            // Weekday headers
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+                  .map(
+                    (day) => SizedBox(
+                      width: 40,
+                      child: Text(
+                        day,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: 8),
+            // Calendar grid
+            ...List.generate(6, (weekIndex) {
+              final weekWidgets = List.generate(7, (dayIndex) {
+                final dayNumber = weekIndex * 7 + dayIndex - firstWeekday + 1;
+                if (dayNumber < 1 || dayNumber > daysInMonth) {
+                  return const SizedBox(width: 40, height: 32);
+                }
+
+                final date = DateTime(
+                  _focusedMonth.year,
+                  _focusedMonth.month,
+                  dayNumber,
+                );
+                final isToday = DateUtils.isSameDay(date, DateTime.now());
+                final isSelected =
+                    (_rangeStart != null &&
+                        DateUtils.isSameDay(date, _rangeStart!)) ||
+                    (_rangeEnd != null &&
+                        DateUtils.isSameDay(date, _rangeEnd!));
+                final isInRange =
+                    _rangeStart != null &&
+                    _rangeEnd != null &&
+                    date.isAfter(_rangeStart!) &&
+                    date.isBefore(_rangeEnd!);
+                final isFuture = date.isAfter(DateTime.now());
+
+                return GestureDetector(
+                  onTap: isFuture ? null : () => _selectDate(date),
+                  child: Container(
+                    width: 40,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppTheme.primaryBlue
+                          : isInRange
+                          ? AppTheme.primaryBlue.withValues(alpha: 0.15)
+                          : null,
+                      borderRadius: BorderRadius.circular(6),
+                      border: isToday && !isSelected
+                          ? Border.all(color: AppTheme.primaryBlue, width: 1.5)
+                          : null,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '$dayNumber',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                        color: isFuture
+                            ? Colors.grey[300]
+                            : isSelected
+                            ? Colors.white
+                            : isInRange
+                            ? AppTheme.primaryBlue
+                            : AppTheme.textDark,
+                      ),
+                    ),
+                  ),
+                );
+              });
+
+              // Only show row if it has at least one valid day
+              final hasValidDay = weekWidgets.any(
+                (widget) => widget is GestureDetector,
+              );
+              if (!hasValidDay) return const SizedBox.shrink();
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: weekWidgets,
+                ),
+              );
+            }),
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                if (widget.initialRange != null)
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: widget.onClear,
+                      icon: const Icon(Icons.clear, size: 16),
+                      label: const Text('Clear'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.primaryRed,
+                      ),
+                    ),
+                  ),
+                if (widget.initialRange != null) const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: (_rangeStart != null && _rangeEnd != null)
+                        ? _applySelection
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Apply'),
+                  ),
+                ),
+              ],
+            ),
+          ], // end if (_pickerMode == null)
         ],
       ),
     );
