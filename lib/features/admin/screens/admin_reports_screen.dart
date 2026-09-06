@@ -1,5 +1,8 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
@@ -27,6 +30,10 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
   // Bulk selection state
   bool _selectionMode = false;
   final Set<String> _selectedReportIds = {};
+
+  // Status update state
+  File? _afterPhoto;
+  XFile? _afterPhotoWeb;
 
   static const _filters = ['All', 'New', 'In Progress', 'Completed', 'Overdue'];
 
@@ -402,93 +409,258 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
     }
   }
 
+  Future<void> _pickAfterPhoto() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _afterPhotoWeb = picked;
+        if (!kIsWeb) {
+          _afterPhoto = File(picked.path);
+        }
+      });
+    }
+  }
+
   void _showStatusDialog(ReportModel report) {
     final auth = context.read<AuthProvider>();
     final adminName = auth.user?.fullName ?? 'Admin';
     String? selectedStatus;
     final noteCtrl = TextEditingController();
 
-    showDialog(
+    // Reset photo state
+    _afterPhoto = null;
+    _afterPhotoWeb = null;
+
+    showModalBottomSheet(
       context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          title: const Text('Update Status'),
-          content: Column(
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
+          child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const Text(
+                'Update Report Status',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(labelText: 'New Status'),
                 items: AppConstants.reportStatuses
                     .where((s) => s != report.currentStatus)
-                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .map(
+                      (s) => DropdownMenuItem(
+                        value: s,
+                        child: Row(
+                          children: [
+                            Icon(
+                              AppTheme.statusIcon(s),
+                              size: 16,
+                              color: AppTheme.statusColor(s),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(s),
+                          ],
+                        ),
+                      ),
+                    )
                     .toList(),
-                onChanged: (v) => setS(() => selectedStatus = v),
+                onChanged: (v) => setModalState(() => selectedStatus = v),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: noteCtrl,
-                decoration: const InputDecoration(labelText: 'Note (optional)'),
+                decoration: const InputDecoration(
+                  labelText: 'Note (optional)',
+                  hintText: 'Add a note for this status update...',
+                ),
                 maxLines: 2,
+              ),
+              if (selectedStatus == AppConstants.statusCompleted) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryYellow.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppTheme.primaryYellow.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: AppTheme.primaryYellow,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Warning: This will lock the report permanently',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.primaryYellow,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                AdminHoverButton(
+                  label: (_afterPhoto != null || _afterPhotoWeb != null)
+                      ? 'After photo added ✓'
+                      : 'Add After Photo (Required)',
+                  icon: Icons.add_a_photo_outlined,
+                  onTap: () async {
+                    await _pickAfterPhoto();
+                    setModalState(() {});
+                  },
+                  outlined: true,
+                  color: (_afterPhoto != null || _afterPhotoWeb != null)
+                      ? AppTheme.successGreen
+                      : null,
+                ),
+              ],
+              const SizedBox(height: 16),
+              AdminHoverButton(
+                label: selectedStatus == AppConstants.statusCompleted
+                    ? 'Complete'
+                    : 'Update',
+                onTap: selectedStatus == null
+                    ? null
+                    : () async {
+                        final status = selectedStatus!;
+                        final note = noteCtrl.text.trim().isEmpty
+                            ? null
+                            : noteCtrl.text.trim();
+
+                        // Validate completion requirements
+                        if (status == AppConstants.statusCompleted) {
+                          if (report.photoUrls.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Cannot complete: No before photo exists',
+                                ),
+                                backgroundColor: AppTheme.primaryRed,
+                              ),
+                            );
+                            return;
+                          }
+                          if (_afterPhoto == null && _afterPhotoWeb == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'After photo is required to mark as completed',
+                                ),
+                                backgroundColor: AppTheme.primaryRed,
+                              ),
+                            );
+                            return;
+                          }
+                        }
+
+                        if (Navigator.canPop(ctx)) {
+                          Navigator.pop(ctx);
+                        }
+
+                        if (!mounted) return;
+
+                        // Show loading
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Row(
+                              children: [
+                                SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 12),
+                                Text('Updating status...'),
+                              ],
+                            ),
+                            duration: Duration(seconds: 30),
+                          ),
+                        );
+
+                        try {
+                          final result = await _service.updateStatus(
+                            reportId: report.id,
+                            newStatus: status,
+                            updatedBy: adminName,
+                            note: note,
+                            afterPhoto: status == AppConstants.statusCompleted
+                                ? _afterPhoto
+                                : null,
+                            afterPhotoWeb:
+                                status == AppConstants.statusCompleted
+                                ? _afterPhotoWeb
+                                : null,
+                          );
+
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).clearSnackBars();
+                            if (result['success'] == true) {
+                              _afterPhoto = null;
+                              _afterPhotoWeb = null;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Status updated to $status'),
+                                  backgroundColor: AppTheme.successGreen,
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    result['error'] ?? 'Failed to update',
+                                  ),
+                                  backgroundColor: AppTheme.primaryRed,
+                                ),
+                              );
+                            }
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).clearSnackBars();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error: $e'),
+                                backgroundColor: AppTheme.primaryRed,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                color: selectedStatus == AppConstants.statusCompleted
+                    ? AppTheme.successGreen
+                    : AppTheme.primaryBlue,
               ),
             ],
           ),
-          actions: [
-            AdminHoverButton(
-              label: 'Cancel',
-              onTap: () {
-                if (Navigator.canPop(ctx)) {
-                  Navigator.pop(ctx);
-                }
-              },
-              outlined: true,
-              small: true,
-            ),
-            const SizedBox(width: 8),
-            AdminHoverButton(
-              label: 'Update',
-              onTap: selectedStatus == null
-                  ? null
-                  : () async {
-                      final status = selectedStatus!;
-                      final note = noteCtrl.text.trim().isEmpty
-                          ? null
-                          : noteCtrl.text.trim();
-                      if (Navigator.canPop(ctx)) {
-                        Navigator.pop(ctx);
-                      }
-
-                      if (!mounted) return;
-
-                      try {
-                        await _service.updateStatus(
-                          reportId: report.id,
-                          newStatus: status,
-                          updatedBy: adminName,
-                          note: note,
-                        );
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Status updated to $status'),
-                              backgroundColor: AppTheme.successGreen,
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Failed to update status'),
-                              backgroundColor: AppTheme.primaryRed,
-                            ),
-                          );
-                        }
-                      }
-                    },
-              color: AppTheme.primaryBlue,
-              small: true,
-            ),
-          ],
         ),
       ),
     );
@@ -664,12 +836,12 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
         }
 
         return GridView.builder(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(40),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
-            childAspectRatio: 1.1,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
+            childAspectRatio: 0.85,
+            crossAxisSpacing: 32,
+            mainAxisSpacing: 32,
           ),
           itemCount: reports.length,
           itemBuilder: (context, index) {
@@ -867,27 +1039,21 @@ class _ReportRow extends StatelessWidget {
                       onTap: onReject,
                       color: AppTheme.primaryRed,
                     ),
-                  ] else
+                  ] else if (report.currentStatus !=
+                      AppConstants.statusCompleted)
                     _Btn(
-                      label:
-                          report.currentStatus == AppConstants.statusCompleted
-                          ? 'Locked'
-                          : 'Update',
-                      onTap:
-                          report.currentStatus == AppConstants.statusCompleted
-                          ? () {} // No-op for completed reports
-                          : onStatusChange,
-                      color:
-                          report.currentStatus == AppConstants.statusCompleted
-                          ? Colors.grey
-                          : AppTheme.primaryBlue,
+                      label: 'Update',
+                      onTap: onStatusChange,
+                      color: AppTheme.primaryBlue,
                     ),
-                  const SizedBox(width: 4),
-                  _Btn(
-                    label: 'Delete',
-                    onTap: onDelete,
-                    color: AppTheme.primaryRed,
-                  ),
+                  if (!isNew) ...[
+                    const SizedBox(width: 4),
+                    _Btn(
+                      label: 'Delete',
+                      onTap: onDelete,
+                      color: AppTheme.primaryRed,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -949,15 +1115,15 @@ class _CommunityReportCard extends StatelessWidget {
               child: Image.network(
                 report.photoUrls.first,
                 width: double.infinity,
-                height: 140,
+                height: 220,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
                   width: double.infinity,
-                  height: 140,
+                  height: 220,
                   color: Colors.grey[200],
                   child: const Icon(
                     Icons.broken_image_outlined,
-                    size: 32,
+                    size: 40,
                     color: Colors.grey,
                   ),
                 ),
@@ -966,7 +1132,7 @@ class _CommunityReportCard extends StatelessWidget {
           else
             Container(
               width: double.infinity,
-              height: 140,
+              height: 220,
               decoration: BoxDecoration(
                 color: Colors.grey[100],
                 borderRadius: const BorderRadius.vertical(
@@ -975,7 +1141,7 @@ class _CommunityReportCard extends StatelessWidget {
               ),
               child: Icon(
                 Icons.report_outlined,
-                size: 48,
+                size: 56,
                 color: Colors.grey[400],
               ),
             ),
@@ -983,7 +1149,7 @@ class _CommunityReportCard extends StatelessWidget {
           // Content
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

@@ -29,6 +29,43 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
   XFile? _afterPhotoWeb;
   bool _isUpdating = false;
   bool _disposed = false;
+  bool _hasMarkedAsSeen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _markReportAsSeen();
+  }
+
+  Future<void> _markReportAsSeen() async {
+    // Wait a bit to get the report data first
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (_disposed || !mounted || _hasMarkedAsSeen) return;
+
+    try {
+      final reportSnapshot = await _service.getReport(widget.reportId).first;
+      if (reportSnapshot == null) return;
+
+      // Only auto-update to "Seen" if status is "Submitted"
+      if (reportSnapshot.currentStatus == AppConstants.statusSubmitted) {
+        final auth = context.read<AuthProvider>();
+        final adminName = auth.user?.fullName ?? 'Admin';
+
+        await _service.updateStatus(
+          reportId: widget.reportId,
+          newStatus: AppConstants.statusSeen,
+          updatedBy: adminName,
+          note: 'Report viewed by admin',
+        );
+
+        _hasMarkedAsSeen = true;
+      }
+    } catch (e) {
+      debugPrint('Error marking report as seen: $e');
+      // Silent fail - not critical
+    }
+  }
 
   @override
   void dispose() {
@@ -114,9 +151,9 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
         builder: (ctx) => AlertDialog(
           title: Row(
             children: [
-              Icon(Icons.lock_outline, color: AppTheme.successGreen),
+              Icon(Icons.check_circle, color: AppTheme.successGreen),
               const SizedBox(width: 8),
-              const Text('Report Locked'),
+              const Text('Report Completed'),
             ],
           ),
           content: const Text(
@@ -240,8 +277,8 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
               const SizedBox(height: 16),
               AdminHoverButton(
                 label: selectedStatus == AppConstants.statusCompleted
-                    ? 'Confirm Completion'
-                    : 'Update Status',
+                    ? 'Complete'
+                    : 'Update',
                 onTap: selectedStatus == null
                     ? null
                     : () {
@@ -921,10 +958,10 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                   right: 16,
                   child: AdminHoverButton(
                     label: report.currentStatus == AppConstants.statusCompleted
-                        ? 'Report Locked'
-                        : 'Update Status',
+                        ? 'Report Completed'
+                        : 'Update',
                     icon: report.currentStatus == AppConstants.statusCompleted
-                        ? Icons.lock_outline
+                        ? Icons.check_circle
                         : Icons.update_rounded,
                     onTap:
                         (report.currentStatus == AppConstants.statusCompleted ||

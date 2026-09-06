@@ -654,11 +654,12 @@ class ReportTimeline extends StatelessWidget {
                       statusName,
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
+                        fontSize: 14,
                         color: isCompleted ? AppTheme.textDark : Colors.grey,
                       ),
                     ),
                     if (historyEntry != null) ...[
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 4),
                       Text(
                         DateFormat(
                           'MMM d, yyyy h:mm a',
@@ -668,14 +669,53 @@ class ReportTimeline extends StatelessWidget {
                           color: AppTheme.textMuted,
                         ),
                       ),
-                      if (historyEntry.note != null)
+                      if (historyEntry.updatedBy != null &&
+                          historyEntry.updatedBy!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
                         Text(
-                          historyEntry.note!,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.textMuted,
+                          'by ${historyEntry.updatedBy}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                            fontStyle: FontStyle.italic,
                           ),
                         ),
+                      ],
+                      if (historyEntry.note != null &&
+                          historyEntry.note!.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.blue.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.message_outlined,
+                                size: 14,
+                                color: Colors.blue[700],
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  historyEntry.note!,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey[800],
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ],
                 ),

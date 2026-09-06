@@ -273,56 +273,127 @@ class _ProgressTracker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: steps.asMap().entries.map((e) {
-        final i = e.key;
-        final label = e.value;
-        final done = i <= currentStep;
-        final active = i == currentStep;
-        final color = done ? AppTheme.primaryBlue : const Color(0xFFD1D5DB);
-
-        return Expanded(
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    Container(
-                      width: active ? 14 : 10,
-                      height: active ? 14 : 10,
-                      decoration: BoxDecoration(
-                        color: done ? color : Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: color, width: 2),
-                      ),
+    return Column(
+      children: [
+        // Progress bar with percentage
+        Row(
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  // Background track
+                  Container(
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE5E7EB),
+                      borderRadius: BorderRadius.circular(3),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: done ? AppTheme.textDark : AppTheme.textMuted,
-                        fontWeight: done ? FontWeight.w500 : FontWeight.normal,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-              if (i < steps.length - 1)
-                Expanded(
-                  child: Container(
-                    height: 2,
-                    margin: const EdgeInsets.only(bottom: 18),
-                    color: i < currentStep
-                        ? AppTheme.primaryBlue
-                        : const Color(0xFFD1D5DB),
                   ),
-                ),
-            ],
-          ),
-        );
-      }).toList(),
+                  // Progress fill
+                  FractionallySizedBox(
+                    widthFactor: (currentStep + 1) / steps.length,
+                    child: Container(
+                      height: 6,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppTheme.primaryBlue,
+                            AppTheme.primaryBlue.withValues(alpha: 0.7),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '${((currentStep + 1) / steps.length * 100).toInt()}%',
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryBlue,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Step indicators
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: steps.asMap().entries.map((e) {
+            final i = e.key;
+            final label = e.value;
+            final done = i <= currentStep;
+            final active = i == currentStep;
+            final color = done ? AppTheme.primaryBlue : const Color(0xFFD1D5DB);
+
+            return Expanded(
+              child: Column(
+                children: [
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Outer ring for active step
+                      if (active)
+                        Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: color.withValues(alpha: 0.3),
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                      // Step circle
+                      Container(
+                        width: done ? 16 : 12,
+                        height: done ? 16 : 12,
+                        decoration: BoxDecoration(
+                          color: done ? color : Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: color,
+                            width: done ? 2.5 : 2,
+                          ),
+                          boxShadow: done
+                              ? [
+                                  BoxShadow(
+                                    color: color.withValues(alpha: 0.3),
+                                    blurRadius: 4,
+                                    spreadRadius: 1,
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: done
+                            ? Icon(Icons.check, size: 10, color: Colors.white)
+                            : null,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: active ? 10 : 9,
+                      color: done ? AppTheme.textDark : AppTheme.textMuted,
+                      fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }
