@@ -25,7 +25,14 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         .collection('users')
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((s) => s.docs.map((d) => UserModel.fromFirestore(d)).toList());
+        .map(
+          (s) => s.docs
+              .map((d) => UserModel.fromFirestore(d))
+              .where(
+                (user) => user.approvalStatus != 'deleted',
+              ) // Filter out deleted users
+              .toList(),
+        );
   }
 
   void _handleApprove(UserModel user) async {
@@ -133,6 +140,32 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       } catch (e) {
         if (mounted) {
           _userService.showErrorMessage(context, 'Failed to reactivate: $e');
+        }
+      }
+    }
+  }
+
+  void _handleDeleteAccount(UserModel user) async {
+    final confirmed = await _showConfirmDialog(
+      title: 'Delete Account',
+      message:
+          'Permanently delete ${user.fullName}\'s account? This action cannot be undone. All their data including reports will remain but will be orphaned.',
+      confirmText: 'Delete Account',
+      isDestructive: true,
+    );
+
+    if (confirmed) {
+      try {
+        await _userService.deleteUser(user.uid);
+        if (mounted) {
+          _userService.showSuccessMessage(
+            context,
+            '✓ ${user.fullName}\'s account deleted permanently',
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          _userService.showErrorMessage(context, 'Failed to delete: $e');
         }
       }
     }
@@ -554,6 +587,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                       onToggleSuspend: () => u.isActive
                                           ? _handleSuspend(u)
                                           : _handleReactivate(u),
+                                      onDelete: () => _handleDeleteAccount(u),
                                     ),
                                   ),
                                 ],
@@ -804,7 +838,12 @@ class _PendingRow extends StatelessWidget {
 class _ActiveRow extends StatelessWidget {
   final UserModel user;
   final VoidCallback onToggleSuspend;
-  const _ActiveRow({required this.user, required this.onToggleSuspend});
+  final VoidCallback onDelete;
+  const _ActiveRow({
+    required this.user,
+    required this.onToggleSuspend,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -918,6 +957,12 @@ class _ActiveRow extends StatelessWidget {
                   label: user.isActive ? 'Suspend' : 'Reactivate',
                   color: user.isActive ? Colors.orange : AppTheme.successGreen,
                   onTap: onToggleSuspend,
+                ),
+                const SizedBox(width: 8),
+                _ActionBtn(
+                  label: 'Delete',
+                  color: AppTheme.primaryRed,
+                  onTap: onDelete,
                 ),
               ],
             ),

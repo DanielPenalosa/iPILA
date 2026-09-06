@@ -201,6 +201,76 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
     }
   }
 
+  Future<void> _deleteReport(ReportModel report) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Report'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Permanently delete this report? This action cannot be undone.',
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _InfoRow('Category', report.category),
+                  _InfoRow('Location', 'Brgy. ${report.barangay}'),
+                  _InfoRow('Reporter', report.userFullName),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryRed,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await _service.bulkDeleteReports([report.id]);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✓ Report deleted'),
+            backgroundColor: AppTheme.successGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppTheme.primaryRed,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _showConfirmDialog(
     ReportModel report,
     String newStatus,
@@ -561,6 +631,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
                           'Reject',
                         ),
                         onStatusChange: () => _showStatusDialog(filtered[i]),
+                        onDelete: () => _deleteReport(filtered[i]),
                       ),
                     ),
             ),
@@ -659,13 +730,14 @@ class _FilterChip extends StatelessWidget {
 
 class _ReportRow extends StatelessWidget {
   final ReportModel report;
-  final VoidCallback onView, onValidate, onReject, onStatusChange;
+  final VoidCallback onView, onValidate, onReject, onStatusChange, onDelete;
   const _ReportRow({
     required this.report,
     required this.onView,
     required this.onValidate,
     required this.onReject,
     required this.onStatusChange,
+    required this.onDelete,
   });
 
   @override
@@ -810,6 +882,12 @@ class _ReportRow extends StatelessWidget {
                           ? Colors.grey
                           : AppTheme.primaryBlue,
                     ),
+                  const SizedBox(width: 4),
+                  _Btn(
+                    label: 'Delete',
+                    onTap: onDelete,
+                    color: AppTheme.primaryRed,
+                  ),
                 ],
               ),
             ),

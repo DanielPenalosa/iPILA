@@ -64,13 +64,15 @@ class _PressCardState extends State<PressCard>
           padding: widget.padding,
           decoration: BoxDecoration(
             color: widget.color ?? Colors.white,
-            borderRadius: widget.borderRadius ?? BorderRadius.circular(16),
-            border: widget.border ?? Border.all(color: AppTheme.borderColor),
+            borderRadius: widget.borderRadius ?? BorderRadius.circular(12),
+            border:
+                widget.border ??
+                Border.all(color: AppTheme.borderColor.withValues(alpha: 0.5)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
               ),
             ],
           ),
@@ -544,12 +546,12 @@ class _AdminHoverButtonState extends State<AdminHoverButton> {
   @override
   Widget build(BuildContext context) {
     final bg = widget.outlined
-        ? (_hovered ? _base.withValues(alpha: 0.15) : Colors.transparent)
+        ? (_hovered ? _base.withValues(alpha: 0.08) : Colors.transparent)
         : (_hovered ? _darken(_base) : _base);
     final border = widget.outlined
         ? Border.all(
-            color: _hovered ? _base : _base.withValues(alpha: 0.5),
-            width: _hovered ? 2 : 1,
+            color: _hovered ? _base : _base.withValues(alpha: 0.4),
+            width: 1,
           )
         : null;
     final textColor = widget.outlined ? _base : Colors.white;
@@ -576,20 +578,20 @@ class _AdminHoverButtonState extends State<AdminHoverButton> {
           padding: pad,
           constraints: const BoxConstraints(minHeight: 32),
           transform: _pressed
-              ? (Matrix4.identity()..scale(0.95))
+              ? (Matrix4.identity()..scale(0.95, 0.95, 1.0))
               : (_hovered
-                    ? (Matrix4.identity()..scale(1.02))
+                    ? (Matrix4.identity()..scale(1.02, 1.02, 1.0))
                     : Matrix4.identity()),
           decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(8),
             border: border,
-            boxShadow: _hovered
+            boxShadow: _hovered && !widget.outlined
                 ? [
                     BoxShadow(
-                      color: _base.withValues(alpha: 0.25),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+                      color: _base.withValues(alpha: 0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
                   ]
                 : [],
@@ -662,21 +664,27 @@ class _AdminHoverCardState extends State<AdminHoverCard> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
+          duration: const Duration(milliseconds: 200),
           padding: widget.padding ?? const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: widget.color ?? Colors.white,
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _hovered
+                  ? AppTheme.primaryBlue.withValues(alpha: 0.2)
+                  : AppTheme.borderColor.withValues(alpha: 0.5),
+              width: 1,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: _hovered ? 0.10 : 0.04),
-                blurRadius: _hovered ? 16 : 8,
-                offset: Offset(0, _hovered ? 4 : 2),
+                color: Colors.black.withValues(alpha: _hovered ? 0.04 : 0.02),
+                blurRadius: _hovered ? 8 : 4,
+                offset: Offset(0, _hovered ? 2 : 1),
               ),
             ],
           ),
           transform: _hovered
-              ? (Matrix4.identity()..translate(0.0, -2.0))
+              ? (Matrix4.identity()..translate(0.0, -1.0, 0.0))
               : Matrix4.identity(),
           child: widget.child,
         ),
@@ -712,7 +720,7 @@ class _AdminTableRowState extends State<AdminTableRow> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           color: _hovered
-              ? AppTheme.primaryBlue.withValues(alpha: 0.04)
+              ? AppTheme.primaryBlue.withValues(alpha: 0.02)
               : Colors.transparent,
           child: widget.child,
         ),

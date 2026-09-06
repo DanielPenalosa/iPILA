@@ -23,6 +23,18 @@ class UserManagementService {
     await _db.collection('users').doc(uid).update({'isActive': true});
   }
 
+  Future<void> deleteUser(String uid) async {
+    // Mark account as deleted instead of removing document
+    // This prevents the user from logging in
+    // Note: The Firebase Auth account will still exist but won't be able to access the app
+    await _db.collection('users').doc(uid).update({
+      'isActive': false,
+      'isDeleted': true,
+      'deletedAt': FieldValue.serverTimestamp(),
+      'approvalStatus': 'deleted',
+    });
+  }
+
   void showSuccessMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

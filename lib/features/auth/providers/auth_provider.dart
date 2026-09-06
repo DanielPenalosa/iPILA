@@ -55,6 +55,15 @@ class AuthProvider extends ChangeNotifier {
       if (currentUid != null) {
         final tempUser = await _authService.getUserModel(currentUid);
         if (tempUser != null && !tempUser.isAdmin) {
+          // Check if account is deleted
+          if (tempUser.approvalStatus == 'deleted') {
+            await _authService.signOut();
+            _errorMessage =
+                'This account has been deleted. Please contact the LGU office if you believe this is an error.';
+            _status = AuthStatus.error;
+            notifyListeners();
+            return false;
+          }
           if (tempUser.isPending) {
             await _authService.signOut();
             _errorMessage =
