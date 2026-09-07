@@ -723,4 +723,55 @@ class ReportService {
 
     return {'success': true};
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FEEDBACK (comment & rating on resolved reports)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Submit or update feedback for a resolved report. One per user.
+  Future<void> submitFeedback({
+    required String reportId,
+    required String userId,
+    required String userFullName,
+    required int rating,
+    required String comment,
+  }) async {
+    await _db
+        .collection(AppConstants.reportsCollection)
+        .doc(reportId)
+        .collection('feedback')
+        .doc(userId) // one doc per user — overwrites if editing
+        .set({
+          'userId': userId,
+          'userFullName': userFullName,
+          'rating': rating,
+          'comment': comment,
+          'createdAt': Timestamp.fromDate(DateTime.now()),
+        });
+  }
+
+  /// Stream all feedback for a report
+  Stream<List<ReportFeedback>> getFeedback(String reportId) {
+    return _db
+        .collection(AppConstants.reportsCollection)
+        .doc(reportId)
+        .collection('feedback')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((s) => s.docs.map(ReportFeedback.fromFirestore).toList());
+  }
+
+  /// Get single user feedback for a report (to pre-fill edit form)
+  Future<ReportFeedback?> getUserFeedback(
+    String reportId,
+    String userId,
+  ) async {
+    final doc = await _db
+        .collection(AppConstants.reportsCollection)
+        .doc(reportId)
+        .collection('feedback')
+        .doc(userId)
+        .get();
+    return doc.exists ? ReportFeedback.fromFirestore(doc) : null;
+  }
 }

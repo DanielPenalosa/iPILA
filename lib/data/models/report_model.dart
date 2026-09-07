@@ -76,6 +76,44 @@ class ProgressUpdate {
   };
 }
 
+class ReportFeedback {
+  final String id;
+  final String userId;
+  final String userFullName;
+  final int rating; // 1–5
+  final String comment;
+  final DateTime createdAt;
+
+  ReportFeedback({
+    required this.id,
+    required this.userId,
+    required this.userFullName,
+    required this.rating,
+    required this.comment,
+    required this.createdAt,
+  });
+
+  factory ReportFeedback.fromFirestore(DocumentSnapshot doc) {
+    final d = doc.data() as Map<String, dynamic>;
+    return ReportFeedback(
+      id: doc.id,
+      userId: d['userId'] ?? '',
+      userFullName: d['userFullName'] ?? '',
+      rating: (d['rating'] ?? 0) as int,
+      comment: d['comment'] ?? '',
+      createdAt: (d['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'userId': userId,
+    'userFullName': userFullName,
+    'rating': rating,
+    'comment': comment,
+    'createdAt': Timestamp.fromDate(createdAt),
+  };
+}
+
 class ReportModel {
   final String id;
   final String userId;

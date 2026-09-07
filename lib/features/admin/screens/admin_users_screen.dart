@@ -24,6 +24,106 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   final _deptService = DepartmentService();
   String _search = '';
 
+  // Bulk selection — ValueNotifier to avoid full StreamBuilder rebuilds
+  final _selectedPending = ValueNotifier<Set<String>>({});
+  final _selectedActive = ValueNotifier<Set<String>>({});
+
+  @override
+  void dispose() {
+    _selectedPending.dispose();
+    _selectedActive.dispose();
+    super.dispose();
+  }
+
+  void _togglePending(String uid) {
+    final next = Set<String>.from(_selectedPending.value);
+    next.contains(uid) ? next.remove(uid) : next.add(uid);
+    _selectedPending.value = next;
+  }
+
+  void _toggleActive(String uid) {
+    final next = Set<String>.from(_selectedActive.value);
+    next.contains(uid) ? next.remove(uid) : next.add(uid);
+    _selectedActive.value = next;
+  }
+
+  // ── Bulk helpers ─────────────────────────────────────────────────────────
+
+  Future<void> _bulkPendingAction(String action) async {
+    if (_selectedPending.value.isEmpty) return;
+    final ids = _selectedPending.value.toList();
+    final count = ids.length;
+
+    final confirmed = await _showConfirmDialog(
+      title: action == 'approve'
+          ? 'Approve $count Users'
+          : 'Reject $count Users',
+      message: action == 'approve'
+          ? 'Approve all $count selected registrations?'
+          : 'Reject and delete all $count selected registrations? This cannot be undone.',
+      confirmText: action == 'approve' ? 'Approve All' : 'Reject All',
+      isDestructive: action != 'approve',
+    );
+    if (!confirmed) return;
+
+    try {
+      if (action == 'approve') {
+        await _userService.bulkApproveUsers(ids);
+      } else {
+        await _userService.bulkRejectUsers(ids);
+      }
+      _selectedPending.value = {};
+      if (mounted) {
+        _userService.showSuccessMessage(
+          context,
+          '✓ $count users ${action == 'approve' ? 'approved' : 'rejected'}',
+        );
+      }
+    } catch (e) {
+      if (mounted) _userService.showErrorMessage(context, 'Error: $e');
+    }
+  }
+
+  Future<void> _bulkActiveAction(String action) async {
+    if (_selectedActive.value.isEmpty) return;
+    final ids = _selectedActive.value.toList();
+    final count = ids.length;
+
+    final label = switch (action) {
+      'suspend' => 'Suspend',
+      'reactivate' => 'Reactivate',
+      _ => 'Delete',
+    };
+
+    final confirmed = await _showConfirmDialog(
+      title: '$label $count Users',
+      message: '$label all $count selected users?',
+      confirmText: '$label All',
+      isDestructive: action != 'reactivate',
+    );
+    if (!confirmed) return;
+
+    try {
+      switch (action) {
+        case 'suspend':
+          await _userService.bulkSuspendUsers(ids);
+        case 'reactivate':
+          await _userService.bulkReactivateUsers(ids);
+        default:
+          await _userService.bulkDeleteUsers(ids);
+      }
+      _selectedActive.value = {};
+      if (mounted) {
+        _userService.showSuccessMessage(
+          context,
+          '✓ $count users ${label.toLowerCase()}d',
+        );
+      }
+    } catch (e) {
+      if (mounted) _userService.showErrorMessage(context, 'Error: $e');
+    }
+  }
+
   void _showCreateDepartmentDialog() {
     String? selectedDept;
     final nameCtrl = TextEditingController();
@@ -587,37 +687,85 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                   style: TextStyle(color: AppTheme.textMuted),
                                 ),
                               )
-                            : Column(
-                                children: [
-                                  const _TableHeader(
-                                    cols: [
-                                      'NAME',
-                                      'EMAIL',
-                                      'BARANGAY',
-                                      'PHONE',
-                                      'REGISTERED',
-                                      'VALID ID',
-                                      'ACTIONS',
-                                    ],
-                                    widths: [150, 190, 110, 120, 110, 80, 0],
-                                  ),
-                                  const Divider(height: 1),
-                                  ...pending.map(
-                                    (u) => _PendingRow(
-                                      user: u,
-                                      onAccept: () => _handleApprove(u),
-                                      onReject: () => _handleReject(u),
-                                      onViewId:
-                                          u.idPhotoUrl != null &&
-                                              u.idPhotoUrl!.isNotEmpty
-                                          ? () => _viewIdPhoto(
-                                              u.idPhotoUrl!,
-                                              u.fullName,
-                                            )
-                                          : null,
+                            : ValueListenableBuilder<Set<String>>(
+                                valueListenable: _selectedPending,
+                                builder: (_, sel, __) => Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Bulk bar
+                                    if (sel.isNotEmpty)
+                                      _UserBulkBar(
+                                        count: sel.length,
+                                        actions: [
+                                          _BulkAction(
+                                            label: 'Approve',
+                                            color: AppTheme.successGreen,
+                                            onTap: () =>
+                                                _bulkPendingAction('approve'),
+                                          ),
+                                          _BulkAction(
+                                            label: 'Reject',
+                                            color: AppTheme.primaryRed,
+                                            onTap: () =>
+                                                _bulkPendingAction('reject'),
+                                          ),
+                                        ],
+                                        onClear: () =>
+                                            _selectedPending.value = {},
+                                      ),
+                                    _TableHeader(
+                                      cols: const [
+                                        '',
+                                        'NAME',
+                                        'EMAIL',
+                                        'BARANGAY',
+                                        'PHONE',
+                                        'REGISTERED',
+                                        'VALID ID',
+                                        'ACTIONS',
+                                      ],
+                                      widths: const [
+                                        36,
+                                        150,
+                                        190,
+                                        110,
+                                        120,
+                                        110,
+                                        80,
+                                        0,
+                                      ],
+                                      selectAll: sel.length == pending.length,
+                                      onSelectAll: () {
+                                        if (sel.length == pending.length) {
+                                          _selectedPending.value = {};
+                                        } else {
+                                          _selectedPending.value = Set.from(
+                                            pending.map((u) => u.uid),
+                                          );
+                                        }
+                                      },
                                     ),
-                                  ),
-                                ],
+                                    const Divider(height: 1),
+                                    ...pending.map(
+                                      (u) => _PendingRow(
+                                        user: u,
+                                        isSelected: sel.contains(u.uid),
+                                        onToggleSelect: () =>
+                                            _togglePending(u.uid),
+                                        onAccept: () => _handleApprove(u),
+                                        onReject: () => _handleReject(u),
+                                        onViewId:
+                                            u.idPhotoUrl != null &&
+                                                u.idPhotoUrl!.isNotEmpty
+                                            ? () => _viewIdPhoto(
+                                                u.idPhotoUrl!,
+                                                u.fullName,
+                                              )
+                                            : null,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                       ),
                       const SizedBox(height: 24),
@@ -674,41 +822,89 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                   style: TextStyle(color: AppTheme.textMuted),
                                 ),
                               )
-                            : Column(
-                                children: [
-                                  const _TableHeader(
-                                    cols: [
-                                      'NAME',
-                                      'EMAIL',
-                                      'BARANGAY',
-                                      'PHONE',
-                                      'ROLE',
-                                      'STATUS',
-                                      'REGISTERED',
-                                      'ACTIONS',
-                                    ],
-                                    widths: [
-                                      150,
-                                      180,
-                                      110,
-                                      120,
-                                      70,
-                                      80,
-                                      100,
-                                      0,
-                                    ],
-                                  ),
-                                  const Divider(height: 1),
-                                  ...filtered.map(
-                                    (u) => _ActiveRow(
-                                      user: u,
-                                      onToggleSuspend: () => u.isActive
-                                          ? _handleSuspend(u)
-                                          : _handleReactivate(u),
-                                      onDelete: () => _handleDeleteAccount(u),
+                            : ValueListenableBuilder<Set<String>>(
+                                valueListenable: _selectedActive,
+                                builder: (_, sel, __) => Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Bulk bar
+                                    if (sel.isNotEmpty)
+                                      _UserBulkBar(
+                                        count: sel.length,
+                                        actions: [
+                                          _BulkAction(
+                                            label: 'Suspend',
+                                            color: Colors.orange,
+                                            onTap: () =>
+                                                _bulkActiveAction('suspend'),
+                                          ),
+                                          _BulkAction(
+                                            label: 'Reactivate',
+                                            color: AppTheme.successGreen,
+                                            onTap: () =>
+                                                _bulkActiveAction('reactivate'),
+                                          ),
+                                          _BulkAction(
+                                            label: 'Delete',
+                                            color: AppTheme.primaryRed,
+                                            onTap: () =>
+                                                _bulkActiveAction('delete'),
+                                          ),
+                                        ],
+                                        onClear: () =>
+                                            _selectedActive.value = {},
+                                      ),
+                                    _TableHeader(
+                                      cols: const [
+                                        '',
+                                        'NAME',
+                                        'EMAIL',
+                                        'BARANGAY',
+                                        'PHONE',
+                                        'ROLE',
+                                        'STATUS',
+                                        'REGISTERED',
+                                        'ACTIONS',
+                                      ],
+                                      widths: const [
+                                        36,
+                                        150,
+                                        180,
+                                        110,
+                                        120,
+                                        70,
+                                        80,
+                                        100,
+                                        0,
+                                      ],
+                                      selectAll:
+                                          filtered.isNotEmpty &&
+                                          sel.length == filtered.length,
+                                      onSelectAll: () {
+                                        if (sel.length == filtered.length) {
+                                          _selectedActive.value = {};
+                                        } else {
+                                          _selectedActive.value = Set.from(
+                                            filtered.map((u) => u.uid),
+                                          );
+                                        }
+                                      },
                                     ),
-                                  ),
-                                ],
+                                    const Divider(height: 1),
+                                    ...filtered.map(
+                                      (u) => _ActiveRow(
+                                        user: u,
+                                        isSelected: sel.contains(u.uid),
+                                        onToggleSelect: () =>
+                                            _toggleActive(u.uid),
+                                        onToggleSuspend: () => u.isActive
+                                            ? _handleSuspend(u)
+                                            : _handleReactivate(u),
+                                        onDelete: () => _handleDeleteAccount(u),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                       ),
                       const SizedBox(height: 24),
@@ -914,7 +1110,14 @@ class _SectionCard extends StatelessWidget {
 class _TableHeader extends StatelessWidget {
   final List<String> cols;
   final List<double> widths;
-  const _TableHeader({required this.cols, required this.widths});
+  final bool selectAll;
+  final VoidCallback? onSelectAll;
+  const _TableHeader({
+    required this.cols,
+    required this.widths,
+    this.selectAll = false,
+    this.onSelectAll,
+  });
 
   static const _s = TextStyle(
     fontSize: 11,
@@ -930,6 +1133,17 @@ class _TableHeader extends StatelessWidget {
       child: Row(
         children: cols.asMap().entries.map((e) {
           final w = widths[e.key];
+          // First col is the checkbox column
+          if (e.key == 0 && onSelectAll != null) {
+            return SizedBox(
+              width: w,
+              child: Checkbox(
+                value: selectAll,
+                onChanged: (_) => onSelectAll!(),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            );
+          }
           final t = Text(e.value, style: _s);
           return w > 0 ? SizedBox(width: w, child: t) : Expanded(child: t);
         }).toList(),
@@ -940,11 +1154,15 @@ class _TableHeader extends StatelessWidget {
 
 class _PendingRow extends StatelessWidget {
   final UserModel user;
+  final bool isSelected;
+  final VoidCallback onToggleSelect;
   final VoidCallback onAccept, onReject;
   final VoidCallback? onViewId;
 
   const _PendingRow({
     required this.user,
+    required this.isSelected,
+    required this.onToggleSelect,
     required this.onAccept,
     required this.onReject,
     this.onViewId,
@@ -953,97 +1171,113 @@ class _PendingRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = DateFormat('MMM d, y').format(user.createdAt);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 150,
-            child: Text(
-              user.fullName,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+    return Container(
+      color: isSelected ? const Color(0xFFF0F4FF) : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 36,
+              child: Checkbox(
+                value: isSelected,
+                onChanged: (_) => onToggleSelect(),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
             ),
-          ),
-          SizedBox(
-            width: 190,
-            child: Text(
-              user.email,
-              style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
-              overflow: TextOverflow.ellipsis,
+            SizedBox(
+              width: 150,
+              child: Text(
+                user.fullName,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
-          ),
-          SizedBox(
-            width: 110,
-            child: Text(
-              'Brgy. ${user.barangay}',
-              style: const TextStyle(fontSize: 12),
+            SizedBox(
+              width: 190,
+              child: Text(
+                user.email,
+                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
-          SizedBox(
-            width: 120,
-            child: Text(user.phone, style: const TextStyle(fontSize: 12)),
-          ),
-          SizedBox(
-            width: 110,
-            child: Text(
-              date,
-              style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+            SizedBox(
+              width: 110,
+              child: Text(
+                'Brgy. ${user.barangay}',
+                style: const TextStyle(fontSize: 12),
+              ),
             ),
-          ),
-          SizedBox(
-            width: 80,
-            child: onViewId != null
-                ? MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: GestureDetector(
-                      onTap: onViewId,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: AppTheme.primaryBlue.withValues(alpha: 0.3),
+            SizedBox(
+              width: 120,
+              child: Text(user.phone, style: const TextStyle(fontSize: 12)),
+            ),
+            SizedBox(
+              width: 110,
+              child: Text(
+                date,
+                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+              ),
+            ),
+            SizedBox(
+              width: 80,
+              child: onViewId != null
+                  ? MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GestureDetector(
+                        onTap: onViewId,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
                           ),
-                        ),
-                        child: const Text(
-                          'View ID',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppTheme.primaryBlue,
-                            fontWeight: FontWeight.w600,
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: AppTheme.primaryBlue.withValues(
+                                alpha: 0.3,
+                              ),
+                            ),
                           ),
-                          textAlign: TextAlign.center,
+                          child: const Text(
+                            'View ID',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.primaryBlue,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
+                    )
+                  : const Text(
+                      'No ID',
+                      style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
                     ),
-                  )
-                : const Text(
-                    'No ID',
-                    style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
-                  ),
-          ),
-          Expanded(
-            child: Row(
-              children: [
-                _ActionBtn(
-                  label: 'Approve',
-                  color: AppTheme.successGreen,
-                  onTap: onAccept,
-                ),
-                const SizedBox(width: 8),
-                _ActionBtn(
-                  label: 'Reject',
-                  color: AppTheme.primaryRed,
-                  onTap: onReject,
-                ),
-              ],
             ),
-          ),
-        ],
+            Expanded(
+              child: Row(
+                children: [
+                  _ActionBtn(
+                    label: 'Approve',
+                    color: AppTheme.successGreen,
+                    onTap: onAccept,
+                  ),
+                  const SizedBox(width: 8),
+                  _ActionBtn(
+                    label: 'Reject',
+                    color: AppTheme.primaryRed,
+                    onTap: onReject,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1051,10 +1285,14 @@ class _PendingRow extends StatelessWidget {
 
 class _ActiveRow extends StatelessWidget {
   final UserModel user;
+  final bool isSelected;
+  final VoidCallback onToggleSelect;
   final VoidCallback onToggleSuspend;
   final VoidCallback onDelete;
   const _ActiveRow({
     required this.user,
+    required this.isSelected,
+    required this.onToggleSelect,
     required this.onToggleSuspend,
     required this.onDelete,
   });
@@ -1062,123 +1300,224 @@ class _ActiveRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = DateFormat('MMM d, y').format(user.createdAt);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+    return Container(
+      color: isSelected ? const Color(0xFFF0F4FF) : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 36,
+              child: Checkbox(
+                value: isSelected,
+                onChanged: (_) => onToggleSelect(),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            SizedBox(
+              width: 150,
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: AppTheme.primaryBlue,
+                    child: Text(
+                      user.fullName.isNotEmpty
+                          ? user.fullName[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      user.fullName,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              width: 180,
+              child: Text(
+                user.email,
+                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            SizedBox(
+              width: 110,
+              child: Text(
+                'Brgy. ${user.barangay}',
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+            SizedBox(
+              width: 120,
+              child: Text(user.phone, style: const TextStyle(fontSize: 12)),
+            ),
+            SizedBox(
+              width: 70,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  user.role,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: AppTheme.primaryBlue,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 80,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: user.isActive
+                      ? AppTheme.successGreen.withValues(alpha: 0.1)
+                      : Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  user.isActive ? 'Active' : 'Suspended',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: user.isActive ? AppTheme.successGreen : Colors.red,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 100,
+              child: Text(
+                date,
+                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+              ),
+            ),
+            Expanded(
+              child: Row(
+                children: [
+                  _ActionBtn(
+                    label: user.isActive ? 'Suspend' : 'Reactivate',
+                    color: user.isActive
+                        ? Colors.orange
+                        : AppTheme.successGreen,
+                    onTap: onToggleSuspend,
+                  ),
+                  const SizedBox(width: 8),
+                  _ActionBtn(
+                    label: 'Delete',
+                    color: AppTheme.primaryRed,
+                    onTap: onDelete,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Bulk UI helpers ───────────────────────────────────────────────────────────
+
+class _BulkAction {
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  const _BulkAction({
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+}
+
+class _UserBulkBar extends StatelessWidget {
+  final int count;
+  final List<_BulkAction> actions;
+  final VoidCallback onClear;
+  const _UserBulkBar({
+    required this.count,
+    required this.actions,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFE8EDF5))),
+        color: Color(0xFFF6F8FF),
+      ),
       child: Row(
         children: [
-          SizedBox(
-            width: 150,
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 14,
-                  backgroundColor: AppTheme.primaryBlue,
-                  child: Text(
-                    user.fullName.isNotEmpty
-                        ? user.fullName[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
+          Text(
+            '$count selected',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.primaryBlue,
+            ),
+          ),
+          const SizedBox(width: 12),
+          ...actions.expand(
+            (a) => [
+              InkWell(
+                onTap: a.onTap,
+                borderRadius: BorderRadius.circular(4),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
                   child: Text(
-                    user.fullName,
-                    style: const TextStyle(
-                      fontSize: 13,
+                    a.label,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: a.color,
                       fontWeight: FontWeight.w500,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-              ],
-            ),
-          ),
-          SizedBox(
-            width: 180,
-            child: Text(
-              user.email,
-              style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          SizedBox(
-            width: 110,
-            child: Text(
-              'Brgy. ${user.barangay}',
-              style: const TextStyle(fontSize: 12),
-            ),
-          ),
-          SizedBox(
-            width: 120,
-            child: Text(user.phone, style: const TextStyle(fontSize: 12)),
-          ),
-          SizedBox(
-            width: 70,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
               ),
+              Container(
+                width: 1,
+                height: 12,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                color: const Color(0xFFDDE3F0),
+              ),
+            ],
+          ),
+          const Spacer(),
+          InkWell(
+            onTap: onClear,
+            borderRadius: BorderRadius.circular(4),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
               child: Text(
-                user.role,
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: AppTheme.primaryBlue,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
+                'Clear',
+                style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
               ),
-            ),
-          ),
-          SizedBox(
-            width: 80,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: user.isActive
-                    ? AppTheme.successGreen.withValues(alpha: 0.1)
-                    : Colors.red.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                user.isActive ? 'Active' : 'Suspended',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: user.isActive ? AppTheme.successGreen : Colors.red,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 100,
-            child: Text(
-              date,
-              style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
-            ),
-          ),
-          Expanded(
-            child: Row(
-              children: [
-                _ActionBtn(
-                  label: user.isActive ? 'Suspend' : 'Reactivate',
-                  color: user.isActive ? Colors.orange : AppTheme.successGreen,
-                  onTap: onToggleSuspend,
-                ),
-                const SizedBox(width: 8),
-                _ActionBtn(
-                  label: 'Delete',
-                  color: AppTheme.primaryRed,
-                  onTap: onDelete,
-                ),
-              ],
             ),
           ),
         ],

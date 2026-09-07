@@ -635,6 +635,20 @@ class ReportDetailScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 ReportTimeline(history: report.statusHistory),
+
+                // ── Feedback section (resolved reports only) ──────────
+                if (report.currentStatus == AppConstants.statusResolved &&
+                    currentUserId != null &&
+                    (isOwnReport ||
+                        report.followers.contains(currentUserId))) ...[
+                  const SizedBox(height: 28),
+                  _FeedbackSection(
+                    reportId: reportId,
+                    currentUserId: currentUserId,
+                    currentUserName: auth.user?.fullName ?? 'Resident',
+                  ),
+                ],
+
                 const SizedBox(height: 40),
               ],
             ),
@@ -717,6 +731,451 @@ class _ResidentProgressEntry extends StatelessWidget {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Feedback section widget ───────────────────────────────────────────────────
+
+class _FeedbackSection extends StatefulWidget {
+  final String reportId;
+  final String currentUserId;
+  final String currentUserName;
+
+  const _FeedbackSection({
+    required this.reportId,
+    required this.currentUserId,
+    required this.currentUserName,
+  });
+
+  @override
+  State<_FeedbackSection> createState() => _FeedbackSectionState();
+}
+
+class _FeedbackSectionState extends State<_FeedbackSection> {
+  final _service = ReportService();
+  final _commentCtrl = TextEditingController();
+  int _selectedRating = 0;
+  bool _submitting = false;
+  bool _showForm = false;
+  ReportFeedback? _myFeedback;
+  bool _loadedMine = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMyFeedback();
+  }
+
+  @override
+  void dispose() {
+    _commentCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadMyFeedback() async {
+    final f = await _service.getUserFeedback(
+      widget.reportId,
+      widget.currentUserId,
+    );
+    if (mounted) {
+      setState(() {
+        _myFeedback = f;
+        _loadedMine = true;
+        if (f != null) {
+          _selectedRating = f.rating;
+          _commentCtrl.text = f.comment;
+        }
+      });
+    }
+  }
+
+  Future<void> _submit() async {
+    if (_selectedRating == 0) {
+      AppToast.show(context, 'Please select a rating', type: ToastType.warning);
+      return;
+    }
+    if (_commentCtrl.text.trim().isEmpty) {
+      AppToast.show(context, 'Please write a comment', type: ToastType.warning);
+      return;
+    }
+    setState(() => _submitting = true);
+    await _service.submitFeedback(
+      reportId: widget.reportId,
+      userId: widget.currentUserId,
+      userFullName: widget.currentUserName,
+      rating: _selectedRating,
+      comment: _commentCtrl.text.trim(),
+    );
+    await _loadMyFeedback();
+    if (mounted) {
+      setState(() {
+        _submitting = false;
+        _showForm = false;
+      });
+      AppToast.show(context, 'Feedback submitted', type: ToastType.success);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.rate_review_outlined,
+              size: 18,
+              color: AppTheme.successGreen,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Community Feedback',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            const Spacer(),
+            if (_loadedMine && !_showForm)
+              TextButton.icon(
+                onPressed: () => setState(() => _showForm = true),
+                icon: Icon(
+                  _myFeedback == null ? Icons.add : Icons.edit_outlined,
+                  size: 14,
+                ),
+                label: Text(
+                  _myFeedback == null ? 'Leave feedback' : 'Edit',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.primaryBlue,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Feedback form
+        if (_showForm) ...[
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.successGreen.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppTheme.successGreen.withValues(alpha: 0.25),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'How satisfied are you with the resolution?',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: List.generate(5, (i) {
+                    final star = i + 1;
+                    return GestureDetector(
+                      onTap: () => setState(() => _selectedRating = star),
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: Icon(
+                          star <= _selectedRating
+                              ? Icons.star_rounded
+                              : Icons.star_outline_rounded,
+                          size: 34,
+                          color: star <= _selectedRating
+                              ? const Color(0xFFFBBF24)
+                              : Colors.grey[300],
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _commentCtrl,
+                  maxLines: 3,
+                  maxLength: 300,
+                  decoration: InputDecoration(
+                    hintText: 'Share your experience...',
+                    hintStyle: const TextStyle(fontSize: 13),
+                    contentPadding: const EdgeInsets.all(12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppTheme.primaryBlue),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: _submitting
+                          ? null
+                          : () => setState(() => _showForm = false),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: _submitting ? null : _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.successGreen,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: _submitting
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Submit',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // Feedback list
+        StreamBuilder<List<ReportFeedback>>(
+          stream: _service.getFeedback(widget.reportId),
+          builder: (context, snap) {
+            final list = snap.data ?? [];
+            if (list.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 20,
+                  horizontal: 16,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(
+                      Icons.chat_bubble_outline,
+                      size: 18,
+                      color: AppTheme.textMuted,
+                    ),
+                    SizedBox(width: 10),
+                    Text(
+                      'No feedback yet. Be the first to share!',
+                      style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                    ),
+                  ],
+                ),
+              );
+            }
+            final avg =
+                list.map((f) => f.rating).reduce((a, b) => a + b) / list.length;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        avg.toStringAsFixed(1),
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: List.generate(
+                              5,
+                              (i) => Icon(
+                                (i + 1) <= avg.round()
+                                    ? Icons.star_rounded
+                                    : Icons.star_outline_rounded,
+                                size: 16,
+                                color: const Color(0xFFFBBF24),
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '${list.length} ${list.length == 1 ? 'review' : 'reviews'}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                ...list.map(
+                  (f) => _FeedbackCard(
+                    feedback: f,
+                    isOwn: f.userId == widget.currentUserId,
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _FeedbackCard extends StatelessWidget {
+  final ReportFeedback feedback;
+  final bool isOwn;
+  const _FeedbackCard({required this.feedback, required this.isOwn});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isOwn
+            ? AppTheme.primaryBlue.withValues(alpha: 0.04)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isOwn
+              ? AppTheme.primaryBlue.withValues(alpha: 0.2)
+              : Colors.grey[200]!,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.12),
+                child: Text(
+                  feedback.userFullName.isNotEmpty
+                      ? feedback.userFullName[0].toUpperCase()
+                      : '?',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryBlue,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          isOwn ? 'You' : feedback.userFullName,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (isOwn) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue.withValues(
+                                alpha: 0.1,
+                              ),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'you',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: AppTheme.primaryBlue,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    Text(
+                      DateFormat('MMM d, y').format(feedback.createdAt),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Row(
+                children: List.generate(
+                  5,
+                  (i) => Icon(
+                    (i + 1) <= feedback.rating
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    size: 14,
+                    color: const Color(0xFFFBBF24),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            feedback.comment,
+            style: const TextStyle(fontSize: 13, color: AppTheme.textDark),
+          ),
         ],
       ),
     );

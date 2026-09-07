@@ -938,19 +938,122 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
                 ],
               ),
             ),
+            // ── Bulk action bar ──────────────────────────────────
+            if (_selectionMode)
+              Container(
+                color: const Color(0xFFF0F4FF),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      '${_selectedReportIds.length} selected',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryBlue,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    _BulkBtn(
+                      label: 'Approve',
+                      color: AppTheme.successGreen,
+                      onTap: () =>
+                          _bulkChangeStatus(AppConstants.statusUnderReview),
+                    ),
+                    const SizedBox(width: 8),
+                    _BulkBtn(
+                      label: 'In Progress',
+                      color: const Color(0xFF1565C0),
+                      onTap: () =>
+                          _bulkChangeStatus(AppConstants.statusInProgress),
+                    ),
+                    const SizedBox(width: 8),
+                    _BulkBtn(
+                      label: 'Resolve',
+                      color: const Color(0xFF059669),
+                      onTap: () =>
+                          _bulkChangeStatus(AppConstants.statusResolved),
+                    ),
+                    const SizedBox(width: 8),
+                    _BulkBtn(
+                      label: 'Reject',
+                      color: Colors.orange,
+                      onTap: () =>
+                          _bulkChangeStatus(AppConstants.statusRejected),
+                    ),
+                    const SizedBox(width: 8),
+                    _BulkBtn(
+                      label: 'Delete',
+                      color: AppTheme.primaryRed,
+                      onTap: _bulkDelete,
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: _clearSelection,
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            // ── Column header row ─────────────────────────────────
             Container(
-              color: Colors.white,
+              color: const Color(0xFFF8FAFC),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-              child: const Row(
+              child: Row(
                 children: [
-                  SizedBox(width: 80, child: Text('ID', style: _hStyle)),
-                  SizedBox(width: 180, child: Text('ISSUE', style: _hStyle)),
-                  SizedBox(width: 120, child: Text('CATEGORY', style: _hStyle)),
-                  SizedBox(width: 120, child: Text('BARANGAY', style: _hStyle)),
-                  SizedBox(width: 90, child: Text('REPORTER', style: _hStyle)),
-                  SizedBox(width: 100, child: Text('DATE', style: _hStyle)),
-                  SizedBox(width: 110, child: Text('STATUS', style: _hStyle)),
-                  Expanded(child: Text('ACTIONS', style: _hStyle)),
+                  SizedBox(
+                    width: 36,
+                    child: Checkbox(
+                      value:
+                          filtered.isNotEmpty &&
+                          _selectedReportIds.containsAll(
+                            filtered.map((r) => r.id),
+                          ),
+                      tristate: true,
+                      onChanged: (_) {
+                        final allSelected = _selectedReportIds.containsAll(
+                          filtered.map((r) => r.id),
+                        );
+                        allSelected ? _clearSelection() : _selectAll(filtered);
+                      },
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                  const SizedBox(width: 80, child: Text('ID', style: _hStyle)),
+                  const SizedBox(
+                    width: 180,
+                    child: Text('ISSUE', style: _hStyle),
+                  ),
+                  const SizedBox(
+                    width: 120,
+                    child: Text('CATEGORY', style: _hStyle),
+                  ),
+                  const SizedBox(
+                    width: 120,
+                    child: Text('BARANGAY', style: _hStyle),
+                  ),
+                  const SizedBox(
+                    width: 90,
+                    child: Text('REPORTER', style: _hStyle),
+                  ),
+                  const SizedBox(
+                    width: 100,
+                    child: Text('DATE', style: _hStyle),
+                  ),
+                  const SizedBox(
+                    width: 110,
+                    child: Text('STATUS', style: _hStyle),
+                  ),
+                  const Expanded(child: Text('ACTIONS', style: _hStyle)),
                 ],
               ),
             ),
@@ -970,6 +1073,8 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
                       separatorBuilder: (_, _x) => const Divider(height: 1),
                       itemBuilder: (_, i) => _ReportRow(
                         report: filtered[i],
+                        isSelected: _selectedReportIds.contains(filtered[i].id),
+                        onToggleSelect: () => _toggleSelection(filtered[i].id),
                         onView: () =>
                             context.push('/admin/reports/${filtered[i].id}'),
                         onValidate: () => _showConfirmDialog(
@@ -1082,9 +1187,13 @@ class _FilterChip extends StatelessWidget {
 
 class _ReportRow extends StatelessWidget {
   final ReportModel report;
+  final bool isSelected;
+  final VoidCallback onToggleSelect;
   final VoidCallback onView, onValidate, onReject, onStatusChange, onDelete;
   const _ReportRow({
     required this.report,
+    required this.isSelected,
+    required this.onToggleSelect,
     required this.onView,
     required this.onValidate,
     required this.onReject,
@@ -1103,10 +1212,18 @@ class _ReportRow extends StatelessWidget {
     return AdminTableRow(
       onTap: onView,
       child: Container(
-        color: Colors.white,
+        color: isSelected ? const Color(0xFFF0F4FF) : Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         child: Row(
           children: [
+            SizedBox(
+              width: 36,
+              child: Checkbox(
+                value: isSelected,
+                onChanged: (_) => onToggleSelect(),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
             SizedBox(
               width: 80,
               child: Text(
@@ -1264,6 +1381,40 @@ class _Btn extends StatelessWidget {
       color: color ?? AppTheme.textDark,
       outlined: outlined,
       small: true,
+    );
+  }
+}
+
+class _BulkBtn extends StatelessWidget {
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  const _BulkBtn({
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: color.withValues(alpha: 0.4)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
     );
   }
 }
