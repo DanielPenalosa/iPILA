@@ -150,12 +150,20 @@ class _NotificationsTab extends StatelessWidget {
       stream: FirebaseFirestore.instance
           .collection(AppConstants.notificationsCollection)
           .where('userId', isEqualTo: adminUid)
-          .orderBy('createdAt', descending: true)
           .limit(100)
           .snapshots(),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snap.hasError) {
+          return Center(
+            child: Text(
+              'Error loading notifications: ${snap.error}',
+              style: const TextStyle(color: AppTheme.primaryRed, fontSize: 12),
+            ),
+          );
         }
 
         final docs = snap.data?.docs ?? [];
@@ -179,9 +187,9 @@ class _NotificationsTab extends StatelessWidget {
           );
         }
 
-        final notifs = docs
-            .map((d) => NotificationModel.fromFirestore(d))
-            .toList();
+        final notifs =
+            docs.map((d) => NotificationModel.fromFirestore(d)).toList()
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         final unreadCount = notifs.where((n) => !n.isRead).length;
 
