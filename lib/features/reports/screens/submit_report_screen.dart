@@ -155,11 +155,17 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
             const Icon(Icons.info_outline, color: AppTheme.primaryBlue),
             const SizedBox(width: 8),
-            const Text('Similar Report Exists'),
+            const Expanded(
+              child: Text(
+                'Concern Already Reported',
+                style: TextStyle(fontSize: 16),
+              ),
+            ),
           ],
         ),
         content: SingleChildScrollView(
@@ -168,31 +174,31 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Good news! This issue has already been reported and is being tracked by the community.',
-                style: TextStyle(fontWeight: FontWeight.w600),
+                'This concern has already been reported. Would you like to follow this concern instead?',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryBlue.withValues(alpha: 0.08),
+                  color: AppTheme.primaryBlue.withValues(alpha: 0.07),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: AppTheme.primaryBlue.withValues(alpha: 0.2),
                   ),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.people_outline,
                       color: AppTheme.primaryBlue,
-                      size: 20,
+                      size: 18,
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Follow the existing report to add your support and get updates on its progress. More followers = higher priority for admin!',
-                        style: const TextStyle(
+                        'Following a concern adds your support — more followers = higher priority for admin.',
+                        style: TextStyle(
                           fontSize: 12,
                           color: AppTheme.primaryBlue,
                         ),
@@ -204,7 +210,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
               const SizedBox(height: 16),
               if (_similarReports.isNotEmpty) ...[
                 const Text(
-                  'Existing reports:',
+                  'Existing concern:',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 ),
                 const SizedBox(height: 8),
@@ -216,84 +222,82 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                           Navigator.pop(context);
                           context.go('/report/${report.id}');
                         },
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[50],
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppTheme.borderColor),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        '${report.category} - Brgy. ${report.barangay}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 12,
-                                        ),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppTheme.borderColor),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      '${report.category} · Brgy. ${report.barangay}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12,
                                       ),
                                     ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.statusColor(
+                                        report.currentStatus,
+                                      ).withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      report.currentStatus,
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w600,
                                         color: AppTheme.statusColor(
                                           report.currentStatus,
-                                        ).withValues(alpha: 0.12),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        report.currentStatus,
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppTheme.statusColor(
-                                            report.currentStatus,
-                                          ),
                                         ),
                                       ),
                                     ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  report.description.length > 70
-                                      ? '${report.description.substring(0, 70)}...'
-                                      : report.description,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey[700],
                                   ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                report.description.length > 70
+                                    ? '${report.description.substring(0, 70)}...'
+                                    : report.description,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[700],
                                 ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.people,
-                                      size: 12,
-                                      color: Colors.grey[600],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.people,
+                                    size: 12,
+                                    color: Colors.grey[600],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${report.followerCount} ${report.followerCount == 1 ? 'follower' : 'followers'}',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey[700],
                                     ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${report.followerCount} ${report.followerCount == 1 ? 'follower' : 'followers'}',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.grey[700],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -302,11 +306,22 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
             ],
           ),
         ),
+        actionsAlignment: MainAxisAlignment.end,
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
+          // Submit anyway
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() => _similarReports.clear());
+              _submit();
+            },
+            child: Text(
+              'Submit Anyway',
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
           ),
+          // View Details
           OutlinedButton.icon(
             onPressed: () {
               Navigator.pop(context);
@@ -314,9 +329,16 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                 context.go('/report/${_similarReports.first.id}');
               }
             },
-            icon: const Icon(Icons.visibility_outlined, size: 18),
-            label: const Text('View Report'),
+            icon: const Icon(Icons.visibility_outlined, size: 16),
+            label: const Text('View Details'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.primaryBlue,
+              side: const BorderSide(color: AppTheme.primaryBlue),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              textStyle: const TextStyle(fontSize: 13),
+            ),
           ),
+          // Follow Concern
           ElevatedButton.icon(
             onPressed: () async {
               Navigator.pop(context);
@@ -329,23 +351,23 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                 if (mounted) {
                   AppToast.show(
                     context,
-                    'You\'re now following this report! Admin will be notified.',
+                    'You\'re now following this concern!',
                     type: ToastType.success,
                   );
                   context.go('/report/${_similarReports.first.id}');
                 }
               }
             },
-            icon: const Icon(Icons.notifications_active, size: 18),
-            label: const Text('Follow & Support'),
+            icon: const Icon(Icons.notifications_active, size: 16),
+            label: const Text('Follow Concern'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryBlue,
               foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              textStyle: const TextStyle(fontSize: 13),
             ),
           ),
         ],
-        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        actionsAlignment: MainAxisAlignment.spaceBetween,
       ),
     );
   }
