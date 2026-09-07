@@ -586,6 +586,49 @@ class ReportDetailScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
+                // Department progress updates
+                if (report.assignedDepartment != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withValues(alpha: 0.07),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.purple.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.business_outlined,
+                          size: 16,
+                          color: Colors.purple,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Handled by: ${report.assignedDepartment}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.purple,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                if (report.progressUpdates.isNotEmpty) ...[
+                  const Text(
+                    'Department Progress Updates',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                  const SizedBox(height: 12),
+                  ...([...report.progressUpdates]
+                        ..sort((a, b) => a.timestamp.compareTo(b.timestamp)))
+                      .map((u) => _ResidentProgressEntry(update: u)),
+                  const SizedBox(height: 20),
+                ],
                 const Text(
                   'Transparency Timeline',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
@@ -597,6 +640,84 @@ class ReportDetailScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// Shared widgets used by both citizen and admin detail screens
+
+class _ResidentProgressEntry extends StatelessWidget {
+  final ProgressUpdate update;
+  const _ResidentProgressEntry({required this.update});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  update.status,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.primaryBlue,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                DateFormat('MMM d, h:mm a').format(update.timestamp),
+                style: TextStyle(fontSize: 10, color: Colors.grey[400]),
+              ),
+            ],
+          ),
+          if (update.remarks != null) ...[
+            const SizedBox(height: 6),
+            Text(update.remarks!, style: const TextStyle(fontSize: 12)),
+          ],
+          const SizedBox(height: 4),
+          Text(
+            'by ${update.department}',
+            style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+          ),
+          if (update.photoUrls.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 70,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: update.photoUrls.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 6),
+                itemBuilder: (_, i) => ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.network(
+                    update.photoUrls[i],
+                    width: 70,
+                    height: 70,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

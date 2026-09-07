@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../data/models/report_model.dart';
 import '../../../data/services/report_service.dart';
+import '../../../data/services/department_service.dart';
 import '../../admin/screens/admin_shell.dart';
 
 class AnalyticsScreen extends StatelessWidget {
@@ -214,6 +215,16 @@ class AnalyticsScreen extends StatelessWidget {
                                 ),
                               ],
                             ),
+                            const SizedBox(height: 20),
+
+                            // ── Department Performance ───────────────────
+                            _Card(
+                              title: 'Department Performance',
+                              subtitle:
+                                  'Reports per department and resolution status',
+                              child: _DepartmentPerformanceWidget(),
+                            ),
+                            const SizedBox(height: 20),
                           ],
                         ),
                 ),
@@ -1938,6 +1949,142 @@ class _MetricRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DepartmentPerformanceWidget extends StatelessWidget {
+  const _DepartmentPerformanceWidget();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Map<String, Map<String, int>>>(
+      future: DepartmentService().getDepartmentAnalytics(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final data = snapshot.data ?? {};
+        if (data.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(20),
+            child: Text(
+              'No department data yet.',
+              style: TextStyle(color: AppTheme.textMuted),
+            ),
+          );
+        }
+        return Column(
+          children: data.entries.map((entry) {
+            final dept = entry.key;
+            final counts = entry.value;
+            final total = counts['total'] ?? 0;
+            final pending = counts['pending'] ?? 0;
+            final inProgress = counts['inProgress'] ?? 0;
+            final resolved = counts['resolved'] ?? 0;
+            final resolutionRate = total > 0
+                ? (resolved / total * 100).toStringAsFixed(0)
+                : '0';
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          dept,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '$total total  •  $resolutionRate% resolved',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      _DeptStatPill(
+                        label: 'Action Req.',
+                        value: pending,
+                        color: Colors.orange,
+                      ),
+                      const SizedBox(width: 8),
+                      _DeptStatPill(
+                        label: 'In Progress',
+                        value: inProgress,
+                        color: const Color(0xFF1565C0),
+                      ),
+                      const SizedBox(width: 8),
+                      _DeptStatPill(
+                        label: 'Resolved',
+                        value: resolved,
+                        color: AppTheme.successGreen,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Progress bar
+                  if (total > 0)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: resolved / total,
+                        minHeight: 6,
+                        backgroundColor: Colors.grey[200],
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          AppTheme.successGreen,
+                        ),
+                      ),
+                    ),
+                  const Divider(height: 20),
+                ],
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+}
+
+class _DeptStatPill extends StatelessWidget {
+  final String label;
+  final int value;
+  final Color color;
+
+  const _DeptStatPill({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        '$label: $value',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
       ),
     );
   }

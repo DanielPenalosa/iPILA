@@ -17,18 +17,41 @@ class AppConstants {
   static const String statusSeen = 'Seen';
   static const String statusValidated = 'Validated';
   static const String statusQueued = 'Queued';
+  static const String statusAssigned = 'Assigned';
   static const String statusInProgress = 'In Progress';
+  static const String statusForVerification = 'For Admin Verification';
   static const String statusCompleted = 'Completed';
+  static const String statusResolved = 'Resolved';
   static const String statusRejected = 'Rejected';
+  static const String statusRevisionRequired = 'Revision Required';
 
   static const List<String> reportStatuses = [
     statusSubmitted,
     statusSeen,
     statusValidated,
     statusQueued,
+    statusAssigned,
     statusInProgress,
+    statusForVerification,
     statusCompleted,
+    statusResolved,
   ];
+
+  // Department statuses (what dept can set)
+  static const List<String> departmentStatuses = [
+    statusAssigned,
+    statusInProgress,
+    statusForVerification,
+  ];
+
+  // User roles
+  static const String roleResident = 'resident';
+  static const String roleAdmin = 'admin';
+  static const String roleSuperAdmin = 'superadmin';
+  static const String roleDepartment = 'department';
+
+  // Firestore collections
+  static const String departmentsCollection = 'departments';
 
   // Issue categories
   static const List<String> issueCategories = [
@@ -63,8 +86,17 @@ class AppConstants {
     'Tibig',
   ];
 
-  // User roles
-  static const String roleResident = 'resident';
-  static const String roleAdmin = 'admin';
-  static const String roleSuperAdmin = 'superadmin';
+  // Municipal departments
+  static const List<String> departments = [
+    'Engineering Office',
+    'Health Office',
+    'Social Welfare Office',
+    'Environment & Natural Resources',
+    'Public Works',
+    'Disaster Risk Reduction',
+    'Agriculture Office',
+    'Business Permit & Licensing',
+    'Treasurer\'s Office',
+    'General Services',
+  ];
 }

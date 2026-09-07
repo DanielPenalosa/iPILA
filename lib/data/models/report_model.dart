@@ -5,7 +5,8 @@ class ReportStatus {
   final DateTime timestamp;
   final String? note;
   final String? updatedBy;
-  final String? adminRemarks; // Additional remarks for completion
+  final String? adminRemarks;
+  final String? department; // which department performed this action
 
   ReportStatus({
     required this.status,
@@ -13,6 +14,7 @@ class ReportStatus {
     this.note,
     this.updatedBy,
     this.adminRemarks,
+    this.department,
   });
 
   factory ReportStatus.fromMap(Map<String, dynamic> map) => ReportStatus(
@@ -21,6 +23,7 @@ class ReportStatus {
     note: map['note'],
     updatedBy: map['updatedBy'],
     adminRemarks: map['adminRemarks'],
+    department: map['department'],
   );
 
   Map<String, dynamic> toMap() => {
@@ -29,6 +32,47 @@ class ReportStatus {
     'note': note,
     'updatedBy': updatedBy,
     'adminRemarks': adminRemarks,
+    'department': department,
+  };
+}
+
+class ProgressUpdate {
+  final String id;
+  final String updatedBy;
+  final String department;
+  final String status;
+  final String? remarks;
+  final List<String> photoUrls;
+  final DateTime timestamp;
+
+  ProgressUpdate({
+    required this.id,
+    required this.updatedBy,
+    required this.department,
+    required this.status,
+    this.remarks,
+    this.photoUrls = const [],
+    required this.timestamp,
+  });
+
+  factory ProgressUpdate.fromMap(Map<String, dynamic> map) => ProgressUpdate(
+    id: map['id'] ?? '',
+    updatedBy: map['updatedBy'] ?? '',
+    department: map['department'] ?? '',
+    status: map['status'] ?? '',
+    remarks: map['remarks'],
+    photoUrls: List<String>.from(map['photoUrls'] ?? []),
+    timestamp: (map['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+  );
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'updatedBy': updatedBy,
+    'department': department,
+    'status': status,
+    'remarks': remarks,
+    'photoUrls': photoUrls,
+    'timestamp': Timestamp.fromDate(timestamp),
   };
 }
 
@@ -50,6 +94,10 @@ class ReportModel {
   final String currentStatus;
   final List<ReportStatus> statusHistory;
   final String? assignedTo;
+  final String? assignedDepartment; // department name
+  final String? assignedDepartmentUserId; // dept user uid
+  final String? adminVerificationRemarks; // when returning for revision
+  final List<ProgressUpdate> progressUpdates;
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isAnonymous;
@@ -75,6 +123,10 @@ class ReportModel {
     required this.currentStatus,
     required this.statusHistory,
     this.assignedTo,
+    this.assignedDepartment,
+    this.assignedDepartmentUserId,
+    this.adminVerificationRemarks,
+    this.progressUpdates = const [],
     required this.createdAt,
     required this.updatedAt,
     this.isAnonymous = false,
@@ -106,6 +158,12 @@ class ReportModel {
           .map((e) => ReportStatus.fromMap(e as Map<String, dynamic>))
           .toList(),
       assignedTo: data['assignedTo'],
+      assignedDepartment: data['assignedDepartment'],
+      assignedDepartmentUserId: data['assignedDepartmentUserId'],
+      adminVerificationRemarks: data['adminVerificationRemarks'],
+      progressUpdates: (data['progressUpdates'] as List<dynamic>? ?? [])
+          .map((e) => ProgressUpdate.fromMap(e as Map<String, dynamic>))
+          .toList(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       isAnonymous: data['isAnonymous'] ?? false,
@@ -134,6 +192,10 @@ class ReportModel {
     'currentStatus': currentStatus,
     'statusHistory': statusHistory.map((s) => s.toMap()).toList(),
     'assignedTo': assignedTo,
+    'assignedDepartment': assignedDepartment,
+    'assignedDepartmentUserId': assignedDepartmentUserId,
+    'adminVerificationRemarks': adminVerificationRemarks,
+    'progressUpdates': progressUpdates.map((p) => p.toMap()).toList(),
     'createdAt': Timestamp.fromDate(createdAt),
     'updatedAt': Timestamp.fromDate(updatedAt),
     'isAnonymous': isAnonymous,
@@ -147,6 +209,10 @@ class ReportModel {
     List<ReportStatus>? statusHistory,
     String? afterPhotoUrl,
     String? assignedTo,
+    String? assignedDepartment,
+    String? assignedDepartmentUserId,
+    String? adminVerificationRemarks,
+    List<ProgressUpdate>? progressUpdates,
     DateTime? updatedAt,
   }) => ReportModel(
     id: id,
@@ -164,6 +230,12 @@ class ReportModel {
     currentStatus: currentStatus ?? this.currentStatus,
     statusHistory: statusHistory ?? this.statusHistory,
     assignedTo: assignedTo ?? this.assignedTo,
+    assignedDepartment: assignedDepartment ?? this.assignedDepartment,
+    assignedDepartmentUserId:
+        assignedDepartmentUserId ?? this.assignedDepartmentUserId,
+    adminVerificationRemarks:
+        adminVerificationRemarks ?? this.adminVerificationRemarks,
+    progressUpdates: progressUpdates ?? this.progressUpdates,
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     isAnonymous: isAnonymous,

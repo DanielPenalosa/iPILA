@@ -6,7 +6,8 @@ class UserModel {
   final String email;
   final String phone;
   final String barangay;
-  final String role; // resident, admin, superadmin
+  final String role; // resident, admin, superadmin, department
+  final String? department; // only for role == 'department'
   final String? photoUrl;
   final String? idPhotoUrl;
   final String approvalStatus; // pending, approved, rejected
@@ -20,6 +21,7 @@ class UserModel {
     required this.phone,
     required this.barangay,
     required this.role,
+    this.department,
     this.photoUrl,
     this.idPhotoUrl,
     this.approvalStatus = 'pending',
@@ -36,6 +38,7 @@ class UserModel {
       phone: data['phone'] ?? '',
       barangay: data['barangay'] ?? '',
       role: data['role'] ?? 'resident',
+      department: data['department'],
       photoUrl: data['photoUrl'],
       idPhotoUrl: data['idPhotoUrl'],
       approvalStatus: data['approvalStatus'] ?? 'pending',
@@ -50,6 +53,7 @@ class UserModel {
     'phone': phone,
     'barangay': barangay,
     'role': role,
+    'department': department,
     'photoUrl': photoUrl,
     'idPhotoUrl': idPhotoUrl,
     'approvalStatus': approvalStatus,
@@ -58,6 +62,7 @@ class UserModel {
   };
 
   bool get isAdmin => role == 'admin' || role == 'superadmin';
+  bool get isDepartment => role == 'department';
   bool get isApproved => approvalStatus == 'approved';
   bool get isPending => approvalStatus == 'pending';
   bool get isRejected => approvalStatus == 'rejected';

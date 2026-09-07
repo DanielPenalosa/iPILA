@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_ui.dart';
 import '../../../data/models/report_model.dart';
 import '../../../data/services/report_service.dart';
+import '../../../data/services/department_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../reports/screens/report_detail_screen.dart';
 
@@ -24,6 +25,7 @@ class AdminReportDetailScreen extends StatefulWidget {
 
 class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
   final ReportService _service = ReportService();
+  final DepartmentService _deptService = DepartmentService();
   final _noteCtrl = TextEditingController();
   File? _afterPhoto;
   XFile? _afterPhotoWeb;
@@ -486,6 +488,209 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
     );
   }
 
+  void _showAssignToDepartmentDialog(ReportModel report, String adminName) {
+    String? selectedDeptUserId;
+    String? selectedDeptName;
+
+    showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setDialog) => StreamBuilder(
+          stream: _deptService.getDepartmentUsers(),
+          builder: (ctx, snapshot) {
+            final deptUsers = snapshot.data ?? [];
+            return AlertDialog(
+              title: const Text('Assign to Department'),
+              content: deptUsers.isEmpty
+                  ? const Text('No department accounts found.')
+                  : DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(
+                        labelText: 'Select Department',
+                      ),
+                      value: selectedDeptUserId,
+                      items: deptUsers
+                          .map(
+                            (u) => DropdownMenuItem(
+                              value: u.uid,
+                              child: Text(u.department ?? u.fullName),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) {
+                        setDialog(() {
+                          selectedDeptUserId = v;
+                          selectedDeptName = deptUsers
+                              .firstWhere((u) => u.uid == v)
+                              .department;
+                        });
+                      },
+                    ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: selectedDeptUserId == null
+                      ? null
+                      : () async {
+                          Navigator.pop(ctx);
+                          try {
+                            await _deptService.assignToDepartment(
+                              reportId: report.id,
+                              departmentUserId: selectedDeptUserId!,
+                              departmentName: selectedDeptName ?? '',
+                              assignedByName: adminName,
+                              reporterUserId: report.userId,
+                            );
+                            if (mounted)
+                              AppToast.show(
+                                context,
+                                'Assigned to $selectedDeptName',
+                                type: ToastType.success,
+                              );
+                          } catch (e) {
+                            if (mounted)
+                              AppToast.show(
+                                context,
+                                'Error: $e',
+                                type: ToastType.error,
+                              );
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryBlue,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Assign'),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showVerifyDialog(ReportModel report, String adminName) {
+    final remarksCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Verify & Resolve'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Mark this report as officially Resolved.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: remarksCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Remarks (optional)',
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await _deptService.approveResolution(
+                  reportId: report.id,
+                  adminName: adminName,
+                  reporterUserId: report.userId,
+                  departmentUserId: report.assignedDepartmentUserId,
+                  remarks: remarksCtrl.text.trim().isEmpty
+                      ? null
+                      : remarksCtrl.text.trim(),
+                );
+                if (mounted)
+                  AppToast.show(
+                    context,
+                    'Report resolved',
+                    type: ToastType.success,
+                  );
+              } catch (e) {
+                if (mounted)
+                  AppToast.show(context, 'Error: $e', type: ToastType.error);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.successGreen,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Approve & Resolve'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReturnDialog(ReportModel report, String adminName) {
+    final remarksCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Return for Revision'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Specify what the department needs to fix.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: remarksCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Remarks (required)',
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (remarksCtrl.text.trim().isEmpty) return;
+              Navigator.pop(ctx);
+              try {
+                await _deptService.returnForRevision(
+                  reportId: report.id,
+                  adminName: adminName,
+                  departmentUserId: report.assignedDepartmentUserId,
+                  reporterUserId: report.userId,
+                  remarks: remarksCtrl.text.trim(),
+                );
+                if (mounted)
+                  AppToast.show(
+                    context,
+                    'Returned for revision',
+                    type: ToastType.success,
+                  );
+              } catch (e) {
+                if (mounted)
+                  AppToast.show(context, 'Error: $e', type: ToastType.error);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Return for Revision'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAssignDialog(ReportModel report) {
     final ctrl = TextEditingController(text: report.assignedTo);
     showDialog(
@@ -606,6 +811,15 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
+                                  if (report.assignedDepartment != null)
+                                    Text(
+                                      'Dept: ${report.assignedDepartment}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.purple,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
@@ -617,6 +831,48 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                               ),
                               label: const Text('Assign'),
                             ),
+                            if (report.assignedDepartment == null)
+                              TextButton.icon(
+                                onPressed: () => _showAssignToDepartmentDialog(
+                                  report,
+                                  adminName,
+                                ),
+                                icon: const Icon(
+                                  Icons.business_outlined,
+                                  size: 16,
+                                ),
+                                label: const Text('Dept'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.purple,
+                                ),
+                              ),
+                            if (report.currentStatus ==
+                                AppConstants.statusForVerification) ...[
+                              TextButton.icon(
+                                onPressed: () =>
+                                    _showVerifyDialog(report, adminName),
+                                icon: const Icon(
+                                  Icons.check_circle_outline,
+                                  size: 16,
+                                ),
+                                label: const Text('Resolve'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppTheme.successGreen,
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed: () =>
+                                    _showReturnDialog(report, adminName),
+                                icon: const Icon(
+                                  Icons.replay_outlined,
+                                  size: 16,
+                                ),
+                                label: const Text('Return'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.orange,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

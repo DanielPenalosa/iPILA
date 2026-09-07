@@ -23,6 +23,8 @@ import '../../features/admin/screens/admin_settings_screen.dart';
 import '../../features/analytics/screens/analytics_screen.dart';
 import '../../features/alerts/screens/alerts_screen.dart';
 import '../../features/help/screens/faq_screen.dart';
+import '../../features/department/screens/department_reports_screen.dart';
+import '../../features/department/screens/department_report_detail_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -54,6 +56,7 @@ final _adminMapKey = GlobalKey<NavigatorState>();
 final _adminOrdinancesKey = GlobalKey<NavigatorState>();
 final _adminAlertsKey = GlobalKey<NavigatorState>();
 final _adminSettingsKey = GlobalKey<NavigatorState>();
+final _deptReportsKey = GlobalKey<NavigatorState>();
 
 GoRouter createRouter(AuthProvider authProvider) {
   return GoRouter(
@@ -72,12 +75,25 @@ GoRouter createRouter(AuthProvider authProvider) {
       final isAuthenticated = authProvider.isAuthenticated;
       if (!isAuthenticated && !isAuthRoute) return '/login';
       if (isAuthenticated && (loc == '/login' || loc == '/register')) {
-        return authProvider.isAdmin ? '/admin' : '/home';
+        if (authProvider.isAdmin) return '/admin';
+        if (authProvider.isDepartment) return '/department';
+        return '/home';
+      }
+      if (isAuthenticated &&
+          !authProvider.isAdmin &&
+          !authProvider.isDepartment &&
+          loc.startsWith('/admin')) {
+        return '/home';
       }
       if (isAuthenticated &&
           !authProvider.isAdmin &&
           loc.startsWith('/admin')) {
-        return '/home';
+        return '/department';
+      }
+      if (isAuthenticated &&
+          !authProvider.isDepartment &&
+          loc.startsWith('/department')) {
+        return authProvider.isAdmin ? '/admin' : '/home';
       }
       return null;
     },
@@ -258,6 +274,21 @@ GoRouter createRouter(AuthProvider authProvider) {
                 builder: (_, s) => const AdminSettingsScreen(),
               ),
             ],
+          ),
+        ],
+      ),
+
+      // Department portal
+      GoRoute(
+        path: '/department',
+        pageBuilder: (_, s) => _fadePage(const DepartmentReportsScreen(), s),
+        routes: [
+          GoRoute(
+            path: 'report/:id',
+            pageBuilder: (_, s) => _fadePage(
+              DepartmentReportDetailScreen(reportId: s.pathParameters['id']!),
+              s,
+            ),
           ),
         ],
       ),

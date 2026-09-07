@@ -1,10 +1,13 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_ui.dart';
 import '../../../data/models/user_model.dart';
+import '../../../data/services/department_service.dart';
 import '../../../data/services/user_management_service.dart';
 import 'admin_shell.dart';
 
@@ -18,7 +21,122 @@ class AdminUsersScreen extends StatefulWidget {
 class _AdminUsersScreenState extends State<AdminUsersScreen> {
   final _db = FirebaseFirestore.instance;
   final _userService = UserManagementService();
+  final _deptService = DepartmentService();
   String _search = '';
+
+  void _showCreateDepartmentDialog() {
+    String? selectedDept;
+    final nameCtrl = TextEditingController();
+    final emailCtrl = TextEditingController();
+    final passCtrl = TextEditingController();
+    bool creating = false;
+
+    showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setDialog) => AlertDialog(
+          title: const Text('Create Department Account'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(labelText: 'Department'),
+                  value: selectedDept,
+                  items: AppConstants.departments
+                      .map((d) => DropdownMenuItem(value: d, child: Text(d)))
+                      .toList(),
+                  onChanged: (v) => setDialog(() => selectedDept = v),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Account Name'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: emailCtrl,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: passCtrl,
+                  decoration: const InputDecoration(labelText: 'Password'),
+                  obscureText: true,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: creating || selectedDept == null
+                  ? null
+                  : () async {
+                      setDialog(() => creating = true);
+                      try {
+                        // Create Firebase Auth account
+                        final credential = await FirebaseAuth.instance
+                            .createUserWithEmailAndPassword(
+                              email: emailCtrl.text.trim(),
+                              password: passCtrl.text.trim(),
+                            );
+                        await _deptService.createDepartmentUser(
+                          uid: credential.user!.uid,
+                          fullName: nameCtrl.text.trim().isEmpty
+                              ? selectedDept!
+                              : nameCtrl.text.trim(),
+                          email: emailCtrl.text.trim(),
+                          department: selectedDept!,
+                        );
+                        // Sign back in as admin (creating another account signs you out)
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Department account created for $selectedDept',
+                              ),
+                              backgroundColor: AppTheme.successGreen,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setDialog(() => creating = false);
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: AppTheme.primaryRed,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue,
+                foregroundColor: Colors.white,
+              ),
+              child: creating
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Create'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Stream<List<UserModel>> _getUsers() {
     return _db
@@ -592,6 +710,102 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                   ),
                                 ],
                               ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Department Accounts
+                      _SectionCard(
+                        header: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Department Accounts',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: _showCreateDepartmentDialog,
+                              icon: const Icon(Icons.add, size: 16),
+                              label: const Text('Add Department'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.purple,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                textStyle: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                        child: StreamBuilder<List<UserModel>>(
+                          stream: _deptService.getDepartmentUsers(),
+                          builder: (ctx, snap) {
+                            final deptUsers = snap.data ?? [];
+                            if (deptUsers.isEmpty) {
+                              return const Padding(
+                                padding: EdgeInsets.all(20),
+                                child: Text(
+                                  'No department accounts yet.',
+                                  style: TextStyle(color: AppTheme.textMuted),
+                                ),
+                              );
+                            }
+                            return Column(
+                              children: deptUsers
+                                  .map(
+                                    (u) => ListTile(
+                                      leading: CircleAvatar(
+                                        backgroundColor: Colors.purple
+                                            .withValues(alpha: 0.15),
+                                        child: const Icon(
+                                          Icons.business,
+                                          color: Colors.purple,
+                                          size: 18,
+                                        ),
+                                      ),
+                                      title: Text(
+                                        u.department ?? u.fullName,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        u.email,
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                      trailing: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 3,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.purple.withValues(
+                                            alpha: 0.1,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'Department',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.purple,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                            );
+                          },
+                        ),
                       ),
                     ],
                   ),
