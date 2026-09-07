@@ -638,9 +638,7 @@ class ReportDetailScreen extends StatelessWidget {
 
                 // ── Feedback section (resolved reports only) ──────────
                 if (report.currentStatus == AppConstants.statusResolved &&
-                    currentUserId != null &&
-                    (isOwnReport ||
-                        report.followers.contains(currentUserId))) ...[
+                    currentUserId != null) ...[
                   const SizedBox(height: 28),
                   _FeedbackSection(
                     reportId: reportId,
