@@ -84,6 +84,18 @@ class AdminDashboardScreen extends StatelessWidget {
               .toList();
           final recentActivity = reports.take(6).toList();
 
+          // High priority = reports with priority >= 3 (MEDIUM+) not yet resolved
+          final highPriority =
+              reports
+                  .where(
+                    (r) =>
+                        r.priority >= 3 &&
+                        r.currentStatus != AppConstants.statusResolved &&
+                        r.currentStatus != AppConstants.statusRejected,
+                  )
+                  .toList()
+                ..sort((a, b) => b.priority.compareTo(a.priority));
+
           return Column(
             children: [
               const AdminPageHeader(title: 'Overview'),
@@ -145,6 +157,33 @@ class AdminDashboardScreen extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 20),
+
+                      // ── High Priority Reports ────────────────────────
+                      if (highPriority.isNotEmpty) ...[
+                        _DashSectionHeader(
+                          icon: Icons.local_fire_department_rounded,
+                          iconColor: Colors.red[700]!,
+                          title: 'High Priority Reports',
+                          subtitle:
+                              '${highPriority.length} report${highPriority.length == 1 ? '' : 's'} need attention',
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.red.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: Column(
+                            children: highPriority
+                                .map((r) => _PriorityReportTile(report: r))
+                                .toList(),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
 
                       // ── Middle row ──────────────────────────────────
                       Row(
@@ -802,6 +841,149 @@ class _QuickBtn extends StatelessWidget {
             color: color,
             fontWeight: FontWeight.w500,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Priority feature helpers ──────────────────────────────────────────────────
+
+class _DashSectionHeader extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  const _DashSectionHeader({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: iconColor),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+        ),
+        const SizedBox(width: 10),
+        Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+      ],
+    );
+  }
+}
+
+class _PriorityReportTile extends StatelessWidget {
+  final ReportModel report;
+  const _PriorityReportTile({required this.report});
+
+  static Color _pColor(int p) {
+    if (p >= 5) return Colors.red[700]!;
+    if (p >= 4) return Colors.orange[700]!;
+    return Colors.amber[700]!;
+  }
+
+  static String _pLabel(int p) {
+    if (p >= 5) return 'CRITICAL';
+    if (p >= 4) return 'HIGH';
+    return 'MEDIUM';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pColor = _pColor(report.priority);
+    return InkWell(
+      onTap: () => context.push('/admin/reports/${report.id}'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            // Priority flame icon
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: pColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.local_fire_department_rounded,
+                size: 18,
+                color: pColor,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        report.category,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: pColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          _pLabel(report.priority),
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: pColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Brgy. ${report.barangay} · ${report.followerCount} following',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.statusColor(
+                  report.currentStatus,
+                ).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                report.currentStatus,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.statusColor(report.currentStatus),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.chevron_right, size: 16, color: Colors.grey[400]),
+          ],
         ),
       ),
     );

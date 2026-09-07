@@ -42,6 +42,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
   OverlayEntry? _calendarOverlay;
 
   static const _filters = ['All', 'New', 'In Progress', 'Completed', 'Overdue'];
+  bool _sortByPriority = false;
 
   @override
   void initState() {
@@ -92,6 +93,15 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
           )
           .toList();
     }
+
+    // Sort by priority descending if toggled
+    if (_sortByPriority) {
+      list.sort((a, b) {
+        final pc = b.priority.compareTo(a.priority);
+        return pc != 0 ? pc : b.createdAt.compareTo(a.createdAt);
+      });
+    }
+
     return list;
   }
 
@@ -935,6 +945,59 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
                       ),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  // Priority sort toggle
+                  Tooltip(
+                    message: _sortByPriority
+                        ? 'Sorting by priority'
+                        : 'Sort by priority',
+                    child: InkWell(
+                      onTap: () =>
+                          setState(() => _sortByPriority = !_sortByPriority),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        height: 36,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: _sortByPriority
+                              ? Colors.red.withValues(alpha: 0.1)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: _sortByPriority
+                                ? Colors.red.withValues(alpha: 0.5)
+                                : const Color(0xFFE0E0E0),
+                            width: _sortByPriority ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.local_fire_department_rounded,
+                              size: 15,
+                              color: _sortByPriority
+                                  ? Colors.red[700]
+                                  : Colors.grey[500],
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Priority',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: _sortByPriority
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: _sortByPriority
+                                    ? Colors.red[700]
+                                    : Colors.grey[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1201,6 +1264,22 @@ class _ReportRow extends StatelessWidget {
     required this.onDelete,
   });
 
+  static Color _priorityColor(int p) {
+    if (p >= 5) return Colors.red[700]!;
+    if (p >= 4) return Colors.orange[700]!;
+    if (p >= 3) return Colors.amber[700]!;
+    if (p >= 2) return Colors.blue[600]!;
+    return Colors.grey[400]!;
+  }
+
+  static String _priorityLabel(int p) {
+    if (p >= 5) return 'CRITICAL';
+    if (p >= 4) return 'HIGH';
+    if (p >= 3) return 'MEDIUM';
+    if (p >= 2) return 'LOW';
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
     final color = AppTheme.statusColor(report.currentStatus);
@@ -1208,11 +1287,16 @@ class _ReportRow extends StatelessWidget {
     final time = DateFormat('h:mm a').format(report.createdAt);
     final id = '#RPT-${report.id.substring(0, 4).toUpperCase()}';
     final isNew = report.currentStatus == AppConstants.statusPending;
+    final hasPriority = report.priority >= 2;
 
     return AdminTableRow(
       onTap: onView,
       child: Container(
-        color: isSelected ? const Color(0xFFF0F4FF) : Colors.white,
+        color: isSelected
+            ? const Color(0xFFF0F4FF)
+            : (report.priority >= 4
+                  ? Colors.red.withValues(alpha: 0.02)
+                  : Colors.white),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         child: Row(
           children: [
@@ -1226,9 +1310,51 @@ class _ReportRow extends StatelessWidget {
             ),
             SizedBox(
               width: 80,
-              child: Text(
-                id,
-                style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    id,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                  if (hasPriority)
+                    Container(
+                      margin: const EdgeInsets.only(top: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _priorityColor(
+                          report.priority,
+                        ).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.local_fire_department_rounded,
+                            size: 9,
+                            color: _priorityColor(report.priority),
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            _priorityLabel(report.priority),
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: _priorityColor(report.priority),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
             ),
             SizedBox(
