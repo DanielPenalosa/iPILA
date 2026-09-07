@@ -65,10 +65,10 @@ class ReportService {
       longitude: longitude,
       address: address,
       photoUrls: photoUrls,
-      currentStatus: AppConstants.statusSubmitted,
+      currentStatus: AppConstants.statusPending,
       statusHistory: [
         ReportStatus(
-          status: AppConstants.statusSubmitted,
+          status: AppConstants.statusPending,
           timestamp: now,
           note: 'Report submitted by citizen.',
         ),
@@ -185,19 +185,38 @@ class ReportService {
       case 'Under Review':
         notificationTitle = 'Report Under Review';
         notificationBody =
-            'Your $category report is now being reviewed by our team.';
+            'Your $category report is now being reviewed by the admin.';
+        notificationType = 'info';
+        break;
+      case 'Assigned':
+        notificationTitle = 'Report Assigned';
+        notificationBody =
+            'Your $category report has been assigned to a department for action.';
         notificationType = 'info';
         break;
       case 'In Progress':
         notificationTitle = 'Work Started';
-        notificationBody = 'We\'ve started working on your $category report.';
+        notificationBody =
+            'The team has started working on your $category report.';
         notificationType = 'info';
         break;
-      case 'Completed':
-        notificationTitle = 'Report Completed! ✓';
+      case 'Done':
+        notificationTitle = 'Work Completed';
         notificationBody =
-            'Great news! Your $category report has been resolved. Check the before & after photos to see the improvement. Thank you for helping our community!';
+            'Work on your $category report is done. Awaiting admin verification.';
+        notificationType = 'info';
+        break;
+      case 'Resolved':
+        notificationTitle = 'Report Resolved ✓';
+        notificationBody =
+            'Your $category report has been officially resolved. Thank you for helping improve our community!';
         notificationType = 'success';
+        break;
+      case 'Needs Revision':
+        notificationTitle = 'Revision Requested';
+        notificationBody =
+            'Admin has requested revisions on your $category report.';
+        notificationType = 'warning';
         break;
       case 'Rejected':
         notificationTitle = 'Report Update';
@@ -405,10 +424,9 @@ class ReportService {
         .where(
           'currentStatus',
           whereIn: [
-            AppConstants.statusSubmitted,
-            AppConstants.statusSeen,
-            AppConstants.statusValidated,
-            AppConstants.statusQueued,
+            AppConstants.statusPending,
+            AppConstants.statusUnderReview,
+            AppConstants.statusAssigned,
             AppConstants.statusInProgress,
           ],
         )
@@ -689,8 +707,8 @@ class ReportService {
 
     // Validation: Check if deletion is allowed based on status
     final canDelete =
-        currentStatus == AppConstants.statusSubmitted ||
-        currentStatus == AppConstants.statusCompleted;
+        currentStatus == AppConstants.statusPending ||
+        currentStatus == AppConstants.statusResolved;
 
     if (!canDelete) {
       return {

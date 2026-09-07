@@ -22,20 +22,19 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
 
   static const _filters = ['All', 'Pending', 'In Progress', 'Completed'];
 
-  // Map filter label to actual statuses
   List<String> get _matchStatuses {
     switch (_filter) {
       case 'Pending':
-        return [
-          AppConstants.statusSubmitted,
-          AppConstants.statusSeen,
-          AppConstants.statusValidated,
-          AppConstants.statusQueued,
-        ];
+        return [AppConstants.statusPending, AppConstants.statusUnderReview];
       case 'In Progress':
-        return [AppConstants.statusInProgress];
+        return [
+          AppConstants.statusAssigned,
+          AppConstants.statusInProgress,
+          AppConstants.statusDone,
+          AppConstants.statusNeedsRevision,
+        ];
       case 'Completed':
-        return [AppConstants.statusCompleted];
+        return [AppConstants.statusResolved, AppConstants.statusRejected];
       default:
         return [];
     }
@@ -158,11 +157,12 @@ class _ReportCard extends StatelessWidget {
   const _ReportCard({required this.report, required this.onTap});
 
   static const _steps = [
-    'Submitted',
-    'Validated',
-    'Queued',
+    'Pending',
+    'Under Review',
+    'Assigned',
     'In Progress',
-    'Completed',
+    'Done',
+    'Resolved',
   ];
 
   static const _categoryIcons = {
@@ -184,7 +184,7 @@ class _ReportCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor = AppTheme.statusColor(report.currentStatus);
-    final isDone = report.currentStatus == AppConstants.statusCompleted;
+    final isDone = report.currentStatus == AppConstants.statusResolved;
     final isProgress = report.currentStatus == AppConstants.statusInProgress;
     final emoji = _categoryIcons[report.category] ?? '📋';
     final date = DateFormat('MMM d, y').format(report.createdAt);

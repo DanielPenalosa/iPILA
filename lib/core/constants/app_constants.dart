@@ -13,36 +13,47 @@ class AppConstants {
   static const String notificationsCollection = 'notifications';
 
   // Report statuses
-  static const String statusSubmitted = 'Submitted';
-  static const String statusSeen = 'Seen';
-  static const String statusValidated = 'Validated';
-  static const String statusQueued = 'Queued';
+  static const String statusPending = 'Pending';
+  static const String statusUnderReview = 'Under Review';
   static const String statusAssigned = 'Assigned';
   static const String statusInProgress = 'In Progress';
-  static const String statusForVerification = 'For Admin Verification';
-  static const String statusCompleted = 'Completed';
+  static const String statusDone = 'Done';
+  static const String statusNeedsRevision = 'Needs Revision';
   static const String statusResolved = 'Resolved';
   static const String statusRejected = 'Rejected';
-  static const String statusRevisionRequired = 'Revision Required';
 
+  // All statuses in pipeline order
   static const List<String> reportStatuses = [
-    statusSubmitted,
-    statusSeen,
-    statusValidated,
-    statusQueued,
+    statusPending,
+    statusUnderReview,
     statusAssigned,
     statusInProgress,
-    statusForVerification,
-    statusCompleted,
+    statusDone,
+    statusNeedsRevision,
     statusResolved,
+    statusRejected,
   ];
 
-  // Department statuses (what dept can set)
-  static const List<String> departmentStatuses = [
+  // Admin-only status transitions
+  static const List<String> adminStatuses = [
+    statusUnderReview,
     statusAssigned,
-    statusInProgress,
-    statusForVerification,
+    statusNeedsRevision,
+    statusResolved,
+    statusRejected,
   ];
+
+  // Department-only status transitions
+  static const List<String> departmentStatuses = [statusInProgress, statusDone];
+
+  // Legacy aliases — kept for Firestore compatibility during migration
+  static const String statusSubmitted = statusPending;
+  static const String statusSeen = statusUnderReview;
+  static const String statusValidated = statusUnderReview;
+  static const String statusQueued = statusAssigned;
+  static const String statusForVerification = statusDone;
+  static const String statusCompleted = statusResolved;
+  static const String statusRevisionRequired = statusNeedsRevision;
 
   // User roles
   static const String roleResident = 'resident';

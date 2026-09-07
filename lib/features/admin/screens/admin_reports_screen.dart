@@ -63,7 +63,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
     if (_filter != 'All') {
       list = list.where((r) {
         if (_filter == 'New')
-          return r.currentStatus == AppConstants.statusSubmitted;
+          return r.currentStatus == AppConstants.statusPending;
         if (_filter == 'Overdue') return r.currentStatus == 'Overdue';
         return r.currentStatus == _filter;
       }).toList();
@@ -614,7 +614,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
                 ),
                 maxLines: 2,
               ),
-              if (selectedStatus == AppConstants.statusCompleted) ...[
+              if (selectedStatus == AppConstants.statusResolved) ...[
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -635,7 +635,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Warning: This will lock the report permanently',
+                          'This will mark the report as officially Resolved.',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -650,7 +650,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
                 AdminHoverButton(
                   label: (_afterPhoto != null || _afterPhotoWeb != null)
                       ? 'After photo added ✓'
-                      : 'Add After Photo (Required)',
+                      : 'Add After Photo (optional)',
                   icon: Icons.add_a_photo_outlined,
                   onTap: () async {
                     await _pickAfterPhoto();
@@ -664,8 +664,8 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
               ],
               const SizedBox(height: 16),
               AdminHoverButton(
-                label: selectedStatus == AppConstants.statusCompleted
-                    ? 'Complete'
+                label: selectedStatus == AppConstants.statusResolved
+                    ? 'Resolve'
                     : 'Update',
                 onTap: selectedStatus == null
                     ? null
@@ -675,39 +675,12 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
                             ? null
                             : noteCtrl.text.trim();
 
-                        // Validate completion requirements
-                        if (status == AppConstants.statusCompleted) {
-                          if (report.photoUrls.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Cannot complete: No before photo exists',
-                                ),
-                                backgroundColor: AppTheme.primaryRed,
-                              ),
-                            );
-                            return;
-                          }
-                          if (_afterPhoto == null && _afterPhotoWeb == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'After photo is required to mark as completed',
-                                ),
-                                backgroundColor: AppTheme.primaryRed,
-                              ),
-                            );
-                            return;
-                          }
-                        }
-
                         if (Navigator.canPop(ctx)) {
                           Navigator.pop(ctx);
                         }
 
                         if (!mounted) return;
 
-                        // Show loading
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Row(
@@ -736,11 +709,10 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
                             newStatus: status,
                             updatedBy: adminName,
                             note: note,
-                            afterPhoto: status == AppConstants.statusCompleted
+                            afterPhoto: status == AppConstants.statusResolved
                                 ? _afterPhoto
                                 : null,
-                            afterPhotoWeb:
-                                status == AppConstants.statusCompleted
+                            afterPhotoWeb: status == AppConstants.statusResolved
                                 ? _afterPhotoWeb
                                 : null,
                           );
@@ -779,7 +751,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
                           }
                         }
                       },
-                color: selectedStatus == AppConstants.statusCompleted
+                color: selectedStatus == AppConstants.statusResolved
                     ? AppTheme.successGreen
                     : AppTheme.primaryBlue,
               ),
@@ -1002,8 +974,8 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
                             context.push('/admin/reports/${filtered[i].id}'),
                         onValidate: () => _showConfirmDialog(
                           filtered[i],
-                          AppConstants.statusValidated,
-                          'Approve',
+                          AppConstants.statusUnderReview,
+                          'Review',
                         ),
                         onReject: () => _showConfirmDialog(
                           filtered[i],
@@ -1126,7 +1098,7 @@ class _ReportRow extends StatelessWidget {
     final date = DateFormat('MMM d, y').format(report.createdAt);
     final time = DateFormat('h:mm a').format(report.createdAt);
     final id = '#RPT-${report.id.substring(0, 4).toUpperCase()}';
-    final isNew = report.currentStatus == AppConstants.statusSubmitted;
+    final isNew = report.currentStatus == AppConstants.statusPending;
 
     return AdminTableRow(
       onTap: onView,
@@ -1237,7 +1209,7 @@ class _ReportRow extends StatelessWidget {
                   const SizedBox(width: 4),
                   if (isNew) ...[
                     _Btn(
-                      label: 'Validate',
+                      label: 'Review',
                       onTap: onValidate,
                       color: AppTheme.successGreen,
                     ),
@@ -1248,7 +1220,7 @@ class _ReportRow extends StatelessWidget {
                       color: AppTheme.primaryRed,
                     ),
                   ] else if (report.currentStatus !=
-                      AppConstants.statusCompleted)
+                      AppConstants.statusResolved)
                     _Btn(
                       label: 'Update',
                       onTap: onStatusChange,

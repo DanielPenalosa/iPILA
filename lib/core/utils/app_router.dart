@@ -23,11 +23,14 @@ import '../../features/admin/screens/admin_settings_screen.dart';
 import '../../features/analytics/screens/analytics_screen.dart';
 import '../../features/alerts/screens/alerts_screen.dart';
 import '../../features/help/screens/faq_screen.dart';
+import '../../features/department/screens/department_scaffold_widget.dart';
+import '../../features/department/screens/department_dashboard_screen.dart';
 import '../../features/department/screens/department_reports_screen.dart';
 import '../../features/department/screens/department_report_detail_screen.dart';
+import '../../features/department/screens/department_map_screen.dart';
+import '../../features/department/screens/department_notifications_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
-final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 CustomTransitionPage<void> _fadePage(Widget child, GoRouterState state) {
   return CustomTransitionPage<void>(
@@ -56,7 +59,10 @@ final _adminMapKey = GlobalKey<NavigatorState>();
 final _adminOrdinancesKey = GlobalKey<NavigatorState>();
 final _adminAlertsKey = GlobalKey<NavigatorState>();
 final _adminSettingsKey = GlobalKey<NavigatorState>();
+final _deptDashKey = GlobalKey<NavigatorState>();
 final _deptReportsKey = GlobalKey<NavigatorState>();
+final _deptMapKey = GlobalKey<NavigatorState>();
+final _deptNotificationsKey = GlobalKey<NavigatorState>();
 
 GoRouter createRouter(AuthProvider authProvider) {
   return GoRouter(
@@ -278,17 +284,55 @@ GoRouter createRouter(AuthProvider authProvider) {
         ],
       ),
 
-      // Department portal
-      GoRoute(
-        path: '/department',
-        pageBuilder: (_, s) => _fadePage(const DepartmentReportsScreen(), s),
-        routes: [
-          GoRoute(
-            path: 'report/:id',
-            pageBuilder: (_, s) => _fadePage(
-              DepartmentReportDetailScreen(reportId: s.pathParameters['id']!),
-              s,
-            ),
+      // Department portal — sidebar shell (same pattern as admin)
+      StatefulShellRoute.indexedStack(
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state, shell) =>
+            DepartmentScaffoldWidget(navigationShell: shell),
+        branches: [
+          StatefulShellBranch(
+            navigatorKey: _deptDashKey,
+            routes: [
+              GoRoute(
+                path: '/department',
+                builder: (_, s) => const DepartmentDashboardScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _deptReportsKey,
+            routes: [
+              GoRoute(
+                path: '/department/reports',
+                builder: (_, s) => const DepartmentReportsScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (_, s) => DepartmentReportDetailScreen(
+                      reportId: s.pathParameters['id']!,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _deptMapKey,
+            routes: [
+              GoRoute(
+                path: '/department/map',
+                builder: (_, s) => const DepartmentMapScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _deptNotificationsKey,
+            routes: [
+              GoRoute(
+                path: '/department/notifications',
+                builder: (_, s) => const DepartmentNotificationsScreen(),
+              ),
+            ],
           ),
         ],
       ),

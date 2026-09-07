@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/report_model.dart';
 import '../../../data/services/report_service.dart';
@@ -63,23 +64,17 @@ class AdminScaffoldWidgetState extends State<AdminScaffoldWidget> {
     final currentIndex = widget.navigationShell.currentIndex;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFF9FAFB),
       body: Row(
         children: [
           // ── Persistent sidebar ──────────────────────────────────────
           AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
+            duration: const Duration(milliseconds: 280),
             curve: Curves.easeInOut,
-            width: _isSidebarCollapsed ? 80 : 240,
-            decoration: const BoxDecoration(
+            width: _isSidebarCollapsed ? 72 : 232,
+            decoration: BoxDecoration(
               color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x0A000000),
-                  blurRadius: 8,
-                  offset: Offset(2, 0),
-                ),
-              ],
+              border: Border(right: BorderSide(color: const Color(0xFFF3F4F6))),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,13 +142,16 @@ class AdminScaffoldWidgetState extends State<AdminScaffoldWidget> {
                     builder: (context, snapshot) {
                       final reports = snapshot.data ?? [];
                       final newCount = reports
-                          .where((r) => r.currentStatus == 'Submitted')
+                          .where(
+                            (r) =>
+                                r.currentStatus == AppConstants.statusPending,
+                          )
                           .length;
                       final alertCount = reports
                           .where(
                             (r) =>
                                 r.currentStatus == 'Overdue' ||
-                                r.currentStatus == 'Submitted',
+                                r.currentStatus == AppConstants.statusPending,
                           )
                           .length;
 
@@ -203,7 +201,7 @@ class AdminScaffoldWidgetState extends State<AdminScaffoldWidget> {
                       children: [
                         CircleAvatar(
                           radius: 16,
-                          backgroundColor: AppTheme.primaryBlue,
+                          backgroundColor: const Color(0xFF111111),
                           child: Text(
                             user?.fullName.isNotEmpty == true
                                 ? user!.fullName[0].toUpperCase()
@@ -337,9 +335,9 @@ class _SidebarItemState extends State<_SidebarItem> {
             ),
             decoration: BoxDecoration(
               color: widget.isActive
-                  ? AppTheme.primaryBlue.withValues(alpha: 0.1)
+                  ? const Color(0xFF111111).withValues(alpha: 0.06)
                   : _hovered
-                  ? const Color(0xFFF5F6FA)
+                  ? const Color(0xFFF9FAFB)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
             ),
@@ -352,7 +350,7 @@ class _SidebarItemState extends State<_SidebarItem> {
                           widget.item.icon,
                           size: 18,
                           color: widget.isActive
-                              ? AppTheme.primaryBlue
+                              ? const Color(0xFF111111)
                               : AppTheme.textMuted,
                         ),
                         if (widget.badge != null)
@@ -362,7 +360,7 @@ class _SidebarItemState extends State<_SidebarItem> {
                             child: Container(
                               padding: const EdgeInsets.all(4),
                               decoration: const BoxDecoration(
-                                color: AppTheme.primaryRed,
+                                color: Color(0xFFDC2626),
                                 shape: BoxShape.circle,
                               ),
                               constraints: const BoxConstraints(
@@ -390,7 +388,7 @@ class _SidebarItemState extends State<_SidebarItem> {
                         widget.item.icon,
                         size: 18,
                         color: widget.isActive
-                            ? AppTheme.primaryBlue
+                            ? const Color(0xFF111111)
                             : AppTheme.textMuted,
                       ),
                       const SizedBox(width: 10),
@@ -403,7 +401,7 @@ class _SidebarItemState extends State<_SidebarItem> {
                                 ? FontWeight.w600
                                 : FontWeight.normal,
                             color: widget.isActive
-                                ? AppTheme.primaryBlue
+                                ? const Color(0xFF111111)
                                 : AppTheme.textDark,
                           ),
                         ),
@@ -415,7 +413,7 @@ class _SidebarItemState extends State<_SidebarItem> {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryRed,
+                            color: const Color(0xFFDC2626),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(

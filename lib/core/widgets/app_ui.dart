@@ -539,62 +539,44 @@ class AdminHoverButton extends StatefulWidget {
 
 class _AdminHoverButtonState extends State<AdminHoverButton> {
   bool _hovered = false;
-  bool _pressed = false;
 
   Color get _base => widget.color ?? AppTheme.primaryBlue;
 
   @override
   Widget build(BuildContext context) {
     final bg = widget.outlined
-        ? (_hovered ? _base.withValues(alpha: 0.08) : Colors.transparent)
-        : (_hovered ? _darken(_base) : _base);
+        ? (_hovered ? _base.withValues(alpha: 0.06) : Colors.transparent)
+        : (_hovered ? _base.withValues(alpha: 0.85) : _base);
     final border = widget.outlined
-        ? Border.all(
-            color: _hovered ? _base : _base.withValues(alpha: 0.4),
-            width: 1,
-          )
+        ? Border.all(color: const Color(0xFFE5E7EB), width: 1)
         : null;
-    final textColor = widget.outlined ? _base : Colors.white;
+    final textColor = widget.outlined
+        ? (_hovered ? _base : const Color(0xFF6B7280))
+        : Colors.white;
     final pad = widget.small
-        ? const EdgeInsets.symmetric(horizontal: 12, vertical: 6)
-        : const EdgeInsets.symmetric(horizontal: 16, vertical: 9);
+        ? const EdgeInsets.symmetric(horizontal: 10, vertical: 5)
+        : const EdgeInsets.symmetric(horizontal: 14, vertical: 8);
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() {
         _hovered = false;
-        _pressed = false;
       }),
       child: GestureDetector(
-        onTapDown: (_) => setState(() => _pressed = true),
+        onTapDown: (_) => setState(() {}),
         onTapUp: (_) {
-          setState(() => _pressed = false);
           widget.onTap?.call();
         },
-        onTapCancel: () => setState(() => _pressed = false),
+        onTapCancel: () => setState(() {}),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
+          duration: const Duration(milliseconds: 120),
           padding: pad,
-          constraints: const BoxConstraints(minHeight: 32),
-          transform: _pressed
-              ? (Matrix4.identity()..scale(0.95, 0.95, 1.0))
-              : (_hovered
-                    ? (Matrix4.identity()..scale(1.02, 1.02, 1.0))
-                    : Matrix4.identity()),
+          constraints: const BoxConstraints(minHeight: 28),
           decoration: BoxDecoration(
             color: bg,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(6),
             border: border,
-            boxShadow: _hovered && !widget.outlined
-                ? [
-                    BoxShadow(
-                      color: _base.withValues(alpha: 0.15),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : [],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -603,16 +585,16 @@ class _AdminHoverButtonState extends State<AdminHoverButton> {
               if (widget.icon != null) ...[
                 Icon(
                   widget.icon,
-                  size: widget.small ? 14 : 16,
+                  size: widget.small ? 13 : 15,
                   color: textColor,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 5),
               ],
               Text(
                 widget.label,
                 style: TextStyle(
-                  fontSize: widget.small ? 12 : 13,
-                  fontWeight: FontWeight.w600,
+                  fontSize: widget.small ? 11 : 12,
+                  fontWeight: FontWeight.w500,
                   color: textColor,
                 ),
               ),
@@ -622,13 +604,6 @@ class _AdminHoverButtonState extends State<AdminHoverButton> {
       ),
     );
   }
-
-  Color _darken(Color c) => Color.fromARGB(
-    c.alpha,
-    (c.red * 0.85).round(),
-    (c.green * 0.85).round(),
-    (c.blue * 0.85).round(),
-  );
 }
 
 // ── Admin Hover Card (web stat/info cards) ────────────────────────────────────

@@ -267,13 +267,13 @@ class _AnalyticsStats {
   factory _AnalyticsStats.from(List<ReportModel> reports) {
     final total = reports.length;
     final resolved = reports
-        .where((r) => r.currentStatus == AppConstants.statusCompleted)
+        .where((r) => r.currentStatus == AppConstants.statusResolved)
         .length;
     final inProgress = reports
         .where((r) => r.currentStatus == AppConstants.statusInProgress)
         .length;
     final pending = reports
-        .where((r) => r.currentStatus == AppConstants.statusSubmitted)
+        .where((r) => r.currentStatus == AppConstants.statusPending)
         .length;
     final overdue = reports.where((r) => r.currentStatus == 'Overdue').length;
 
@@ -1113,7 +1113,7 @@ class _MonthlyTrendChart extends StatelessWidget {
       }).length;
 
       final completed = reports.where((r) {
-        return r.currentStatus == AppConstants.statusCompleted &&
+        return r.currentStatus == AppConstants.statusResolved &&
             r.createdAt.isAfter(month) &&
             r.createdAt.isBefore(nextMonth);
       }).length;
@@ -1271,7 +1271,7 @@ class _CategoryResolutionChart extends StatelessWidget {
       categoryStats.putIfAbsent(r.category, () => {'total': 0, 'completed': 0});
       categoryStats[r.category]!['total'] =
           categoryStats[r.category]!['total']! + 1;
-      if (r.currentStatus == AppConstants.statusCompleted) {
+      if (r.currentStatus == AppConstants.statusResolved) {
         categoryStats[r.category]!['completed'] =
             categoryStats[r.category]!['completed']! + 1;
       }
@@ -1403,7 +1403,7 @@ class _BarangayPerformanceWidget extends StatelessWidget {
     final Map<String, List<Duration>> barangayTimes = {};
 
     for (final r in reports) {
-      if (r.currentStatus == AppConstants.statusCompleted &&
+      if (r.currentStatus == AppConstants.statusResolved &&
           r.statusHistory.length > 1) {
         final duration = r.statusHistory.last.timestamp.difference(r.createdAt);
         barangayTimes.putIfAbsent(r.barangay, () => []).add(duration);

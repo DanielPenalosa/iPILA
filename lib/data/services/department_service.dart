@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 import '../models/report_model.dart';
@@ -118,7 +117,7 @@ class DepartmentService {
     );
   }
 
-  /// Department submits for admin verification
+  /// Department submits as done — awaiting admin verification
   Future<void> submitForVerification({
     required String reportId,
     required String departmentName,
@@ -129,7 +128,6 @@ class DepartmentService {
   }) async {
     final now = DateTime.now();
 
-    // Upload completion photos
     final photoUrls = <String>[];
     if (completionPhotosWeb != null) {
       for (final photo in completionPhotosWeb) {
@@ -146,22 +144,22 @@ class DepartmentService {
       id: updateId,
       updatedBy: updatedByName,
       department: departmentName,
-      status: AppConstants.statusForVerification,
+      status: AppConstants.statusDone,
       remarks: remarks,
       photoUrls: photoUrls,
       timestamp: now,
     );
 
     final statusEntry = ReportStatus(
-      status: AppConstants.statusForVerification,
+      status: AppConstants.statusDone,
       timestamp: now,
-      note: remarks ?? 'Submitted for admin verification',
+      note: remarks ?? 'Marked as done, awaiting admin verification',
       updatedBy: updatedByName,
       department: departmentName,
     );
 
     final updateData = <String, dynamic>{
-      'currentStatus': AppConstants.statusForVerification,
+      'currentStatus': AppConstants.statusDone,
       'updatedAt': Timestamp.fromDate(now),
       'statusHistory': FieldValue.arrayUnion([statusEntry.toMap()]),
       'progressUpdates': FieldValue.arrayUnion([progressUpdate.toMap()]),
@@ -176,12 +174,11 @@ class DepartmentService {
         .doc(reportId)
         .update(updateData);
 
-    // Notify reporter
     await _notifications.createNotification(
       userId: reporterUserId,
-      title: 'Report Under Verification',
+      title: 'Work Completed',
       body:
-          '$departmentName has completed action on your report. Awaiting admin verification.',
+          '$departmentName has finished work on your report. Awaiting admin review.',
       type: 'info',
       data: {'reportId': reportId},
     );
@@ -242,26 +239,24 @@ class DepartmentService {
   }) async {
     final now = DateTime.now();
     final statusEntry = ReportStatus(
-      status: AppConstants.statusRevisionRequired,
+      status: AppConstants.statusNeedsRevision,
       timestamp: now,
       note: remarks,
       updatedBy: adminName,
     );
 
     await _db.collection(AppConstants.reportsCollection).doc(reportId).update({
-      'currentStatus': AppConstants.statusRevisionRequired,
+      'currentStatus': AppConstants.statusNeedsRevision,
       'adminVerificationRemarks': remarks,
       'updatedAt': Timestamp.fromDate(now),
       'statusHistory': FieldValue.arrayUnion([statusEntry.toMap()]),
     });
 
-    // Notify department
     if (departmentUserId != null) {
       await _notifications.createNotification(
         userId: departmentUserId,
-        title: 'Report Returned for Revision',
-        body:
-            'Admin has returned a report for further action. Remarks: $remarks',
+        title: 'Report Needs Revision',
+        body: 'Admin returned a report for further action. Remarks: $remarks',
         type: 'warning',
         data: {'reportId': reportId},
       );
@@ -331,10 +326,10 @@ class DepartmentService {
       result[dept]!['total'] = result[dept]!['total']! + 1;
       final status = doc.data()['currentStatus'] as String? ?? '';
       if (status == AppConstants.statusAssigned ||
-          status == AppConstants.statusRevisionRequired) {
+          status == AppConstants.statusNeedsRevision) {
         result[dept]!['pending'] = result[dept]!['pending']! + 1;
       } else if (status == AppConstants.statusInProgress ||
-          status == AppConstants.statusForVerification) {
+          status == AppConstants.statusDone) {
         result[dept]!['inProgress'] = result[dept]!['inProgress']! + 1;
       } else if (status == AppConstants.statusResolved) {
         result[dept]!['resolved'] = result[dept]!['resolved']! + 1;

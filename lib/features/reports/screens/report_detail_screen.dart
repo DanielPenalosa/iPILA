@@ -139,9 +139,9 @@ class ReportDetailScreen extends StatelessWidget {
           ],
         ),
         content: Text(
-          report.currentStatus == AppConstants.statusCompleted
-              ? 'This completed report will be permanently deleted from your list. This action cannot be undone.'
-              : 'Are you sure you want to delete this report? You can only delete reports that haven\'t been reviewed yet.',
+          report.currentStatus == AppConstants.statusResolved
+              ? 'This resolved report will be removed from your list. This action cannot be undone.'
+              : 'Are you sure you want to delete this report? You can only delete pending reports.',
           style: const TextStyle(fontSize: 14),
         ),
         actions: [
@@ -255,9 +255,9 @@ class ReportDetailScreen extends StatelessWidget {
                 // Delete button for own reports (only for Pending or Completed)
                 if (isOwnReport &&
                     currentUserId != null &&
-                    (report.currentStatus == AppConstants.statusSubmitted ||
+                    (report.currentStatus == AppConstants.statusPending ||
                         report.currentStatus ==
-                            AppConstants.statusCompleted)) ...[
+                            AppConstants.statusResolved)) ...[
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
@@ -265,8 +265,8 @@ class ReportDetailScreen extends StatelessWidget {
                           _showDeleteDialog(context, report, currentUserId),
                       icon: const Icon(Icons.delete_outline),
                       label: Text(
-                        report.currentStatus == AppConstants.statusCompleted
-                            ? 'Remove Completed Report'
+                        report.currentStatus == AppConstants.statusResolved
+                            ? 'Remove Resolved Report'
                             : 'Delete Report',
                       ),
                       style: OutlinedButton.styleFrom(

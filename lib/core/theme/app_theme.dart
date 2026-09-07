@@ -125,20 +125,36 @@ class AppTheme {
 
   static Color statusColor(String status) {
     switch (status) {
-      case 'Submitted':
-        return const Color(0xFFD97706); // Darker yellow/amber
-      case 'Seen':
-        return const Color(0xFFF59E0B); // Amber
-      case 'Validated':
-        return const Color(0xFFEA580C); // Dark orange
-      case 'Queued':
-        return primaryOrange;
+      case 'Pending':
+        return const Color(0xFFF59E0B);
+      case 'Under Review':
+        return const Color(0xFF6366F1);
+      case 'Assigned':
+        return const Color(0xFF3B82F6);
       case 'In Progress':
-        return coral;
-      case 'Completed':
-        return successGreen;
+        return const Color(0xFF0EA5E9);
+      case 'Done':
+        return const Color(0xFF8B5CF6);
+      case 'Needs Revision':
+        return const Color(0xFFDC2626);
+      case 'Resolved':
+        return const Color(0xFF10B981);
       case 'Rejected':
-        return darkGray;
+        return const Color(0xFF6B7280);
+      // Legacy values from existing Firestore data
+      case 'Submitted':
+        return const Color(0xFFF59E0B);
+      case 'Seen':
+      case 'Validated':
+        return const Color(0xFF6366F1);
+      case 'Queued':
+        return const Color(0xFF3B82F6);
+      case 'For Admin Verification':
+        return const Color(0xFF8B5CF6);
+      case 'Revision Required':
+        return const Color(0xFFDC2626);
+      case 'Completed':
+        return const Color(0xFF10B981);
       default:
         return textMuted;
     }
@@ -146,16 +162,25 @@ class AppTheme {
 
   static IconData statusIcon(String status) {
     switch (status) {
+      case 'Pending':
       case 'Submitted':
-        return Icons.upload_rounded;
+        return Icons.inbox_rounded;
+      case 'Under Review':
       case 'Seen':
-        return Icons.visibility_rounded;
       case 'Validated':
-        return Icons.verified_rounded;
+        return Icons.manage_search_rounded;
+      case 'Assigned':
       case 'Queued':
-        return Icons.queue_rounded;
+        return Icons.assignment_ind_outlined;
       case 'In Progress':
         return Icons.construction_rounded;
+      case 'Done':
+      case 'For Admin Verification':
+        return Icons.pending_actions_outlined;
+      case 'Needs Revision':
+      case 'Revision Required':
+        return Icons.undo_rounded;
+      case 'Resolved':
       case 'Completed':
         return Icons.check_circle_rounded;
       case 'Rejected':

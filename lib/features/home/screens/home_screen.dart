@@ -302,7 +302,7 @@ class _RecentReportTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = AppTheme.statusColor(report.currentStatus);
-    final isDone = report.currentStatus == AppConstants.statusCompleted;
+    final isDone = report.currentStatus == AppConstants.statusResolved;
     final isProgress = report.currentStatus == AppConstants.statusInProgress;
 
     return GestureDetector(

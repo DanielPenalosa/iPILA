@@ -22,13 +22,13 @@ class AdminDashboardScreen extends StatelessWidget {
           final reports = snapshot.data ?? [];
           final total = reports.length;
           final awaiting = reports
-              .where((r) => r.currentStatus == AppConstants.statusSubmitted)
+              .where((r) => r.currentStatus == AppConstants.statusPending)
               .length;
           final inProgress = reports
               .where((r) => r.currentStatus == AppConstants.statusInProgress)
               .length;
           final resolved = reports
-              .where((r) => r.currentStatus == AppConstants.statusCompleted)
+              .where((r) => r.currentStatus == AppConstants.statusResolved)
               .length;
           final overdue = reports
               .where((r) => r.currentStatus == 'Overdue')
@@ -79,7 +79,7 @@ class AdminDashboardScreen extends StatelessWidget {
           final maxCatMin = catAvg.isEmpty ? 1 : catAvg.last.value;
 
           final needsAttention = reports
-              .where((r) => r.currentStatus == AppConstants.statusSubmitted)
+              .where((r) => r.currentStatus == AppConstants.statusPending)
               .take(5)
               .toList();
           final recentActivity = reports.take(6).toList();
@@ -158,18 +158,20 @@ class AdminDashboardScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
-                                    'Acknowledgment Rate',
+                                    'ACKNOWLEDGMENT RATE',
                                     style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF9CA3AF),
+                                      letterSpacing: 0.6,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 3),
                                   const Text(
                                     'Reports reviewed within the 24-hour target window',
                                     style: TextStyle(
                                       fontSize: 11,
-                                      color: AppTheme.textMuted,
+                                      color: Color(0xFF9CA3AF),
                                     ),
                                   ),
                                   const SizedBox(height: 24),
@@ -268,9 +270,9 @@ class AdminDashboardScreen extends StatelessWidget {
                                     'RESPONSE TIME BY CATEGORY',
                                     style: TextStyle(
                                       fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppTheme.textMuted,
-                                      letterSpacing: 0.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF9CA3AF),
+                                      letterSpacing: 0.6,
                                     ),
                                   ),
                                   const SizedBox(height: 16),
@@ -325,10 +327,12 @@ class AdminDashboardScreen extends StatelessWidget {
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       const Text(
-                                        'Needs Attention',
+                                        'NEEDS ATTENTION',
                                         style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 15,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF9CA3AF),
+                                          letterSpacing: 0.6,
                                         ),
                                       ),
                                       AdminHoverButton(
@@ -387,10 +391,12 @@ class AdminDashboardScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
-                                    'Recent Activity',
+                                    'RECENT ACTIVITY',
                                     style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF9CA3AF),
+                                      letterSpacing: 0.6,
                                     ),
                                   ),
                                   const SizedBox(height: 16),
@@ -430,7 +436,15 @@ class _WhiteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AdminHoverCard(child: child);
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF3F4F6)),
+      ),
+      child: child,
+    );
   }
 }
 
@@ -450,11 +464,11 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
+          border: Border.all(color: const Color(0xFFF3F4F6)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -463,28 +477,25 @@ class _StatCard extends StatelessWidget {
             Text(
               value,
               style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: valueColor ?? AppTheme.textDark,
+                fontSize: 30,
+                fontWeight: FontWeight.w700,
+                color: valueColor ?? const Color(0xFF111111),
+                letterSpacing: -1,
                 height: 1,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               label,
-              style: const TextStyle(
-                fontSize: 13,
-                color: AppTheme.textMuted,
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
               sub,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 color: subColor,
                 fontWeight: FontWeight.w600,
               ),
@@ -633,12 +644,12 @@ class _AttentionRow extends StatelessWidget {
           _StatusBadge(status: report.currentStatus),
           const SizedBox(width: 6),
           _QuickBtn(
-            label: 'Validate',
+            label: 'Review',
             color: AppTheme.successGreen,
             onTap: () async {
               await ReportService().updateStatus(
                 reportId: report.id,
-                newStatus: AppConstants.statusValidated,
+                newStatus: AppConstants.statusUnderReview,
                 updatedBy: adminName,
               );
             },
@@ -780,16 +791,16 @@ class _QuickBtn extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 11,
             color: color,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ),

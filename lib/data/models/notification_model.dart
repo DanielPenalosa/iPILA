@@ -27,7 +27,7 @@ class NotificationModel {
       id: doc.id,
       userId: data['userId'] ?? '',
       title: data['title'] ?? '',
-      message: data['message'] ?? '',
+      message: data['body'] ?? data['message'] ?? '',
       type: data['type'] ?? 'general',
       reportId: data['reportId'],
       isRead: data['isRead'] ?? false,

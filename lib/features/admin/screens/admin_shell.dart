@@ -190,13 +190,16 @@ class _AdminScaffoldState extends State<AdminScaffold> {
                     builder: (context, snapshot) {
                       final reports = snapshot.data ?? [];
                       final newCount = reports
-                          .where((r) => r.currentStatus == 'Submitted')
+                          .where(
+                            (r) =>
+                                r.currentStatus == AppConstants.statusPending,
+                          )
                           .length;
                       final alertCount = reports
                           .where(
                             (r) =>
                                 r.currentStatus == 'Overdue' ||
-                                r.currentStatus == 'Submitted',
+                                r.currentStatus == AppConstants.statusPending,
                           )
                           .length;
 
@@ -393,16 +396,13 @@ class _MinimalSidebarItemState extends State<_MinimalSidebarItem> {
             ),
             decoration: BoxDecoration(
               color: widget.isActive
-                  ? AppTheme.primaryYellow.withValues(alpha: 0.1)
+                  ? const Color(0xFF111111).withValues(alpha: 0.06)
                   : _hovered
                   ? Colors.grey[100]
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
               border: widget.isActive
-                  ? Border.all(
-                      color: AppTheme.primaryYellow.withValues(alpha: 0.3),
-                      width: 1,
-                    )
+                  ? Border.all(color: const Color(0xFFE5E7EB), width: 1)
                   : null,
             ),
             child: widget.isCollapsed
@@ -414,7 +414,7 @@ class _MinimalSidebarItemState extends State<_MinimalSidebarItem> {
                           widget.item.icon,
                           size: 20,
                           color: widget.isActive
-                              ? AppTheme.textDark
+                              ? const Color(0xFF111111)
                               : Colors.grey[600],
                         ),
                         if (widget.badge != null)
@@ -452,7 +452,7 @@ class _MinimalSidebarItemState extends State<_MinimalSidebarItem> {
                         widget.item.icon,
                         size: 20,
                         color: widget.isActive
-                            ? AppTheme.textDark
+                            ? const Color(0xFF111111)
                             : Colors.grey[600],
                       ),
                       const SizedBox(width: 14),
@@ -460,12 +460,12 @@ class _MinimalSidebarItemState extends State<_MinimalSidebarItem> {
                         child: Text(
                           widget.item.label,
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: widget.isActive
                                 ? FontWeight.w600
                                 : FontWeight.normal,
                             color: widget.isActive
-                                ? AppTheme.textDark
+                                ? const Color(0xFF111111)
                                 : Colors.grey[700],
                           ),
                         ),
@@ -660,13 +660,21 @@ class AdminPageHeader extends StatelessWidget {
     final userId = auth.user?.uid ?? '';
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 28, 32, 24),
+      padding: const EdgeInsets.fromLTRB(32, 20, 24, 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: Colors.grey[100]!, width: 1)),
+        border: Border(bottom: BorderSide(color: const Color(0xFFF3F4F6))),
       ),
       child: Row(
         children: [
+          // Menu toggle
+          IconButton(
+            icon: Icon(Icons.menu, color: const Color(0xFF6B7280), size: 20),
+            onPressed: () => AdminScaffoldWidget.toggleSidebar(),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -675,37 +683,24 @@ class AdminPageHeader extends StatelessWidget {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 26,
+                    fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.textDark,
-                    letterSpacing: -0.8,
+                    color: Color(0xFF111111),
+                    letterSpacing: -0.4,
                   ),
                 ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 6),
+                if (subtitle != null)
                   Text(
                     subtitle!,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.normal,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF9CA3AF),
                     ),
                   ),
-                ],
               ],
             ),
           ),
-          // Toggle sidebar button
-          IconButton(
-            icon: Icon(Icons.menu, color: Colors.grey[700], size: 24),
-            onPressed: () {
-              // Toggle sidebar using the static method
-              AdminScaffoldWidget.toggleSidebar();
-            },
-            tooltip: 'Toggle sidebar',
-          ),
-          const SizedBox(width: 8),
-          // Notification Bell Icon
+          // Notification bell
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection(AppConstants.notificationsCollection)
@@ -714,15 +709,14 @@ class AdminPageHeader extends StatelessWidget {
                 .snapshots(),
             builder: (context, snapshot) {
               final unread = snapshot.data?.docs.length ?? 0;
-
               return Stack(
                 clipBehavior: Clip.none,
                 children: [
                   IconButton(
                     icon: Icon(
                       Icons.notifications_outlined,
-                      color: Colors.grey[700],
-                      size: 24,
+                      color: const Color(0xFF6B7280),
+                      size: 20,
                     ),
                     onPressed: () => context.push('/admin/alerts'),
                     tooltip: 'Notifications',
@@ -733,20 +727,20 @@ class AdminPageHeader extends StatelessWidget {
                       top: 8,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
+                          horizontal: 4,
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryRed,
+                          color: const Color(0xFFDC2626),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        constraints: const BoxConstraints(minWidth: 18),
+                        constraints: const BoxConstraints(minWidth: 16),
                         child: Text(
                           unread > 99 ? '99+' : '$unread',
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 10,
+                            fontSize: 9,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

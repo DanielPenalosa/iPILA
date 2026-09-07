@@ -993,7 +993,7 @@ class _SystemSectionState extends State<_SystemSection> {
       // Get all completed reports
       final querySnapshot = await FirebaseFirestore.instance
           .collection('reports')
-          .where('currentStatus', isEqualTo: AppConstants.statusCompleted)
+          .where('currentStatus', isEqualTo: AppConstants.statusResolved)
           .get();
 
       // Delete in batches (Firestore limit is 500 per batch)

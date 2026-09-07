@@ -49,14 +49,14 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
       final reportSnapshot = await _service.getReport(widget.reportId).first;
       if (reportSnapshot == null) return;
 
-      // Only auto-update to "Seen" if status is "Submitted"
-      if (reportSnapshot.currentStatus == AppConstants.statusSubmitted) {
+      // Auto-update to "Under Review" when admin opens a Pending report
+      if (reportSnapshot.currentStatus == AppConstants.statusPending) {
         final auth = context.read<AuthProvider>();
         final adminName = auth.user?.fullName ?? 'Admin';
 
         await _service.updateStatus(
           reportId: widget.reportId,
-          newStatus: AppConstants.statusSeen,
+          newStatus: AppConstants.statusUnderReview,
           updatedBy: adminName,
           note: 'Report viewed by admin',
         );
@@ -189,10 +189,10 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
         updatedBy: adminName,
         note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
         adminRemarks: null,
-        afterPhoto: newStatus == AppConstants.statusCompleted
+        afterPhoto: newStatus == AppConstants.statusResolved
             ? _afterPhoto
             : null,
-        afterPhotoWeb: newStatus == AppConstants.statusCompleted
+        afterPhotoWeb: newStatus == AppConstants.statusResolved
             ? _afterPhotoWeb
             : null,
       );
@@ -227,8 +227,8 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
   }
 
   void _showUpdateDialog(ReportModel report, String adminName) {
-    // Prevent updating completed reports
-    if (report.currentStatus == AppConstants.statusCompleted) {
+    // Prevent updating resolved reports
+    if (report.currentStatus == AppConstants.statusResolved) {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -309,7 +309,7 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                 ),
                 maxLines: 2,
               ),
-              if (selectedStatus == AppConstants.statusCompleted) ...[
+              if (selectedStatus == AppConstants.statusResolved) ...[
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -330,7 +330,7 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Warning: This will lock the report permanently',
+                          'This will mark the report as officially Resolved.',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -345,7 +345,7 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                 AdminHoverButton(
                   label: (_afterPhoto != null || _afterPhotoWeb != null)
                       ? 'After photo added ✓'
-                      : 'Add After Photo (Required)',
+                      : 'Add After Photo (optional)',
                   icon: Icons.add_a_photo_outlined,
                   onTap: () async {
                     await _pickAfterPhoto();
@@ -359,8 +359,8 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
               ],
               const SizedBox(height: 16),
               AdminHoverButton(
-                label: selectedStatus == AppConstants.statusCompleted
-                    ? 'Complete'
+                label: selectedStatus == AppConstants.statusResolved
+                    ? 'Resolve'
                     : 'Update',
                 onTap: selectedStatus == null
                     ? null
@@ -369,8 +369,7 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                         if (Navigator.canPop(ctx)) {
                           Navigator.pop(ctx);
                         }
-                        // Show extra confirmation for completion
-                        if (status == AppConstants.statusCompleted) {
+                        if (status == AppConstants.statusResolved) {
                           _showCompletionConfirmation(
                             report,
                             status,
@@ -380,7 +379,7 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                           _updateStatus(report.id, status, adminName);
                         }
                       },
-                color: selectedStatus == AppConstants.statusCompleted
+                color: selectedStatus == AppConstants.statusResolved
                     ? AppTheme.successGreen
                     : AppTheme.primaryBlue,
               ),
@@ -847,7 +846,7 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                                 ),
                               ),
                             if (report.currentStatus ==
-                                AppConstants.statusForVerification) ...[
+                                AppConstants.statusDone) ...[
                               TextButton.icon(
                                 onPressed: () =>
                                     _showVerifyDialog(report, adminName),
@@ -883,9 +882,9 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                           children: [
                             ReportStatusBanner(status: report.currentStatus),
                             const SizedBox(height: 16),
-                            // Lock indicator for completed reports
+                            // Lock indicator for resolved reports
                             if (report.currentStatus ==
-                                AppConstants.statusCompleted) ...[
+                                AppConstants.statusResolved) ...[
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
@@ -909,7 +908,7 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        'This report is completed and locked. No further status updates can be made.',
+                                        'This report is resolved and locked. No further status updates can be made.',
                                         style: TextStyle(
                                           color: AppTheme.successGreen,
                                           fontSize: 13,
@@ -1312,18 +1311,18 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                   left: 16,
                   right: 16,
                   child: AdminHoverButton(
-                    label: report.currentStatus == AppConstants.statusCompleted
-                        ? 'Report Completed'
+                    label: report.currentStatus == AppConstants.statusResolved
+                        ? 'Report Resolved'
                         : 'Update',
-                    icon: report.currentStatus == AppConstants.statusCompleted
+                    icon: report.currentStatus == AppConstants.statusResolved
                         ? Icons.check_circle
                         : Icons.update_rounded,
                     onTap:
-                        (report.currentStatus == AppConstants.statusCompleted ||
+                        (report.currentStatus == AppConstants.statusResolved ||
                             _isUpdating)
                         ? null
                         : () => _showUpdateDialog(report, adminName),
-                    color: report.currentStatus == AppConstants.statusCompleted
+                    color: report.currentStatus == AppConstants.statusResolved
                         ? Colors.grey
                         : AppTheme.primaryBlue,
                   ),

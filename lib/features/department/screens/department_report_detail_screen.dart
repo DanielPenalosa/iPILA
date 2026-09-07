@@ -23,7 +23,24 @@ class _DepartmentReportDetailScreenState
   final _service = DepartmentService();
   bool _submitting = false;
 
-  void _showProgressUpdateSheet(ReportModel report) {
+  Color _statusColor(String s) {
+    switch (s) {
+      case 'Assigned':
+        return const Color(0xFFF59E0B);
+      case 'In Progress':
+        return const Color(0xFF3B82F6);
+      case 'Done':
+        return const Color(0xFF8B5CF6);
+      case 'Needs Revision':
+        return const Color(0xFFDC2626);
+      case 'Resolved':
+        return const Color(0xFF10B981);
+      default:
+        return const Color(0xFF9CA3AF);
+    }
+  }
+
+  void _showUpdateSheet(ReportModel report) {
     final auth = context.read<AuthProvider>();
     String? selectedStatus;
     final remarksCtrl = TextEditingController();
@@ -32,74 +49,137 @@ class _DepartmentReportDetailScreenState
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheet) => Padding(
+        builder: (ctx, set) => Padding(
           padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Handle
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE5E7EB),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
               const Text(
                 'Add Progress Update',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF111111),
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
+              // Status dropdown
               DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: 'Status'),
+                decoration: InputDecoration(
+                  labelText: 'Status',
+                  labelStyle: const TextStyle(fontSize: 13),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                ),
                 items: AppConstants.departmentStatuses
-                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .map(
+                      (s) => DropdownMenuItem(
+                        value: s,
+                        child: Text(s, style: const TextStyle(fontSize: 13)),
+                      ),
+                    )
                     .toList(),
-                onChanged: (v) => setSheet(() => selectedStatus = v),
+                onChanged: (v) => set(() => selectedStatus = v),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
+              // Remarks
               TextField(
                 controller: remarksCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Remarks / Action Notes',
-                  hintText: 'Describe the action taken...',
-                ),
                 maxLines: 3,
+                style: const TextStyle(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Action notes or remarks (optional)',
+                  hintStyle: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFFD1D5DB),
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                  ),
+                  contentPadding: const EdgeInsets.all(14),
+                ),
               ),
               const SizedBox(height: 12),
+              // Photos button
               OutlinedButton.icon(
                 onPressed: () async {
-                  final picker = ImagePicker();
-                  final picked = await picker.pickMultiImage();
-                  setSheet(() => photos.addAll(picked));
+                  final picked = await ImagePicker().pickMultiImage();
+                  set(() => photos.addAll(picked));
                 },
-                icon: const Icon(Icons.add_photo_alternate_outlined),
+                icon: const Icon(Icons.add_photo_alternate_outlined, size: 16),
                 label: Text(
                   photos.isEmpty
-                      ? 'Add Photos (optional)'
-                      : '${photos.length} photo(s) selected',
+                      ? 'Attach photos'
+                      : '${photos.length} photo(s) attached',
+                  style: const TextStyle(fontSize: 13),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF6366F1),
+                  side: const BorderSide(color: Color(0xFFE5E7EB)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                 ),
               ),
-              const SizedBox(height: 16),
-              // Submit for verification option
-              if (selectedStatus == AppConstants.statusForVerification)
+              const SizedBox(height: 6),
+              if (selectedStatus == AppConstants.statusDone) ...[
+                const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.all(10),
-                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
-                    color: Colors.purple.withValues(alpha: 0.08),
+                    color: const Color(0xFFF5F3FF),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Colors.purple.withValues(alpha: 0.3),
-                    ),
                   ),
                   child: const Text(
-                    'This will submit the report for Admin verification. Make sure all photos and remarks are complete.',
-                    style: TextStyle(fontSize: 12, color: Colors.purple),
+                    'This marks the work as done and notifies admin for final review.',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF7C3AED)),
                   ),
                 ),
+                const SizedBox(height: 12),
+              ],
+              const SizedBox(height: 8),
               ElevatedButton(
                 onPressed: selectedStatus == null
                     ? null
@@ -107,8 +187,7 @@ class _DepartmentReportDetailScreenState
                         Navigator.pop(ctx);
                         setState(() => _submitting = true);
                         try {
-                          if (selectedStatus ==
-                              AppConstants.statusForVerification) {
+                          if (selectedStatus == AppConstants.statusDone) {
                             await _service.submitForVerification(
                               reportId: report.id,
                               departmentName: auth.user?.department ?? '',
@@ -138,8 +217,8 @@ class _DepartmentReportDetailScreenState
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Progress updated'),
-                                backgroundColor: AppTheme.successGreen,
+                                content: Text('Update saved'),
+                                backgroundColor: Color(0xFF10B981),
                               ),
                             );
                           }
@@ -157,17 +236,24 @@ class _DepartmentReportDetailScreenState
                         }
                       },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      selectedStatus == AppConstants.statusForVerification
-                      ? Colors.purple
-                      : AppTheme.primaryBlue,
+                  backgroundColor: selectedStatus == AppConstants.statusDone
+                      ? const Color(0xFF7C3AED)
+                      : const Color(0xFF111111),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 0,
                 ),
                 child: Text(
-                  selectedStatus == AppConstants.statusForVerification
-                      ? 'Submit for Admin Verification'
+                  selectedStatus == AppConstants.statusDone
+                      ? 'Mark as Done'
                       : 'Save Update',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -180,28 +266,39 @@ class _DepartmentReportDetailScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back,
+            size: 20,
+            color: Color(0xFF374151),
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text(
           'Report Detail',
           style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF1A1A2E),
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF111111),
           ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A2E)),
-          onPressed: () => Navigator.pop(context),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: const Color(0xFFF3F4F6)),
         ),
       ),
       body: StreamBuilder<ReportModel?>(
         stream: ReportService().getReport(widget.reportId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(strokeWidth: 2),
+            );
           }
           final report = snapshot.data;
           if (report == null) {
@@ -210,56 +307,223 @@ class _DepartmentReportDetailScreenState
 
           final canUpdate =
               report.currentStatus != AppConstants.statusResolved &&
-              report.currentStatus != AppConstants.statusForVerification;
+              report.currentStatus != AppConstants.statusDone;
+          final statusColor = _statusColor(report.currentStatus);
 
           return Stack(
             children: [
               SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _InfoCard(report: report),
-                    const SizedBox(height: 16),
-                    if (report.adminVerificationRemarks != null)
-                      _RevisionBanner(
-                        remarks: report.adminVerificationRemarks!,
+                    // ── Main info ──────────────────────────────────────
+                    _Card(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  report.category,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF111111),
+                                    letterSpacing: -0.4,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  report.currentStatus,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: statusColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            report.description,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF6B7280),
+                              height: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Divider(color: Color(0xFFF3F4F6)),
+                          const SizedBox(height: 12),
+                          _Meta(
+                            icon: Icons.location_on_outlined,
+                            value: 'Brgy. ${report.barangay}',
+                          ),
+                          const SizedBox(height: 8),
+                          _Meta(
+                            icon: Icons.person_outline,
+                            value: report.isAnonymous
+                                ? 'Anonymous'
+                                : report.userFullName,
+                          ),
+                          const SizedBox(height: 8),
+                          _Meta(
+                            icon: Icons.calendar_today_outlined,
+                            value: DateFormat(
+                              'MMM d, yyyy – h:mm a',
+                            ).format(report.createdAt),
+                          ),
+                          if (report.photoUrls.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Photos',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF9CA3AF),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 80,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: report.photoUrls.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(width: 8),
+                                itemBuilder: (_, i) => ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    report.photoUrls[i],
+                                    width: 80,
+                                    height: 80,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                    if (report.adminVerificationRemarks != null)
+                    ),
+                    const SizedBox(height: 16),
+
+                    // ── Revision banner ────────────────────────────────
+                    if (report.adminVerificationRemarks != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFFECACA)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.info_outline,
+                              size: 16,
+                              color: Color(0xFFDC2626),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Needs Revision',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFFDC2626),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    report.adminVerificationRemarks!,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFFDC2626),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       const SizedBox(height: 16),
-                    _ProgressTimeline(report: report),
+                    ],
+
+                    // ── Timeline ───────────────────────────────────────
+                    _Card(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Progress Updates',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF111111),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _Timeline(report: report),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 80),
                   ],
                 ),
               ),
               if (canUpdate)
                 Positioned(
-                  bottom: 16,
-                  left: 16,
-                  right: 16,
+                  bottom: 20,
+                  left: 24,
+                  right: 24,
                   child: ElevatedButton.icon(
                     onPressed: _submitting
                         ? null
-                        : () => _showProgressUpdateSheet(report),
+                        : () => _showUpdateSheet(report),
                     icon: _submitting
                         ? const SizedBox(
-                            width: 16,
-                            height: 16,
+                            width: 14,
+                            height: 14,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               color: Colors.white,
                             ),
                           )
-                        : const Icon(Icons.add_circle_outline),
+                        : const Icon(Icons.add, size: 18),
                     label: Text(
                       _submitting ? 'Saving...' : 'Add Progress Update',
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryBlue,
+                      backgroundColor: const Color(0xFF111111),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                      textStyle: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -272,326 +536,193 @@ class _DepartmentReportDetailScreenState
   }
 }
 
-class _InfoCard extends StatelessWidget {
-  final ReportModel report;
-  const _InfoCard({required this.report});
+// ── Shared widgets ────────────────────────────────────────────────────────────
+
+class _Card extends StatelessWidget {
+  final Widget child;
+  const _Card({required this.child});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8),
-        ],
+        border: Border.all(color: const Color(0xFFF3F4F6)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  report.category,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              _StatusBadge(status: report.currentStatus),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            report.description,
-            style: TextStyle(fontSize: 13, color: Colors.grey[700]),
-          ),
-          const Divider(height: 24),
-          _Row(
-            icon: Icons.location_on_outlined,
-            label: 'Location',
-            value: 'Brgy. ${report.barangay}',
-          ),
-          _Row(
-            icon: Icons.person_outline,
-            label: 'Reporter',
-            value: report.isAnonymous ? 'Anonymous' : report.userFullName,
-          ),
-          _Row(
-            icon: Icons.calendar_today_outlined,
-            label: 'Submitted',
-            value: DateFormat('MMM d, yyyy – h:mm a').format(report.createdAt),
-          ),
-          if (report.photoUrls.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            const Text(
-              'Photos',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 80,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: report.photoUrls.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (_, i) => ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    report.photoUrls[i],
-                    width: 80,
-                    height: 80,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
+      child: child,
     );
   }
 }
 
-class _Row extends StatelessWidget {
+class _Meta extends StatelessWidget {
   final IconData icon;
-  final String label;
   final String value;
-  const _Row({required this.icon, required this.label, required this.value});
+  const _Meta({required this.icon, required this.value});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(icon, size: 15, color: Colors.grey[500]),
-          const SizedBox(width: 8),
-          Text(
-            '$label: ',
-            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: const Color(0xFFD1D5DB)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 13, color: Color(0xFF374151)),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-class _RevisionBanner extends StatelessWidget {
-  final String remarks;
-  const _RevisionBanner({required this.remarks});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.red[50],
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.red[300]!),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.warning_amber_rounded, color: Colors.red[700], size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Revision Required',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: Colors.red[700],
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Admin remarks: $remarks',
-                  style: TextStyle(fontSize: 12, color: Colors.red[700]),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProgressTimeline extends StatelessWidget {
+class _Timeline extends StatelessWidget {
   final ReportModel report;
-  const _ProgressTimeline({required this.report});
+  const _Timeline({required this.report});
+
+  Color _color(String s) {
+    switch (s) {
+      case 'Assigned':
+        return const Color(0xFFF59E0B);
+      case 'In Progress':
+        return const Color(0xFF3B82F6);
+      case 'Done':
+        return const Color(0xFF8B5CF6);
+      case 'Needs Revision':
+        return const Color(0xFFDC2626);
+      case 'Resolved':
+        return const Color(0xFF10B981);
+      default:
+        return const Color(0xFF9CA3AF);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final updates = [...report.progressUpdates]
       ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Progress Updates',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 12),
-          if (updates.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Text(
-                  'No progress updates yet.',
-                  style: TextStyle(color: Colors.grey[400], fontSize: 13),
-                ),
-              ),
-            )
-          else
-            ...updates.map((u) => _UpdateEntry(update: u)),
-        ],
-      ),
-    );
-  }
-}
+    if (updates.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Text(
+          'No progress updates yet.',
+          style: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
+        ),
+      );
+    }
 
-class _UpdateEntry extends StatelessWidget {
-  final ProgressUpdate update;
-  const _UpdateEntry({required this.update});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Column(
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: const BoxDecoration(
-                  color: AppTheme.primaryBlue,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              Container(width: 2, height: 60, color: Colors.grey[200]),
-            ],
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    _StatusBadge(status: update.status),
-                    const Spacer(),
-                    Text(
-                      DateFormat('MMM d, h:mm a').format(update.timestamp),
-                      style: TextStyle(fontSize: 10, color: Colors.grey[400]),
+    return Column(
+      children: updates.map((u) {
+        final c = _color(u.status);
+        final isLast = u == updates.last;
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Timeline gutter
+            SizedBox(
+              width: 20,
+              child: Column(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(color: c, shape: BoxShape.circle),
+                  ),
+                  if (!isLast)
+                    Container(
+                      width: 1.5,
+                      height: 52,
+                      color: const Color(0xFFF3F4F6),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'By ${update.updatedBy}',
-                  style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                ),
-                if (update.remarks != null) ...[
-                  const SizedBox(height: 4),
-                  Text(update.remarks!, style: const TextStyle(fontSize: 12)),
                 ],
-                if (update.photoUrls.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  SizedBox(
-                    height: 60,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: update.photoUrls.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 6),
-                      itemBuilder: (_, i) => ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: Image.network(
-                          update.photoUrls[i],
-                          width: 60,
-                          height: 60,
-                          fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: c.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            u.status,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: c,
+                            ),
+                          ),
                         ),
+                        const Spacer(),
+                        Text(
+                          DateFormat('MMM d, h:mm a').format(u.timestamp),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFFD1D5DB),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'By ${u.updatedBy}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF9CA3AF),
                       ),
                     ),
-                  ),
-                ],
-              ],
+                    if (u.remarks != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        u.remarks!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF374151),
+                        ),
+                      ),
+                    ],
+                    if (u.photoUrls.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        height: 56,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: u.photoUrls.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 6),
+                          itemBuilder: (_, i) => ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: Image.network(
+                              u.photoUrls[i],
+                              width: 56,
+                              height: 56,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  final String status;
-  const _StatusBadge({required this.status});
-
-  Color get _color {
-    switch (status) {
-      case 'Assigned':
-        return Colors.orange;
-      case 'In Progress':
-        return const Color(0xFF1565C0);
-      case 'For Admin Verification':
-        return Colors.purple;
-      case 'Revision Required':
-        return Colors.red;
-      case 'Resolved':
-        return AppTheme.successGreen;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: _color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        status,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: _color,
-        ),
-      ),
+          ],
+        );
+      }).toList(),
     );
   }
 }
