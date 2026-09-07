@@ -1300,6 +1300,12 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                             ),
                             const SizedBox(height: 12),
                             ReportTimeline(history: report.statusHistory),
+                            // ── Citizen Feedback (resolved only) ─────────
+                            if (report.currentStatus ==
+                                AppConstants.statusResolved) ...[
+                              const SizedBox(height: 28),
+                              _AdminFeedbackView(reportId: report.id),
+                            ],
                           ],
                         ),
                       ),
@@ -1363,5 +1369,223 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
       default:
         return Colors.grey;
     }
+  }
+}
+
+// ── Admin read-only feedback view ─────────────────────────────────────────────
+
+class _AdminFeedbackView extends StatelessWidget {
+  final String reportId;
+  const _AdminFeedbackView({required this.reportId});
+
+  @override
+  Widget build(BuildContext context) {
+    final service = ReportService();
+    return StreamBuilder<List<ReportFeedback>>(
+      stream: service.getFeedback(reportId),
+      builder: (context, snap) {
+        final list = snap.data ?? [];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.rate_review_outlined,
+                  size: 18,
+                  color: AppTheme.successGreen,
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Citizen Feedback',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+                const SizedBox(width: 8),
+                if (list.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.successGreen.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${list.length}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.successGreen,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (list.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(
+                      Icons.chat_bubble_outline,
+                      size: 16,
+                      color: AppTheme.textMuted,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'No citizen feedback yet.',
+                      style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                    ),
+                  ],
+                ),
+              )
+            else ...[
+              // Summary bar
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      (list.map((f) => f.rating).reduce((a, b) => a + b) /
+                              list.length)
+                          .toStringAsFixed(1),
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textDark,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: List.generate(5, (i) {
+                            final avg =
+                                list
+                                    .map((f) => f.rating)
+                                    .reduce((a, b) => a + b) /
+                                list.length;
+                            return Icon(
+                              (i + 1) <= avg.round()
+                                  ? Icons.star_rounded
+                                  : Icons.star_outline_rounded,
+                              size: 16,
+                              color: const Color(0xFFFBBF24),
+                            );
+                          }),
+                        ),
+                        Text(
+                          '${list.length} ${list.length == 1 ? 'review' : 'reviews'}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              ...list.map(
+                (f) => Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 14,
+                            backgroundColor: AppTheme.primaryBlue.withValues(
+                              alpha: 0.12,
+                            ),
+                            child: Text(
+                              f.userFullName.isNotEmpty
+                                  ? f.userFullName[0].toUpperCase()
+                                  : '?',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryBlue,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  f.userFullName,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  DateFormat('MMM d, y').format(f.createdAt),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppTheme.textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Row(
+                            children: List.generate(
+                              5,
+                              (i) => Icon(
+                                (i + 1) <= f.rating
+                                    ? Icons.star_rounded
+                                    : Icons.star_outline_rounded,
+                                size: 14,
+                                color: const Color(0xFFFBBF24),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        f.comment,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
   }
 }

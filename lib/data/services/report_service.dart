@@ -736,11 +736,12 @@ class ReportService {
     required int rating,
     required String comment,
   }) async {
+    // Save feedback
     await _db
         .collection(AppConstants.reportsCollection)
         .doc(reportId)
         .collection('feedback')
-        .doc(userId) // one doc per user — overwrites if editing
+        .doc(userId)
         .set({
           'userId': userId,
           'userFullName': userFullName,
@@ -748,6 +749,55 @@ class ReportService {
           'comment': comment,
           'createdAt': Timestamp.fromDate(DateTime.now()),
         });
+
+    // Notify all admins
+    await _notifyAdminAboutFeedback(
+      reportId: reportId,
+      userFullName: userFullName,
+      rating: rating,
+      comment: comment,
+    );
+  }
+
+  Future<void> _notifyAdminAboutFeedback({
+    required String reportId,
+    required String userFullName,
+    required int rating,
+    required String comment,
+  }) async {
+    try {
+      final reportDoc = await _db
+          .collection(AppConstants.reportsCollection)
+          .doc(reportId)
+          .get();
+      if (!reportDoc.exists) return;
+
+      final data = reportDoc.data()!;
+      final category = data['category'] ?? 'Report';
+      final barangay = data['barangay'] ?? '';
+      final stars = '★' * rating + '☆' * (5 - rating);
+      final shortComment = comment.length > 80
+          ? '${comment.substring(0, 80)}...'
+          : comment;
+
+      final adminsSnap = await _db
+          .collection(AppConstants.usersCollection)
+          .where('role', whereIn: ['admin', 'superadmin'])
+          .get();
+
+      for (final adminDoc in adminsSnap.docs) {
+        await _notificationService.createNotification(
+          userId: adminDoc.id,
+          title: 'New Citizen Feedback $stars',
+          body:
+              '$userFullName rated your $category resolution in Brgy. $barangay: "$shortComment"',
+          type: 'info',
+          data: {'reportId': reportId, 'type': 'citizen_feedback'},
+        );
+      }
+    } catch (e) {
+      debugPrint('Error notifying admin about feedback: $e');
+    }
   }
 
   /// Stream all feedback for a report
