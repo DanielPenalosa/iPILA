@@ -83,6 +83,15 @@ class ReportService {
         .doc(reportId)
         .set(report.toMap());
 
+    // Notify all admins of the new report
+    await _notifyAdmins(
+      title: 'New Report: $category',
+      body:
+          '${isAnonymous ? 'Anonymous' : userFullName} submitted a $category report in Brgy. $barangay.',
+      type: 'new_report',
+      reportId: reportId,
+    );
+
     return reportId;
   }
 
@@ -490,8 +499,11 @@ class ReportService {
     final data = reportDoc.data()!;
     final category = data['category'] ?? 'Report';
     final barangay = data['barangay'] ?? '';
+    final shortMsg = message.length > 100
+        ? '${message.substring(0, 100)}...'
+        : message;
 
-    // Store the follow-up as a sub-document for traceability
+    // Store follow-up sub-document for traceability
     await _db
         .collection(AppConstants.reportsCollection)
         .doc(reportId)
@@ -504,21 +516,13 @@ class ReportService {
         });
 
     // Notify all admins
-    final adminsSnap = await _db
-        .collection(AppConstants.usersCollection)
-        .where('role', whereIn: ['admin', 'superadmin'])
-        .get();
-
-    for (final adminDoc in adminsSnap.docs) {
-      await _notificationService.createNotification(
-        userId: adminDoc.id,
-        title: 'Reporter Follow-Up: $category',
-        body:
-            '$userFullName is following up on their $category report in Brgy. $barangay. Message: "$message"',
-        type: 'warning',
-        data: {'reportId': reportId, 'type': 'reporter_followup'},
-      );
-    }
+    await _notifyAdmins(
+      title: '📢 Reporter Follow-Up: $category',
+      body:
+          '$userFullName is following up on their $category report in Brgy. $barangay: "$shortMsg"',
+      type: 'reporter_followup',
+      reportId: reportId,
+    );
   }
 
   // Add follower to a report
@@ -587,6 +591,34 @@ class ReportService {
     if (followerCount >= 5) return 3; // Medium
     if (followerCount >= 2) return 2; // Low
     return 1; // Normal
+  }
+
+  /// Shared helper — notify all admins/superadmins with a single notification
+  Future<void> _notifyAdmins({
+    required String title,
+    required String body,
+    required String type,
+    String reportId = '',
+  }) async {
+    try {
+      final adminsSnap = await _db
+          .collection(AppConstants.usersCollection)
+          .where('role', whereIn: ['admin', 'superadmin'])
+          .get();
+      for (final adminDoc in adminsSnap.docs) {
+        await _notificationService.createNotification(
+          userId: adminDoc.id,
+          title: title,
+          body: body,
+          type: type,
+          data: reportId.isNotEmpty
+              ? {'reportId': reportId, 'type': type}
+              : null,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error notifying admins: $e');
+    }
   }
 
   // Notify admin about new follower
@@ -836,21 +868,13 @@ class ReportService {
           ? '${comment.substring(0, 80)}...'
           : comment;
 
-      final adminsSnap = await _db
-          .collection(AppConstants.usersCollection)
-          .where('role', whereIn: ['admin', 'superadmin'])
-          .get();
-
-      for (final adminDoc in adminsSnap.docs) {
-        await _notificationService.createNotification(
-          userId: adminDoc.id,
-          title: 'New Citizen Feedback $stars',
-          body:
-              '$userFullName rated your $category resolution in Brgy. $barangay: "$shortComment"',
-          type: 'info',
-          data: {'reportId': reportId, 'type': 'citizen_feedback'},
-        );
-      }
+      await _notifyAdmins(
+        title: 'New Citizen Feedback $stars',
+        body:
+            '$userFullName rated the $category resolution in Brgy. $barangay: "$shortComment"',
+        type: 'citizen_feedback',
+        reportId: reportId,
+      );
     } catch (e) {
       debugPrint('Error notifying admin about feedback: $e');
     }
