@@ -247,21 +247,29 @@ class ReportService {
       type: notificationType,
     );
 
-    // Also notify all followers about completion
-    if (newStatus == AppConstants.statusCompleted) {
-      final followers = List<String>.from(reportData['followers'] ?? []);
-      for (final followerId in followers) {
-        if (followerId != userId) {
-          // Don't duplicate for the original reporter
-          await _notificationService.createReportNotification(
-            userId: followerId,
-            reportId: reportId,
-            title: 'Followed Report Completed',
-            body:
-                'A $category report you were following in ${reportData['barangay']} has been completed. Check out the results!',
-            type: 'success',
-          );
+    // Notify ALL followers on every status change
+    final followers = List<String>.from(reportData['followers'] ?? []);
+    for (final followerId in followers) {
+      if (followerId != userId) {
+        String followerTitle;
+        String followerBody;
+        if (newStatus == AppConstants.statusResolved ||
+            newStatus == AppConstants.statusCompleted) {
+          followerTitle = 'Followed Concern Resolved ✓';
+          followerBody =
+              'A $category concern you supported in Brgy. ${reportData['barangay']} has been resolved!';
+        } else {
+          followerTitle = 'Followed Concern Updated';
+          followerBody =
+              'Status update on a $category concern in Brgy. ${reportData['barangay']}: $newStatus';
         }
+        await _notificationService.createReportNotification(
+          userId: followerId,
+          reportId: reportId,
+          title: followerTitle,
+          body: followerBody,
+          type: notificationType,
+        );
       }
     }
 
@@ -463,6 +471,54 @@ class ReportService {
     }
 
     return similar;
+  }
+
+  /// Owner follows up their own report — signals urgency to admin without
+  /// adding them as a follower (they're already the reporter).
+  Future<void> followUpOwnReport({
+    required String reportId,
+    required String userId,
+    required String userFullName,
+    required String message,
+  }) async {
+    final reportDoc = await _db
+        .collection(AppConstants.reportsCollection)
+        .doc(reportId)
+        .get();
+    if (!reportDoc.exists) return;
+
+    final data = reportDoc.data()!;
+    final category = data['category'] ?? 'Report';
+    final barangay = data['barangay'] ?? '';
+
+    // Store the follow-up as a sub-document for traceability
+    await _db
+        .collection(AppConstants.reportsCollection)
+        .doc(reportId)
+        .collection('followups')
+        .add({
+          'userId': userId,
+          'userFullName': userFullName,
+          'message': message,
+          'createdAt': Timestamp.fromDate(DateTime.now()),
+        });
+
+    // Notify all admins
+    final adminsSnap = await _db
+        .collection(AppConstants.usersCollection)
+        .where('role', whereIn: ['admin', 'superadmin'])
+        .get();
+
+    for (final adminDoc in adminsSnap.docs) {
+      await _notificationService.createNotification(
+        userId: adminDoc.id,
+        title: 'Reporter Follow-Up: $category',
+        body:
+            '$userFullName is following up on their $category report in Brgy. $barangay. Message: "$message"',
+        type: 'warning',
+        data: {'reportId': reportId, 'type': 'reporter_followup'},
+      );
+    }
   }
 
   // Add follower to a report

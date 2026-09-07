@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -1268,6 +1269,11 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                                                 color: Colors.grey[700],
                                               ),
                                             ),
+                                            const SizedBox(height: 12),
+                                            // Follower list
+                                            _AdminFollowerList(
+                                              reportId: report.id,
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -1300,6 +1306,9 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                             ),
                             const SizedBox(height: 12),
                             ReportTimeline(history: report.statusHistory),
+                            // ── Reporter Follow-Ups ───────────────────────
+                            const SizedBox(height: 28),
+                            _AdminFollowUpsView(reportId: report.id),
                             // ── Citizen Feedback (resolved only) ─────────
                             if (report.currentStatus ==
                                 AppConstants.statusResolved) ...[
@@ -1583,6 +1592,166 @@ class _AdminFeedbackView extends StatelessWidget {
                 ),
               ),
             ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ── Follower list widget ──────────────────────────────────────────────────────
+
+class _AdminFollowerList extends StatelessWidget {
+  final String reportId;
+  const _AdminFollowerList({required this.reportId});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('reports')
+          .doc(reportId)
+          .snapshots(),
+      builder: (context, snap) {
+        if (!snap.hasData) return const SizedBox.shrink();
+        final data = snap.data!.data() as Map<String, dynamic>? ?? {};
+        final followers = List<String>.from(data['followers'] ?? []);
+        if (followers.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${followers.length} citizen${followers.length == 1 ? '' : 's'} following',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.primaryBlue,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ── Reporter follow-ups widget ────────────────────────────────────────────────
+
+class _AdminFollowUpsView extends StatelessWidget {
+  final String reportId;
+  const _AdminFollowUpsView({required this.reportId});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('reports')
+          .doc(reportId)
+          .collection('followups')
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snap) {
+        final docs = snap.data?.docs ?? [];
+        if (docs.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.campaign_outlined,
+                  size: 18,
+                  color: Colors.orange[700],
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Reporter Follow-Ups',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${docs.length}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.orange[700],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ...docs.map((doc) {
+              final d = doc.data() as Map<String, dynamic>;
+              final name = d['userFullName'] ?? 'Reporter';
+              final msg = d['message'] ?? '';
+              final ts = (d['createdAt'] as Timestamp?)?.toDate();
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Colors.orange.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.person_pin_circle_outlined,
+                      size: 18,
+                      color: Colors.orange[700],
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                name,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const Spacer(),
+                              if (ts != null)
+                                Text(
+                                  DateFormat('MMM d, h:mm a').format(ts),
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: AppTheme.textMuted,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(msg, style: const TextStyle(fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
           ],
         );
       },

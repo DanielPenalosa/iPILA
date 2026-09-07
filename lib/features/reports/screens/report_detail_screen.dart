@@ -162,6 +162,111 @@ class ReportDetailScreen extends StatelessWidget {
     );
   }
 
+  void _showFollowUpDialog(
+    BuildContext context,
+    ReportModel report,
+    String userId,
+    String userName,
+  ) {
+    final msgCtrl = TextEditingController();
+    bool sending = false;
+
+    showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setDialog) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.campaign_outlined,
+                color: Colors.orange[700],
+                size: 22,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Follow Up',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Send a message to the admin about this ${report.category} concern.',
+                style: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: msgCtrl,
+                maxLines: 3,
+                maxLength: 200,
+                decoration: InputDecoration(
+                  hintText: 'e.g. "Still not fixed after 2 weeks..."',
+                  hintStyle: const TextStyle(fontSize: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.all(12),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              onPressed: sending
+                  ? null
+                  : () async {
+                      if (msgCtrl.text.trim().isEmpty) return;
+                      setDialog(() => sending = true);
+                      await ReportService().followUpOwnReport(
+                        reportId: report.id,
+                        userId: userId,
+                        userFullName: userName,
+                        message: msgCtrl.text.trim(),
+                      );
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (context.mounted) {
+                        AppToast.show(
+                          context,
+                          'Follow-up sent to admin!',
+                          type: ToastType.success,
+                        );
+                      }
+                    },
+              icon: sending
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.send_rounded, size: 16),
+              label: const Text('Send'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange[700],
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.read<ReportProvider>();
@@ -277,8 +382,30 @@ class ReportDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                 ],
-
-                // Follower count display
+                // Follow Up button — for own active reports to signal urgency to admin
+                if (isOwnReport &&
+                    currentUserId != null &&
+                    report.currentStatus != AppConstants.statusResolved &&
+                    report.currentStatus != AppConstants.statusRejected) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showFollowUpDialog(
+                        context,
+                        report,
+                        currentUserId,
+                        auth.user?.fullName ?? 'Resident',
+                      ),
+                      icon: const Icon(Icons.campaign_outlined),
+                      label: const Text('Follow Up / Nudge Admin'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.orange[700],
+                        side: BorderSide(color: Colors.orange[700]!),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 if (report.followerCount > 0) ...[
                   Container(
                     padding: const EdgeInsets.all(12),
