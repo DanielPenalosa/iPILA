@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../data/models/user_model.dart';
@@ -30,12 +29,13 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _onAuthStateChanged(User? firebaseUser) async {
     if (firebaseUser == null) {
-      // On web, the file picker causes a brief focus loss that can fire a null
-      // auth event. Debounce it — only sign out if null persists for 2 seconds.
-      if (kIsWeb && _status == AuthStatus.authenticated) {
+      // Debounce null auth events on ALL platforms — the image picker (web + Android)
+      // can cause a brief focus loss that triggers a spurious null auth event.
+      // Only act on null if the user was authenticated and null persists after 3s.
+      if (_status == AuthStatus.authenticated) {
         _signOutDebounce?.cancel();
-        _signOutDebounce = Timer(const Duration(seconds: 2), () {
-          // Re-check the actual current Firebase user before signing out
+        _signOutDebounce = Timer(const Duration(seconds: 3), () {
+          // Re-verify with Firebase directly before signing out
           final stillNull = _authService.currentUser == null;
           if (stillNull) {
             _user = null;
