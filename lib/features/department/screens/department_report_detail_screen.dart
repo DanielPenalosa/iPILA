@@ -337,23 +337,36 @@ class _DepartmentReportDetailScreenState
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  report.currentStatus,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: statusColor,
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  if (report.urgencyLevel != null) ...[
+                                    _UrgencyBadge(
+                                      urgency: report.urgencyLevel!,
+                                    ),
+                                    const SizedBox(height: 4),
+                                  ],
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: statusColor.withValues(
+                                        alpha: 0.08,
+                                      ),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      report.currentStatus,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: statusColor,
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
                             ],
                           ),
@@ -723,6 +736,65 @@ class _Timeline extends StatelessWidget {
           ],
         );
       }).toList(),
+    );
+  }
+}
+
+class _UrgencyBadge extends StatelessWidget {
+  final String urgency;
+  const _UrgencyBadge({required this.urgency});
+
+  Color get _color {
+    switch (urgency) {
+      case 'High':
+        return const Color(0xFFDC2626);
+      case 'Medium':
+        return const Color(0xFFF59E0B);
+      case 'Low':
+        return const Color(0xFF10B981);
+      default:
+        return const Color(0xFF9CA3AF);
+    }
+  }
+
+  IconData get _icon {
+    switch (urgency) {
+      case 'High':
+        return Icons.arrow_upward_rounded;
+      case 'Medium':
+        return Icons.remove_rounded;
+      case 'Low':
+        return Icons.arrow_downward_rounded;
+      default:
+        return Icons.remove_rounded;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _color;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(_icon, size: 10, color: color),
+          const SizedBox(width: 4),
+          Text(
+            '$urgency Priority',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

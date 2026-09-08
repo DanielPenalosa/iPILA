@@ -30,6 +30,7 @@ class _DepartmentScaffoldWidgetState extends State<DepartmentScaffoldWidget> {
       icon: Icons.notifications_outlined,
       index: 3,
     ),
+    _NavItem(label: 'Settings', icon: Icons.settings_outlined, index: 4),
   ];
 
   @override

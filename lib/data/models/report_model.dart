@@ -142,6 +142,7 @@ class ReportModel {
   final List<String> followers; // Users tracking this report
   final int followerCount; // Number of followers/supporters
   final int priority; // Auto-calculated priority based on followers
+  final String? urgencyLevel; // Manual urgency: 'High', 'Medium', 'Low'
 
   ReportModel({
     required this.id,
@@ -171,6 +172,7 @@ class ReportModel {
     this.followers = const [],
     this.followerCount = 0,
     this.priority = 0,
+    this.urgencyLevel,
   });
 
   factory ReportModel.fromFirestore(DocumentSnapshot doc) {
@@ -208,6 +210,7 @@ class ReportModel {
       followers: followers,
       followerCount: data['followerCount'] ?? followers.length,
       priority: data['priority'] ?? 0,
+      urgencyLevel: data['urgencyLevel'],
     );
   }
 
@@ -240,6 +243,7 @@ class ReportModel {
     'followers': followers,
     'followerCount': followerCount,
     'priority': priority,
+    'urgencyLevel': urgencyLevel,
   };
 
   ReportModel copyWith({
@@ -252,6 +256,7 @@ class ReportModel {
     String? adminVerificationRemarks,
     List<ProgressUpdate>? progressUpdates,
     DateTime? updatedAt,
+    String? urgencyLevel,
   }) => ReportModel(
     id: id,
     userId: userId,
@@ -277,5 +282,6 @@ class ReportModel {
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     isAnonymous: isAnonymous,
+    urgencyLevel: urgencyLevel ?? this.urgencyLevel,
   );
 }

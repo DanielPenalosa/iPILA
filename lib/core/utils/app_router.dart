@@ -29,6 +29,7 @@ import '../../features/department/screens/department_reports_screen.dart';
 import '../../features/department/screens/department_report_detail_screen.dart';
 import '../../features/department/screens/department_map_screen.dart';
 import '../../features/department/screens/department_notifications_screen.dart';
+import '../../features/department/screens/department_settings_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -63,6 +64,7 @@ final _deptDashKey = GlobalKey<NavigatorState>();
 final _deptReportsKey = GlobalKey<NavigatorState>();
 final _deptMapKey = GlobalKey<NavigatorState>();
 final _deptNotificationsKey = GlobalKey<NavigatorState>();
+final _deptSettingsKey = GlobalKey<NavigatorState>();
 
 GoRouter createRouter(AuthProvider authProvider) {
   return GoRouter(
@@ -331,6 +333,15 @@ GoRouter createRouter(AuthProvider authProvider) {
               GoRoute(
                 path: '/department/notifications',
                 builder: (_, s) => const DepartmentNotificationsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _deptSettingsKey,
+            routes: [
+              GoRoute(
+                path: '/department/settings',
+                builder: (_, s) => const DepartmentSettingsScreen(),
               ),
             ],
           ),

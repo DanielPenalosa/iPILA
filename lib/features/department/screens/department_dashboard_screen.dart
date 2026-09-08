@@ -40,6 +40,14 @@ class DepartmentDashboardScreen extends StatelessWidget {
           ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
         final recentFive = recent.take(5).toList();
 
+        // Category workload — count reports per category, sorted desc
+        final categoryMap = <String, int>{};
+        for (final r in reports) {
+          categoryMap[r.category] = (categoryMap[r.category] ?? 0) + 1;
+        }
+        final categoryEntries = categoryMap.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(32),
           child: Column(
@@ -190,6 +198,18 @@ class DepartmentDashboardScreen extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 20),
+
+              // ── Category workload ────────────────────────────────────
+              _Section(
+                title: 'Workload by Category',
+                child: categoryEntries.isEmpty
+                    ? const _Empty(message: 'No data yet.')
+                    : _CategoryWorkload(
+                        entries: categoryEntries,
+                        total: reports.length,
+                      ),
               ),
             ],
           ),
@@ -499,6 +519,194 @@ class _Bar extends StatelessWidget {
               valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryWorkload extends StatelessWidget {
+  final List<MapEntry<String, int>> entries;
+  final int total;
+
+  const _CategoryWorkload({required this.entries, required this.total});
+
+  // Assign a distinct color per category index
+  Color _color(int index) {
+    const colors = [
+      Color(0xFF6366F1),
+      Color(0xFFF59E0B),
+      Color(0xFF3B82F6),
+      Color(0xFF10B981),
+      Color(0xFFEC4899),
+      Color(0xFF8B5CF6),
+      Color(0xFFDC2626),
+      Color(0xFF14B8A6),
+    ];
+    return colors[index % colors.length];
+  }
+
+  IconData _icon(String category) {
+    switch (category) {
+      case 'Road Damage':
+        return Icons.construction_rounded;
+      case 'Drainage / Flooding':
+        return Icons.water_rounded;
+      case 'Broken Streetlight':
+        return Icons.lightbulb_outline_rounded;
+      case 'Garbage / Waste':
+        return Icons.delete_outline_rounded;
+      case 'Public Facility':
+        return Icons.account_balance_outlined;
+      case 'Water Supply':
+        return Icons.water_drop_outlined;
+      case 'Illegal Structure':
+        return Icons.warning_amber_rounded;
+      default:
+        return Icons.report_outlined;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final top = entries.first;
+    final maxCount = top.value;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top category highlight
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF6366F1).withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: const Color(0xFF6366F1).withValues(alpha: 0.15),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    _icon(top.key),
+                    size: 18,
+                    color: const Color(0xFF6366F1),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Most Reported',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Color(0xFF9CA3AF),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        top.key,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF111111),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '${top.value} report${top.value != 1 ? 's' : ''}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF6366F1),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // All categories as horizontal bar chart rows
+          ...entries.asMap().entries.map((e) {
+            final idx = e.key;
+            final category = e.value.key;
+            final count = e.value.value;
+            final pct = maxCount > 0 ? count / maxCount : 0.0;
+            final color = _color(idx);
+            final percentage = total > 0
+                ? (count / total * 100).toStringAsFixed(0)
+                : '0';
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  Icon(_icon(category), size: 14, color: color),
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 130,
+                    child: Text(
+                      category,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF374151),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: pct,
+                        minHeight: 6,
+                        backgroundColor: const Color(0xFFF3F4F6),
+                        valueColor: AlwaysStoppedAnimation<Color>(color),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 40,
+                    child: Text(
+                      '$count',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: color,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  SizedBox(
+                    width: 32,
+                    child: Text(
+                      '$percentage%',
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Color(0xFF9CA3AF),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );

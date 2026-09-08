@@ -691,6 +691,97 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
     );
   }
 
+  Color _urgencyColor(String? urgency) {
+    switch (urgency) {
+      case 'High':
+        return const Color(0xFFDC2626);
+      case 'Medium':
+        return const Color(0xFFF59E0B);
+      case 'Low':
+        return const Color(0xFF10B981);
+      default:
+        return const Color(0xFF9CA3AF);
+    }
+  }
+
+  void _showUrgencyDialog(ReportModel report) {
+    String? selected = report.urgencyLevel;
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, set) => AlertDialog(
+          title: const Text('Set Urgency Level'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: ['High', 'Medium', 'Low'].map((level) {
+              final color = _urgencyColor(level);
+              return RadioListTile<String>(
+                value: level,
+                groupValue: selected,
+                onChanged: (v) => set(() => selected = v),
+                title: Row(
+                  children: [
+                    Icon(
+                      level == 'High'
+                          ? Icons.arrow_upward_rounded
+                          : level == 'Low'
+                          ? Icons.arrow_downward_rounded
+                          : Icons.remove_rounded,
+                      size: 16,
+                      color: color,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      level,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: color,
+                      ),
+                    ),
+                  ],
+                ),
+                activeColor: color,
+              );
+            }).toList(),
+          ),
+          actions: [
+            if (report.urgencyLevel != null)
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  await _service.setUrgencyLevel(report.id, null);
+                },
+                child: const Text(
+                  'Clear',
+                  style: TextStyle(color: Color(0xFF9CA3AF)),
+                ),
+              ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: selected == null
+                  ? null
+                  : () async {
+                      Navigator.pop(ctx);
+                      await _service.setUrgencyLevel(report.id, selected);
+                      if (mounted) {
+                        AppToast.show(
+                          context,
+                          'Urgency set to $selected',
+                          type: ToastType.success,
+                        );
+                      }
+                    },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showAssignDialog(ReportModel report) {
     final ctrl = TextEditingController(text: report.assignedTo);
     showDialog(
@@ -873,6 +964,20 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                                 ),
                               ),
                             ],
+                            TextButton.icon(
+                              onPressed: () => _showUrgencyDialog(report),
+                              icon: Icon(
+                                Icons.flag_outlined,
+                                size: 16,
+                                color: _urgencyColor(report.urgencyLevel),
+                              ),
+                              label: Text(
+                                report.urgencyLevel ?? 'Urgency',
+                                style: TextStyle(
+                                  color: _urgencyColor(report.urgencyLevel),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),

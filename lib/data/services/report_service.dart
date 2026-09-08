@@ -293,6 +293,14 @@ class ReportService {
     });
   }
 
+  // Set urgency level for a report (High, Medium, Low)
+  Future<void> setUrgencyLevel(String reportId, String? urgencyLevel) async {
+    await _db.collection(AppConstants.reportsCollection).doc(reportId).update({
+      'urgencyLevel': urgencyLevel,
+      'updatedAt': Timestamp.fromDate(DateTime.now()),
+    });
+  }
+
   // Get reports for a specific user
   Stream<List<ReportModel>> getUserReports(String userId) {
     return _db

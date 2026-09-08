@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/widgets/app_ui.dart';
+import '../../../core/utils/report_export_service.dart';
 import '../../../data/models/report_model.dart';
 import '../../../data/services/report_service.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -991,6 +992,47 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
                                 color: _sortByPriority
                                     ? Colors.red[700]
                                     : Colors.grey[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Export button
+                  Tooltip(
+                    message: 'Export reports',
+                    child: InkWell(
+                      onTap: () => ReportExportService.showExportDialog(
+                        context,
+                        filtered,
+                        label: 'Export Reports',
+                        filePrefix: 'admin_reports',
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        height: 36,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: const Color(0xFFE0E0E0)),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.download_outlined,
+                              size: 16,
+                              color: Color(0xFF374151),
+                            ),
+                            SizedBox(width: 6),
+                            Text(
+                              'Export',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF374151),
                               ),
                             ),
                           ],
