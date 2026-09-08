@@ -462,6 +462,132 @@ class _DepartmentReportDetailScreenState
                               ),
                               const SizedBox(height: 16),
                             ],
+
+                            // Before & After photos (visible once admin resolves)
+                            if (report.afterPhotoUrl != null &&
+                                report.photoUrls.isNotEmpty) ...[
+                              _SectionCard(
+                                title: 'Resolution Evidence',
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            children: [
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 4,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.grey[200],
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
+                                                ),
+                                                child: const Text(
+                                                  'BEFORE',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: AppTheme.textMuted,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                child: Image.network(
+                                                  report.photoUrls.first,
+                                                  width: double.infinity,
+                                                  height: 140,
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                          ),
+                                          child: Icon(
+                                            Icons.arrow_forward_rounded,
+                                            color: AppTheme.successGreen,
+                                            size: 28,
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: Column(
+                                            children: [
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical: 4,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: AppTheme.successGreen,
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
+                                                ),
+                                                child: const Text(
+                                                  'AFTER',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                child: Image.network(
+                                                  report.afterPhotoUrl!,
+                                                  width: double.infinity,
+                                                  height: 140,
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (report.completionRemarks != null &&
+                                        report
+                                            .completionRemarks!
+                                            .isNotEmpty) ...[
+                                      const SizedBox(height: 12),
+                                      const Divider(height: 1),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        report.completionRemarks!,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: AppTheme.textMuted,
+                                          height: 1.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+
+                            // Status timeline
+                            _SectionCard(
+                              title: 'Status Timeline',
+                              child: _StatusTimeline(
+                                history: report.statusHistory,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -972,6 +1098,135 @@ class _Timeline extends StatelessWidget {
                           ),
                         ),
                       ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      }).toList(),
+    );
+  }
+}
+
+// ── Full status timeline (all pipeline steps) ─────────────────────────────────
+
+class _StatusTimeline extends StatelessWidget {
+  final List<ReportStatus> history;
+  const _StatusTimeline({required this.history});
+
+  @override
+  Widget build(BuildContext context) {
+    final allStatuses = AppConstants.reportStatuses;
+
+    return Column(
+      children: allStatuses.asMap().entries.map((entry) {
+        final index = entry.key;
+        final statusName = entry.value;
+        final historyEntry = history
+            .where((h) => h.status == statusName)
+            .firstOrNull;
+        final isCompleted = historyEntry != null;
+        final isLast = index == allStatuses.length - 1;
+
+        Color color;
+        switch (statusName) {
+          case 'Assigned':
+            color = const Color(0xFFF59E0B);
+            break;
+          case 'In Progress':
+            color = const Color(0xFF3B82F6);
+            break;
+          case 'Done':
+            color = const Color(0xFF8B5CF6);
+            break;
+          case 'Needs Revision':
+            color = const Color(0xFFDC2626);
+            break;
+          case 'Resolved':
+            color = const Color(0xFF10B981);
+            break;
+          case 'Rejected':
+            color = const Color(0xFFEF4444);
+            break;
+          default:
+            color = const Color(0xFF9CA3AF);
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 24,
+              child: Column(
+                children: [
+                  Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: isCompleted ? color : Colors.grey[200],
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isCompleted ? color : Colors.grey[300]!,
+                        width: 2,
+                      ),
+                    ),
+                    child: isCompleted
+                        ? const Icon(Icons.check, size: 11, color: Colors.white)
+                        : null,
+                  ),
+                  if (!isLast)
+                    Container(
+                      width: 2,
+                      height: 36,
+                      color: isCompleted
+                          ? color.withValues(alpha: 0.3)
+                          : Colors.grey[200],
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      statusName,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: isCompleted
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                        color: isCompleted ? color : Colors.grey[400],
+                      ),
+                    ),
+                    if (historyEntry != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        DateFormat(
+                          'MMM d, yyyy · h:mm a',
+                        ).format(historyEntry.timestamp),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                      if (historyEntry.updatedBy != null &&
+                          historyEntry.updatedBy!.isNotEmpty) ...[
+                        const SizedBox(height: 1),
+                        Text(
+                          'by ${historyEntry.updatedBy}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[500],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
                     ],
                   ],
                 ),
