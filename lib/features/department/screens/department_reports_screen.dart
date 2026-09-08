@@ -416,27 +416,23 @@ class _DepartmentReportsScreenState extends State<DepartmentReportsScreen> {
                   ),
                   const SizedBox(width: 80, child: Text('ID', style: _hStyle)),
                   const SizedBox(
-                    width: 160,
+                    width: 180,
                     child: Text('CATEGORY', style: _hStyle),
                   ),
                   const SizedBox(
-                    width: 160,
-                    child: Text('DESCRIPTION', style: _hStyle),
-                  ),
-                  const SizedBox(
-                    width: 120,
+                    width: 140,
                     child: Text('BARANGAY', style: _hStyle),
                   ),
                   const SizedBox(
-                    width: 100,
+                    width: 120,
                     child: Text('REPORTER', style: _hStyle),
                   ),
                   const SizedBox(
-                    width: 110,
+                    width: 130,
                     child: Text('DATE', style: _hStyle),
                   ),
                   const SizedBox(
-                    width: 120,
+                    width: 130,
                     child: Text('STATUS', style: _hStyle),
                   ),
                   const Expanded(child: Text('URGENCY', style: _hStyle)),
@@ -677,40 +673,45 @@ class _ReportRow extends StatelessWidget {
 
             // Category
             SizedBox(
-              width: 160,
-              child: Text(
-                report.category,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-
-            // Description
-            SizedBox(
-              width: 160,
-              child: Text(
-                report.description,
-                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              width: 180,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    report.category,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    report.description,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textMuted,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
 
             // Barangay
             SizedBox(
-              width: 120,
+              width: 140,
               child: Text(
                 'Brgy. ${report.barangay}',
                 style: const TextStyle(fontSize: 12),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
 
             // Reporter
             SizedBox(
-              width: 100,
+              width: 120,
               child: Text(
                 report.isAnonymous
                     ? 'Anonymous'
@@ -722,7 +723,7 @@ class _ReportRow extends StatelessWidget {
 
             // Date
             SizedBox(
-              width: 110,
+              width: 130,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -747,14 +748,14 @@ class _ReportRow extends StatelessWidget {
 
             // Status
             SizedBox(
-              width: 120,
+              width: 130,
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
+                  color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -773,45 +774,50 @@ class _ReportRow extends StatelessWidget {
             // Urgency
             Expanded(
               child: report.urgencyLevel != null
-                  ? Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _urgencyColor(
-                          report.urgencyLevel,
-                        ).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: _urgencyColor(
-                            report.urgencyLevel,
-                          ).withValues(alpha: 0.25),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            report.urgencyLevel == 'High'
-                                ? Icons.arrow_upward_rounded
-                                : report.urgencyLevel == 'Low'
-                                ? Icons.arrow_downward_rounded
-                                : Icons.remove_rounded,
-                            size: 10,
-                            color: _urgencyColor(report.urgencyLevel),
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            report.urgencyLevel!,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: _urgencyColor(report.urgencyLevel),
+                          decoration: BoxDecoration(
+                            color: _urgencyColor(
+                              report.urgencyLevel,
+                            ).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: _urgencyColor(
+                                report.urgencyLevel,
+                              ).withValues(alpha: 0.25),
                             ),
                           ),
-                        ],
-                      ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                report.urgencyLevel == 'High'
+                                    ? Icons.arrow_upward_rounded
+                                    : report.urgencyLevel == 'Low'
+                                    ? Icons.arrow_downward_rounded
+                                    : Icons.remove_rounded,
+                                size: 10,
+                                color: _urgencyColor(report.urgencyLevel),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                report.urgencyLevel!,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: _urgencyColor(report.urgencyLevel),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     )
                   : Text(
                       '—',
