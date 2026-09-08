@@ -472,9 +472,13 @@ class _DepartmentReportDetailScreenState
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Expanded(
                                           child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
                                             children: [
                                               Container(
                                                 padding:
@@ -497,22 +501,25 @@ class _DepartmentReportDetailScreenState
                                                 ),
                                               ),
                                               const SizedBox(height: 8),
-                                              ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                child: Image.network(
-                                                  report.photoUrls.first,
-                                                  width: double.infinity,
-                                                  height: 140,
-                                                  fit: BoxFit.cover,
+                                              AspectRatio(
+                                                aspectRatio: 4 / 3,
+                                                child: ClipRRect(
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  child: Image.network(
+                                                    report.photoUrls.first,
+                                                    fit: BoxFit.cover,
+                                                  ),
                                                 ),
                                               ),
                                             ],
                                           ),
                                         ),
                                         Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
+                                          padding: const EdgeInsets.only(
+                                            top: 48,
+                                            left: 10,
+                                            right: 10,
                                           ),
                                           child: Icon(
                                             Icons.arrow_forward_rounded,
@@ -522,6 +529,8 @@ class _DepartmentReportDetailScreenState
                                         ),
                                         Expanded(
                                           child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
                                             children: [
                                               Container(
                                                 padding:
@@ -544,14 +553,15 @@ class _DepartmentReportDetailScreenState
                                                 ),
                                               ),
                                               const SizedBox(height: 8),
-                                              ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                child: Image.network(
-                                                  report.afterPhotoUrl!,
-                                                  width: double.infinity,
-                                                  height: 140,
-                                                  fit: BoxFit.cover,
+                                              AspectRatio(
+                                                aspectRatio: 4 / 3,
+                                                child: ClipRRect(
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  child: Image.network(
+                                                    report.afterPhotoUrl!,
+                                                    fit: BoxFit.cover,
+                                                  ),
                                                 ),
                                               ),
                                             ],
