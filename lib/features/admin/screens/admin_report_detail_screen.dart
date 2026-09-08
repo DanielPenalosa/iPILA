@@ -814,47 +814,6 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
     );
   }
 
-  void _showAssignDialog(ReportModel report) {
-    final ctrl = TextEditingController(text: report.assignedTo);
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Assign Report'),
-        content: TextField(
-          controller: ctrl,
-          decoration: const InputDecoration(labelText: 'Staff Name'),
-        ),
-        actions: [
-          AdminHoverButton(
-            label: 'Cancel',
-            onTap: () {
-              if (Navigator.canPop(context)) {
-                Navigator.pop(context);
-              }
-            },
-            outlined: true,
-            small: true,
-          ),
-          const SizedBox(width: 8),
-          AdminHoverButton(
-            label: 'Assign',
-            onTap: () async {
-              final staffName = ctrl.text.trim();
-              if (Navigator.canPop(context)) {
-                Navigator.pop(context);
-              }
-              if (!_disposed && mounted) {
-                await _service.assignReport(report.id, staffName);
-              }
-            },
-            color: AppTheme.primaryBlue,
-            small: true,
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final auth = context.read<AuthProvider>();
@@ -946,14 +905,6 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                                 ],
                               ),
                             ),
-                            TextButton.icon(
-                              onPressed: () => _showAssignDialog(report),
-                              icon: const Icon(
-                                Icons.person_add_outlined,
-                                size: 16,
-                              ),
-                              label: const Text('Assign'),
-                            ),
                             if (report.assignedDepartment == null)
                               TextButton.icon(
                                 onPressed: () => _showAssignToDepartmentDialog(
@@ -997,7 +948,13 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                               ),
                             ],
                             TextButton.icon(
-                              onPressed: () => _showUrgencyDialog(report),
+                              onPressed:
+                                  report.currentStatus ==
+                                          AppConstants.statusResolved ||
+                                      report.currentStatus ==
+                                          AppConstants.statusDone
+                                  ? null
+                                  : () => _showUrgencyDialog(report),
                               icon: Icon(
                                 Icons.flag_outlined,
                                 size: 16,
