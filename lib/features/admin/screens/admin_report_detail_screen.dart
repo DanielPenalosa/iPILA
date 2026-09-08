@@ -870,334 +870,188 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                   padding: const EdgeInsets.only(bottom: 100),
                   child: Column(
                     children: [
-                      // Admin action bar
+                      // ── Top action bar ─────────────────────────────
                       Container(
-                        padding: const EdgeInsets.all(12),
-                        color: Colors.grey[100],
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border(
+                            bottom: BorderSide(color: Colors.grey[200]!),
+                          ),
+                        ),
                         child: Row(
                           children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Assigned to',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppTheme.textMuted,
-                                    ),
-                                  ),
-                                  Text(
-                                    report.assignedTo ?? 'Unassigned',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  if (report.assignedDepartment != null)
-                                    Text(
-                                      'Dept: ${report.assignedDepartment}',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.purple,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                ],
+                            // Status badge
+                            _StatusBadge(status: report.currentStatus),
+                            const SizedBox(width: 12),
+                            // Department chip
+                            if (report.assignedDepartment != null)
+                              _InfoChip(
+                                icon: Icons.business_outlined,
+                                label: report.assignedDepartment!,
+                                color: Colors.purple,
+                              )
+                            else
+                              _InfoChip(
+                                icon: Icons.person_outline,
+                                label: 'Unassigned',
+                                color: Colors.grey,
                               ),
-                            ),
-                            if (report.assignedDepartment == null)
-                              TextButton.icon(
-                                onPressed: () => _showAssignToDepartmentDialog(
+                            // Urgency chip
+                            if (report.urgencyLevel != null) ...[
+                              const SizedBox(width: 8),
+                              _InfoChip(
+                                icon: Icons.flag_outlined,
+                                label: report.urgencyLevel!,
+                                color: _urgencyColor(report.urgencyLevel),
+                              ),
+                            ],
+                            const Spacer(),
+                            // Action buttons
+                            if (report.assignedDepartment == null &&
+                                report.currentStatus !=
+                                    AppConstants.statusResolved)
+                              _ActionBtn(
+                                label: 'Assign Dept',
+                                icon: Icons.business_outlined,
+                                color: Colors.purple,
+                                onTap: () => _showAssignToDepartmentDialog(
                                   report,
                                   adminName,
-                                ),
-                                icon: const Icon(
-                                  Icons.business_outlined,
-                                  size: 16,
-                                ),
-                                label: const Text('Dept'),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Colors.purple,
                                 ),
                               ),
                             if (report.currentStatus ==
                                 AppConstants.statusDone) ...[
-                              TextButton.icon(
-                                onPressed: () =>
+                              const SizedBox(width: 8),
+                              _ActionBtn(
+                                label: 'Resolve',
+                                icon: Icons.check_circle_outline,
+                                color: AppTheme.successGreen,
+                                onTap: () =>
                                     _showVerifyDialog(report, adminName),
-                                icon: const Icon(
-                                  Icons.check_circle_outline,
-                                  size: 16,
-                                ),
-                                label: const Text('Resolve'),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: AppTheme.successGreen,
-                                ),
                               ),
-                              TextButton.icon(
-                                onPressed: () =>
+                              const SizedBox(width: 8),
+                              _ActionBtn(
+                                label: 'Return',
+                                icon: Icons.replay_outlined,
+                                color: Colors.orange,
+                                onTap: () =>
                                     _showReturnDialog(report, adminName),
-                                icon: const Icon(
-                                  Icons.replay_outlined,
-                                  size: 16,
-                                ),
-                                label: const Text('Return'),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Colors.orange,
-                                ),
                               ),
                             ],
-                            TextButton.icon(
-                              onPressed:
-                                  report.currentStatus ==
-                                          AppConstants.statusResolved ||
-                                      report.currentStatus ==
-                                          AppConstants.statusDone
-                                  ? null
-                                  : () => _showUrgencyDialog(report),
-                              icon: Icon(
-                                Icons.flag_outlined,
-                                size: 16,
+                            if (report.currentStatus !=
+                                    AppConstants.statusResolved &&
+                                report.currentStatus !=
+                                    AppConstants.statusDone) ...[
+                              const SizedBox(width: 8),
+                              _ActionBtn(
+                                label: report.urgencyLevel ?? 'Set Urgency',
+                                icon: Icons.flag_outlined,
                                 color: _urgencyColor(report.urgencyLevel),
+                                onTap: () => _showUrgencyDialog(report),
                               ),
-                              label: Text(
-                                report.urgencyLevel ?? 'Urgency',
-                                style: TextStyle(
-                                  color: _urgencyColor(report.urgencyLevel),
-                                ),
-                              ),
-                            ),
+                            ],
                           ],
                         ),
                       ),
+
+                      // ── Main content — two columns ──────────────────
                       Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
+                        padding: const EdgeInsets.all(24),
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            ReportStatusBanner(status: report.currentStatus),
-                            const SizedBox(height: 16),
-                            // Lock indicator for resolved reports
-                            if (report.currentStatus ==
-                                AppConstants.statusResolved) ...[
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.successGreen.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: AppTheme.successGreen.withValues(
-                                      alpha: 0.3,
-                                    ),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.lock_outline,
+                            // ── Left column ──────────────────────────
+                            Expanded(
+                              flex: 3,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Resolved / locked banner
+                                  if (report.currentStatus ==
+                                      AppConstants.statusResolved) ...[
+                                    _Banner(
+                                      icon: Icons.lock_outline,
                                       color: AppTheme.successGreen,
-                                      size: 20,
+                                      message:
+                                          'This report is resolved and locked. No further status updates can be made.',
                                     ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        'This report is resolved and locked. No further status updates can be made.',
-                                        style: TextStyle(
-                                          color: AppTheme.successGreen,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
+                                    const SizedBox(height: 16),
                                   ],
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                            ],
-                            if (report.photoUrls.isNotEmpty) ...[
-                              const Text(
-                                'Photos',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              SizedBox(
-                                height: 180,
-                                child: ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: report.photoUrls.length,
-                                  itemBuilder: (_, i) => Container(
-                                    margin: const EdgeInsets.only(right: 8),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: Image.network(
-                                        report.photoUrls[i],
-                                        width: 200,
-                                        height: 180,
-                                        fit: BoxFit.cover,
-                                      ),
+                                  // Dept locked banner
+                                  if (report.assignedDepartment != null &&
+                                      report.currentStatus !=
+                                          AppConstants.statusDone &&
+                                      report.currentStatus !=
+                                          AppConstants.statusResolved) ...[
+                                    _Banner(
+                                      icon: Icons.lock_clock_outlined,
+                                      color: Colors.orange,
+                                      message:
+                                          'Assigned to ${report.assignedDepartment}. Status locked until department marks it Done.',
                                     ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                            ],
-                            // Before & After Photos Display
-                            if (report.afterPhotoUrl != null) ...[
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.successGreen.withValues(
-                                    alpha: 0.08,
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: AppTheme.successGreen.withValues(
-                                      alpha: 0.3,
-                                    ),
-                                  ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
+                                    const SizedBox(height: 16),
+                                  ],
+
+                                  // Report info card
+                                  _SectionCard(
+                                    title: 'Report Information',
+                                    child: Column(
                                       children: [
-                                        Icon(
-                                          Icons.check_circle,
-                                          color: AppTheme.successGreen,
-                                          size: 20,
+                                        _DetailRow(
+                                          icon: Icons.category_outlined,
+                                          label: 'Category',
+                                          value: report.category,
                                         ),
-                                        const SizedBox(width: 8),
-                                        const Text(
-                                          'Resolution Evidence',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 15,
-                                          ),
+                                        _DetailRow(
+                                          icon: Icons.location_on_outlined,
+                                          label: 'Barangay',
+                                          value: 'Brgy. ${report.barangay}',
                                         ),
-                                      ],
-                                    ),
-                                    if (report.completedAt != null) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Completed: ${DateFormat('MMM d, yyyy h:mm a').format(report.completedAt!)}',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
+                                        _DetailRow(
+                                          icon: Icons.gps_fixed,
+                                          label: 'Coordinates',
+                                          value:
+                                              '${report.latitude.toStringAsFixed(5)}, ${report.longitude.toStringAsFixed(5)}',
                                         ),
-                                      ),
-                                    ],
-                                    const SizedBox(height: 12),
-                                    Row(
-                                      children: [
-                                        Expanded(
+                                        _DetailRow(
+                                          icon: Icons.person_outlined,
+                                          label: 'Reporter',
+                                          value: report.isAnonymous
+                                              ? 'Anonymous'
+                                              : '${report.userFullName} · Brgy. ${report.userBarangay}',
+                                        ),
+                                        _DetailRow(
+                                          icon: Icons.access_time_outlined,
+                                          label: 'Submitted',
+                                          value: DateFormat(
+                                            'MMM d, yyyy · h:mm a',
+                                          ).format(report.createdAt),
+                                        ),
+                                        const Divider(height: 24),
+                                        Align(
+                                          alignment: Alignment.centerLeft,
                                           child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 4,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.grey[200],
-                                                  borderRadius:
-                                                      BorderRadius.circular(4),
-                                                ),
-                                                child: const Text(
-                                                  'BEFORE',
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: AppTheme.textMuted,
-                                                  ),
+                                              const Text(
+                                                'Description',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppTheme.textMuted,
                                                 ),
                                               ),
-                                              const SizedBox(height: 8),
-                                              GestureDetector(
-                                                onTap: () => _showImageViewer(
-                                                  context,
-                                                  report.photoUrls.first,
-                                                  'Before Photo',
-                                                ),
-                                                child: AspectRatio(
-                                                  aspectRatio: 4 / 3,
-                                                  child: ClipRRect(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          8,
-                                                        ),
-                                                    child: Image.network(
-                                                      report.photoUrls.first,
-                                                      fit: BoxFit.cover,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                          ),
-                                          child: Column(
-                                            children: [
-                                              const SizedBox(height: 24),
-                                              Icon(
-                                                Icons.arrow_forward_rounded,
-                                                color: AppTheme.successGreen,
-                                                size: 32,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: Column(
-                                            children: [
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 4,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: AppTheme.successGreen,
-                                                  borderRadius:
-                                                      BorderRadius.circular(4),
-                                                ),
-                                                child: const Text(
-                                                  'AFTER',
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              GestureDetector(
-                                                onTap: () => _showImageViewer(
-                                                  context,
-                                                  report.afterPhotoUrl!,
-                                                  'After Photo',
-                                                ),
-                                                child: AspectRatio(
-                                                  aspectRatio: 4 / 3,
-                                                  child: ClipRRect(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          8,
-                                                        ),
-                                                    child: Image.network(
-                                                      report.afterPhotoUrl!,
-                                                      fit: BoxFit.cover,
-                                                    ),
-                                                  ),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                report.description,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  height: 1.5,
                                                 ),
                                               ),
                                             ],
@@ -1205,210 +1059,318 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                                         ),
                                       ],
                                     ),
-                                    if (report.completionRemarks != null &&
-                                        report
-                                            .completionRemarks!
-                                            .isNotEmpty) ...[
-                                      const SizedBox(height: 12),
-                                      const Divider(),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                  ),
+                                  const SizedBox(height: 16),
+
+                                  // Community attention card
+                                  if (report.followerCount > 0)
+                                    _SectionCard(
+                                      title: 'Community Attention',
+                                      child: Row(
                                         children: [
-                                          Icon(
-                                            Icons.assignment_outlined,
-                                            size: 16,
-                                            color: Colors.grey[600],
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: _getPriorityColor(
+                                                report.priority,
+                                              ).withValues(alpha: 0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                            child: Icon(
+                                              Icons.people_outline,
+                                              color: _getPriorityColor(
+                                                report.priority,
+                                              ),
+                                            ),
                                           ),
-                                          const SizedBox(width: 8),
+                                          const SizedBox(width: 14),
                                           Expanded(
                                             child: Column(
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  'Resolution Details',
+                                                  '${report.followerCount} ${report.followerCount == 1 ? 'follower' : 'followers'}',
                                                   style: TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: Colors.grey[700],
+                                                    fontSize: 15,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: _getPriorityColor(
+                                                      report.priority,
+                                                    ),
                                                   ),
                                                 ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  report.completionRemarks!,
+                                                const SizedBox(height: 2),
+                                                const Text(
+                                                  'This report has gained community attention.',
                                                   style: TextStyle(
-                                                    fontSize: 13,
-                                                    color: Colors.grey[800],
+                                                    fontSize: 12,
+                                                    color: AppTheme.textMuted,
                                                   ),
                                                 ),
                                               ],
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 5,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: _getPriorityColor(
+                                                report.priority,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            child: Text(
+                                              _getPriorityLabel(
+                                                report.priority,
+                                              ),
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w700,
+                                                color: Colors.white,
+                                              ),
                                             ),
                                           ),
                                         ],
                                       ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                            ],
-                            Card(
-                              margin: EdgeInsets.zero,
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    ReportDetailRow(
-                                      icon: Icons.category_outlined,
-                                      label: 'Category',
-                                      value: report.category,
                                     ),
-                                    ReportDetailRow(
-                                      icon: Icons.location_on_outlined,
-                                      label: 'Barangay',
-                                      value: 'Brgy. ${report.barangay}',
-                                    ),
-                                    ReportDetailRow(
-                                      icon: Icons.gps_fixed,
-                                      label: 'GPS',
-                                      value:
-                                          '${report.latitude.toStringAsFixed(5)}, ${report.longitude.toStringAsFixed(5)}',
-                                    ),
-                                    ReportDetailRow(
-                                      icon: Icons.person_outlined,
-                                      label: 'Reported by',
-                                      value: report.isAnonymous
-                                          ? 'Anonymous'
-                                          : '${report.userFullName} (Brgy. ${report.userBarangay})',
-                                    ),
-                                    if (report.followerCount > 0) ...[
-                                      const Divider(height: 20),
-                                      Container(
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: _getPriorityColor(
-                                            report.priority,
-                                          ).withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          border: Border.all(
-                                            color: _getPriorityColor(
-                                              report.priority,
-                                            ).withValues(alpha: 0.3),
-                                          ),
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.people_outline,
-                                                  size: 20,
-                                                  color: _getPriorityColor(
-                                                    report.priority,
-                                                  ),
+
+                                  if (report.followerCount > 0)
+                                    const SizedBox(height: 16),
+
+                                  // Photos
+                                  if (report.photoUrls.isNotEmpty)
+                                    _SectionCard(
+                                      title: 'Submitted Photos',
+                                      child: SizedBox(
+                                        height: 160,
+                                        child: ListView.builder(
+                                          scrollDirection: Axis.horizontal,
+                                          itemCount: report.photoUrls.length,
+                                          itemBuilder: (_, i) =>
+                                              GestureDetector(
+                                                onTap: () => _showImageViewer(
+                                                  context,
+                                                  report.photoUrls[i],
+                                                  'Photo ${i + 1}',
                                                 ),
-                                                const SizedBox(width: 8),
-                                                Text(
-                                                  '${report.followerCount} ${report.followerCount == 1 ? 'Follower' : 'Followers'}',
-                                                  style: TextStyle(
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: _getPriorityColor(
-                                                      report.priority,
-                                                    ),
+                                                child: Container(
+                                                  margin: const EdgeInsets.only(
+                                                    right: 10,
                                                   ),
-                                                ),
-                                                const Spacer(),
-                                                Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 4,
-                                                      ),
-                                                  decoration: BoxDecoration(
-                                                    color: _getPriorityColor(
-                                                      report.priority,
-                                                    ),
+                                                  child: ClipRRect(
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                          12,
+                                                          10,
                                                         ),
-                                                  ),
-                                                  child: Text(
-                                                    _getPriorityLabel(
-                                                      report.priority,
-                                                    ),
-                                                    style: const TextStyle(
-                                                      fontSize: 10,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      color: Colors.white,
+                                                    child: Image.network(
+                                                      report.photoUrls[i],
+                                                      width: 160,
+                                                      height: 160,
+                                                      fit: BoxFit.cover,
                                                     ),
                                                   ),
                                                 ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Text(
-                                              'This report has gained community attention. Consider prioritizing this issue.',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey[700],
                                               ),
-                                            ),
-                                            const SizedBox(height: 12),
-                                            // Follower list
-                                            _AdminFollowerList(
-                                              reportId: report.id,
-                                            ),
-                                          ],
                                         ),
                                       ),
-                                    ],
-                                    const Divider(height: 20),
-                                    const Text(
-                                      'Description',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
+                                    ),
+
+                                  if (report.photoUrls.isNotEmpty)
+                                    const SizedBox(height: 16),
+
+                                  // Before & After
+                                  if (report.afterPhotoUrl != null)
+                                    _SectionCard(
+                                      title: 'Resolution Evidence',
+                                      subtitle: report.completedAt != null
+                                          ? 'Completed: ${DateFormat('MMM d, yyyy · h:mm a').format(report.completedAt!)}'
+                                          : null,
+                                      child: Column(
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Column(
+                                                  children: [
+                                                    Container(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 10,
+                                                            vertical: 4,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.grey[200],
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              6,
+                                                            ),
+                                                      ),
+                                                      child: const Text(
+                                                        'BEFORE',
+                                                        style: TextStyle(
+                                                          fontSize: 11,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: AppTheme
+                                                              .textMuted,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    GestureDetector(
+                                                      onTap: () =>
+                                                          _showImageViewer(
+                                                            context,
+                                                            report
+                                                                .photoUrls
+                                                                .first,
+                                                            'Before',
+                                                          ),
+                                                      child: AspectRatio(
+                                                        aspectRatio: 4 / 3,
+                                                        child: ClipRRect(
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                8,
+                                                              ),
+                                                          child: Image.network(
+                                                            report
+                                                                .photoUrls
+                                                                .first,
+                                                            fit: BoxFit.cover,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                    ),
+                                                child: Icon(
+                                                  Icons.arrow_forward_rounded,
+                                                  color: AppTheme.successGreen,
+                                                  size: 28,
+                                                ),
+                                              ),
+                                              Expanded(
+                                                child: Column(
+                                                  children: [
+                                                    Container(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 10,
+                                                            vertical: 4,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color: AppTheme
+                                                            .successGreen,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              6,
+                                                            ),
+                                                      ),
+                                                      child: const Text(
+                                                        'AFTER',
+                                                        style: TextStyle(
+                                                          fontSize: 11,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: Colors.white,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    GestureDetector(
+                                                      onTap: () =>
+                                                          _showImageViewer(
+                                                            context,
+                                                            report
+                                                                .afterPhotoUrl!,
+                                                            'After',
+                                                          ),
+                                                      child: AspectRatio(
+                                                        aspectRatio: 4 / 3,
+                                                        child: ClipRRect(
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                8,
+                                                              ),
+                                                          child: Image.network(
+                                                            report
+                                                                .afterPhotoUrl!,
+                                                            fit: BoxFit.cover,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          if (report.completionRemarks !=
+                                                  null &&
+                                              report
+                                                  .completionRemarks!
+                                                  .isNotEmpty) ...[
+                                            const SizedBox(height: 14),
+                                            const Divider(height: 1),
+                                            const SizedBox(height: 12),
+                                            Text(
+                                              report.completionRemarks!,
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                color: AppTheme.textMuted,
+                                                height: 1.5,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                     ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      report.description,
-                                      style: const TextStyle(
-                                        color: AppTheme.textMuted,
-                                      ),
-                                    ),
+
+                                  if (report.afterPhotoUrl != null)
+                                    const SizedBox(height: 16),
+
+                                  // Follow-ups
+                                  _AdminFollowUpsView(reportId: report.id),
+
+                                  // Feedback
+                                  if (report.currentStatus ==
+                                      AppConstants.statusResolved) ...[
+                                    const SizedBox(height: 16),
+                                    _AdminFeedbackView(reportId: report.id),
                                   ],
-                                ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 20),
-                            const Text(
-                              'Transparency Timeline',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
+
+                            const SizedBox(width: 20),
+
+                            // ── Right column ──────────────────────────
+                            SizedBox(
+                              width: 300,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Timeline
+                                  _SectionCard(
+                                    title: 'Status Timeline',
+                                    child: ReportTimeline(
+                                      history: report.statusHistory,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            ReportTimeline(history: report.statusHistory),
-                            // ── Reporter Follow-Ups ───────────────────────
-                            const SizedBox(height: 28),
-                            _AdminFollowUpsView(reportId: report.id),
-                            // ── Citizen Feedback (resolved only) ─────────
-                            if (report.currentStatus ==
-                                AppConstants.statusResolved) ...[
-                              const SizedBox(height: 28),
-                              _AdminFeedbackView(reportId: report.id),
-                            ],
                           ],
                         ),
                       ),
@@ -1746,43 +1708,6 @@ class _AdminFeedbackView extends StatelessWidget {
   }
 }
 
-// ── Follower list widget ──────────────────────────────────────────────────────
-
-class _AdminFollowerList extends StatelessWidget {
-  final String reportId;
-  const _AdminFollowerList({required this.reportId});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('reports')
-          .doc(reportId)
-          .snapshots(),
-      builder: (context, snap) {
-        if (!snap.hasData) return const SizedBox.shrink();
-        final data = snap.data!.data() as Map<String, dynamic>? ?? {};
-        final followers = List<String>.from(data['followers'] ?? []);
-        if (followers.isEmpty) return const SizedBox.shrink();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${followers.length} citizen${followers.length == 1 ? '' : 's'} following',
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.primaryBlue,
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
 // ── Reporter follow-ups widget ────────────────────────────────────────────────
 
 class _AdminFollowUpsView extends StatelessWidget {
@@ -1902,6 +1827,274 @@ class _AdminFollowUpsView extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+// ── Clean UI widgets for redesigned detail page ──────────────────────────────
+
+class _StatusBadge extends StatelessWidget {
+  final String status;
+  const _StatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = AppTheme.statusColor(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 7),
+          Text(
+            status,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionBtn extends StatefulWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  const _ActionBtn({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  State<_ActionBtn> createState() => _ActionBtnState();
+}
+
+class _ActionBtnState extends State<_ActionBtn> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: _hovered
+                ? widget.color.withValues(alpha: 0.12)
+                : widget.color.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: widget.color.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(widget.icon, size: 15, color: widget.color),
+              const SizedBox(width: 6),
+              Text(
+                widget.label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: widget.color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Banner extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String message;
+  const _Banner({
+    required this.icon,
+    required this.color,
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: 13,
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final Widget child;
+  const _SectionCard({required this.title, required this.child, this.subtitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF0F0F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF111111),
+                    letterSpacing: 0.1,
+                  ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle!,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textMuted,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFFF3F4F6)),
+          Padding(padding: const EdgeInsets.all(18), child: child),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _DetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 15, color: const Color(0xFFD1D5DB)),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF111111),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
