@@ -93,9 +93,10 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
             : '';
       });
 
-      if (!_isInsidePila && mounted) {
-        _showLocationRestrictionDialog();
-      }
+      // DEV: location dialog temporarily disabled for testing
+      // if (!_isInsidePila && mounted) {
+      //   _showLocationRestrictionDialog();
+      // }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -387,23 +388,23 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
       );
       return;
     }
-    if (!_isInsidePila) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'You must be within Pila municipality to submit a report.',
-          ),
-        ),
-      );
-      return;
-    }
+    // DEV: location restriction temporarily disabled for testing
+    // if (!_isInsidePila) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(
+    //       content: Text(
+    //         'You must be within Pila municipality to submit a report.',
+    //       ),
+    //     ),
+    //   );
+    //   return;
+    // }
 
-    // Check for duplicates before submitting
-    await _checkForDuplicates();
-    if (_similarReports.isNotEmpty) {
-      // User will be shown duplicate dialog, don't proceed with submission
-      return;
-    }
+    // DEV: duplicate check temporarily disabled for testing
+    // await _checkForDuplicates();
+    // if (_similarReports.isNotEmpty) {
+    //   return;
+    // }
 
     final auth = context.read<AuthProvider>();
     final provider = context.read<ReportProvider>();
