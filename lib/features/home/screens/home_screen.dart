@@ -9,6 +9,7 @@ import '../../../data/models/report_model.dart';
 import '../../../data/services/report_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../widgets/mobile_shell.dart';
+import '../../reports/widgets/report_card.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -251,6 +252,72 @@ class HomeScreen extends StatelessWidget {
                   );
                 },
               ),
+            const SizedBox(height: 28),
+
+            // Community reports section
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'COMMUNITY REPORTS',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textMuted,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => context.push('/community-reports'),
+                  child: const Text(
+                    'See all →',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primaryBlue,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            StreamBuilder<List<ReportModel>>(
+              stream: ReportService().getCommunityReports(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final reports = snapshot.data ?? [];
+                if (reports.isEmpty) {
+                  return Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.borderColor),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'No community reports yet.',
+                        style: TextStyle(color: AppTheme.textMuted),
+                      ),
+                    ),
+                  );
+                }
+                return Column(
+                  children: reports
+                      .take(5)
+                      .map(
+                        (r) => ReportCard(
+                          report: r,
+                          onTap: () => context.push('/report/${r.id}'),
+                        ),
+                      )
+                      .toList(),
+                );
+              },
+            ),
           ],
         ),
       ),
