@@ -10,9 +10,7 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_ui.dart';
-import '../../../data/models/report_model.dart';
 import '../../../data/services/geofence_service.dart';
-import '../../../data/services/report_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../home/widgets/mobile_shell.dart';
 import '../providers/report_provider.dart';
@@ -35,8 +33,6 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
   double? _longitude;
   String _address = '';
   bool _gettingLocation = false;
-  bool _isInsidePila = false;
-  List<ReportModel> _similarReports = [];
 
   @override
   void dispose() {
@@ -87,16 +83,10 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
       setState(() {
         _latitude = result.latitude;
         _longitude = result.longitude;
-        _isInsidePila = result.isInsidePila;
         _address = result.latitude != null && result.longitude != null
             ? '${result.latitude!.toStringAsFixed(5)}, ${result.longitude!.toStringAsFixed(5)}'
             : '';
       });
-
-      // DEV: location dialog temporarily disabled for testing
-      // if (!_isInsidePila && mounted) {
-      //   _showLocationRestrictionDialog();
-      // }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -106,271 +96,6 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
     } finally {
       setState(() => _gettingLocation = false);
     }
-  }
-
-  void _showLocationRestrictionDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Location Restriction'),
-        content: const Text(
-          'Reporting is only available for users currently located within the Municipality of Pila.\n\nYou can still browse reports and updates, but cannot create new reports from your current location.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _checkForDuplicates() async {
-    if (_selectedCategory == null ||
-        _selectedBarangay == null ||
-        _descCtrl.text.trim().isEmpty) {
-      return;
-    }
-
-    try {
-      final similar = await ReportService().findSimilarReports(
-        category: _selectedCategory!,
-        barangay: _selectedBarangay!,
-        description: _descCtrl.text.trim(),
-        latitude: _latitude,
-        longitude: _longitude,
-      );
-
-      if (similar.isNotEmpty && mounted) {
-        setState(() => _similarReports = similar);
-        _showDuplicateDialog();
-      }
-    } catch (e) {
-      // Silent fail - duplicate check is not critical
-    }
-  }
-
-  void _showDuplicateDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.info_outline, color: AppTheme.primaryBlue),
-            const SizedBox(width: 8),
-            const Expanded(
-              child: Text(
-                'Concern Already Reported',
-                style: TextStyle(fontSize: 16),
-              ),
-            ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'This concern has already been reported. Would you like to follow this concern instead?',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryBlue.withValues(alpha: 0.07),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: AppTheme.primaryBlue.withValues(alpha: 0.2),
-                  ),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(
-                      Icons.people_outline,
-                      color: AppTheme.primaryBlue,
-                      size: 18,
-                    ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Following a concern adds your support — more followers = higher priority for admin.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.primaryBlue,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (_similarReports.isNotEmpty) ...[
-                const Text(
-                  'Existing concern:',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                ),
-                const SizedBox(height: 8),
-                ..._similarReports
-                    .take(3)
-                    .map(
-                      (report) => GestureDetector(
-                        onTap: () {
-                          Navigator.pop(context);
-                          context.go('/report/${report.id}');
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[50],
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppTheme.borderColor),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      '${report.category} · Brgy. ${report.barangay}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.statusColor(
-                                        report.currentStatus,
-                                      ).withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      report.currentStatus,
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppTheme.statusColor(
-                                          report.currentStatus,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                report.description.length > 70
-                                    ? '${report.description.substring(0, 70)}...'
-                                    : report.description,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey[700],
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.people,
-                                    size: 12,
-                                    color: Colors.grey[600],
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${report.followerCount} ${report.followerCount == 1 ? 'follower' : 'followers'}',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.grey[700],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-              ],
-            ],
-          ),
-        ),
-        actionsAlignment: MainAxisAlignment.end,
-        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        actions: [
-          // Submit anyway
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              setState(() => _similarReports.clear());
-              _submit();
-            },
-            child: Text(
-              'Submit Anyway',
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-            ),
-          ),
-          // View Details
-          OutlinedButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              if (_similarReports.isNotEmpty) {
-                context.go('/report/${_similarReports.first.id}');
-              }
-            },
-            icon: const Icon(Icons.visibility_outlined, size: 16),
-            label: const Text('View Details'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppTheme.primaryBlue,
-              side: const BorderSide(color: AppTheme.primaryBlue),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              textStyle: const TextStyle(fontSize: 13),
-            ),
-          ),
-          // Follow Concern
-          ElevatedButton.icon(
-            onPressed: () async {
-              Navigator.pop(context);
-              if (_similarReports.isNotEmpty) {
-                final auth = context.read<AuthProvider>();
-                await ReportService().followReport(
-                  _similarReports.first.id,
-                  auth.user!.uid,
-                );
-                if (mounted) {
-                  AppToast.show(
-                    context,
-                    'You\'re now following this concern!',
-                    type: ToastType.success,
-                  );
-                  context.go('/report/${_similarReports.first.id}');
-                }
-              }
-            },
-            icon: const Icon(Icons.notifications_active, size: 16),
-            label: const Text('Follow Concern'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryBlue,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              textStyle: const TextStyle(fontSize: 13),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _submit() async {
@@ -383,32 +108,11 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
       return;
     }
     if (_latitude == null) {
-      // DEV: GPS check temporarily skipped for testing
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   const SnackBar(content: Text('Please get your GPS location first.')),
-      // );
-      // return;
-      _latitude = 14.2500; // DEV: default coords inside Pila
-      _longitude = 121.3667;
-      _isInsidePila = true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please get your GPS location first.')),
+      );
+      return;
     }
-    // DEV: location restriction temporarily disabled for testing
-    // if (!_isInsidePila) {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     const SnackBar(
-    //       content: Text(
-    //         'You must be within Pila municipality to submit a report.',
-    //       ),
-    //     ),
-    //   );
-    //   return;
-    // }
-
-    // DEV: duplicate check temporarily disabled for testing
-    // await _checkForDuplicates();
-    // if (_similarReports.isNotEmpty) {
-    //   return;
-    // }
 
     final auth = context.read<AuthProvider>();
     final provider = context.read<ReportProvider>();
@@ -560,82 +264,54 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: _latitude != null
-                      ? (_isInsidePila
-                            ? AppTheme.successGreen.withValues(alpha: 0.08)
-                            : AppTheme.primaryRed.withValues(alpha: 0.08))
+                      ? AppTheme.successGreen.withValues(alpha: 0.06)
                       : Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: _latitude != null
-                        ? (_isInsidePila
-                              ? AppTheme.successGreen.withValues(alpha: 0.4)
-                              : AppTheme.primaryRed.withValues(alpha: 0.4))
+                        ? AppTheme.successGreen.withValues(alpha: 0.4)
                         : AppTheme.borderColor,
                   ),
                 ),
-                child: Column(
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          _latitude != null
-                              ? Icons.gps_fixed
-                              : Icons.gps_not_fixed,
-                          color: _latitude != null
-                              ? (_isInsidePila
-                                    ? AppTheme.successGreen
-                                    : AppTheme.primaryRed)
-                              : AppTheme.textMuted,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            _latitude != null
-                                ? (_isInsidePila
-                                      ? 'Location: $_address'
-                                      : 'Outside Pila municipality')
-                                : 'GPS location not yet captured',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: _latitude != null
-                                  ? (_isInsidePila
-                                        ? AppTheme.successGreen
-                                        : AppTheme.primaryRed)
-                                  : AppTheme.textMuted,
-                            ),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: _gettingLocation ? null : _getLocation,
-                          child: _gettingLocation
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Text(
-                                  _latitude != null ? 'Refresh' : 'Get GPS',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                        ),
-                      ],
+                    Icon(
+                      _latitude != null ? Icons.gps_fixed : Icons.gps_not_fixed,
+                      color: _latitude != null
+                          ? AppTheme.successGreen
+                          : AppTheme.textMuted,
+                      size: 20,
                     ),
-                    if (_latitude != null && !_isInsidePila) ...[
-                      const SizedBox(height: 8),
-                      const Text(
-                        'You must be within Pila municipality to submit a report. You can still browse existing reports.',
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _latitude != null
+                            ? 'Location: $_address'
+                            : 'GPS location not yet captured',
                         style: TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.primaryRed,
+                          fontSize: 13,
+                          color: _latitude != null
+                              ? AppTheme.successGreen
+                              : AppTheme.textMuted,
                         ),
                       ),
-                    ],
+                    ),
+                    TextButton(
+                      onPressed: _gettingLocation ? null : _getLocation,
+                      child: _gettingLocation
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(
+                              _latitude != null ? 'Refresh' : 'Get GPS',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                    ),
                   ],
                 ),
               ),
