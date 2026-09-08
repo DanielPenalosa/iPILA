@@ -36,7 +36,13 @@ class MobileShell extends StatelessWidget {
         leading: showBack
             ? IconButton(
                 icon: const Icon(Icons.arrow_back, color: AppTheme.textDark),
-                onPressed: () => context.pop(),
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/home');
+                  }
+                },
               )
             : null,
         leadingWidth: showBack ? 56 : 16,
@@ -81,7 +87,7 @@ class MobileShell extends StatelessWidget {
                       Icons.notifications_outlined,
                       color: AppTheme.textDark,
                     ),
-                    onPressed: () => context.push('/alerts'),
+                    onPressed: () => context.go('/alerts'),
                   ),
                   if (unread > 0)
                     Positioned(

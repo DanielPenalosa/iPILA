@@ -180,7 +180,7 @@ class HomeScreen extends StatelessWidget {
                 _QuickCard(
                   icon: Icons.show_chart_rounded,
                   label: 'My Reports',
-                  onTap: () => context.push('/my-reports'),
+                  onTap: () => context.go('/my-reports'),
                 ),
                 _QuickCard(
                   icon: Icons.groups_outlined,
@@ -190,7 +190,7 @@ class HomeScreen extends StatelessWidget {
                 _QuickCard(
                   icon: Icons.notifications_outlined,
                   label: 'Notifications',
-                  onTap: () => context.push('/alerts'),
+                  onTap: () => context.go('/alerts'),
                 ),
               ],
             ),
