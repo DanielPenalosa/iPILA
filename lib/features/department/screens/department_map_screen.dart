@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../data/models/report_model.dart';
 import '../../../data/services/department_service.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -54,22 +55,7 @@ class _DepartmentMapScreenState extends State<DepartmentMapScreen> {
     }).toList();
   }
 
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'Assigned':
-        return const Color(0xFFF59E0B);
-      case 'In Progress':
-        return const Color(0xFF3B82F6);
-      case 'Done':
-        return const Color(0xFF8B5CF6);
-      case 'Needs Revision':
-        return const Color(0xFFDC2626);
-      case 'Resolved':
-        return const Color(0xFF10B981);
-      default:
-        return const Color(0xFF9CA3AF);
-    }
-  }
+  Color _statusColor(String status) => AppTheme.statusColor(status);
 
   @override
   Widget build(BuildContext context) {

@@ -53,26 +53,7 @@ class _AdminMapScreenState extends State<AdminMapScreen> {
     }).toList();
   }
 
-  Color _markerColor(String status) {
-    switch (status) {
-      case 'Submitted':
-        return Colors.orange;
-      case 'Seen':
-        return Colors.purple;
-      case 'Validated':
-        return Colors.cyan;
-      case 'Queued':
-        return Colors.amber;
-      case 'In Progress':
-        return AppTheme.primaryBlue;
-      case 'Completed':
-        return AppTheme.successGreen;
-      case 'Rejected':
-        return AppTheme.primaryRed;
-      default:
-        return Colors.grey;
-    }
-  }
+  Color _markerColor(String status) => AppTheme.statusColor(status);
 
   @override
   Widget build(BuildContext context) {
