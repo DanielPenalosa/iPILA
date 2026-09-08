@@ -133,51 +133,54 @@ class _AdminMapScreenState extends State<AdminMapScreen> {
                   onPressed: () =>
                       setState(() => _clusterMarkers = !_clusterMarkers),
                 ),
-                const Spacer(),
-                Wrap(
-                  spacing: 12,
-                  children:
-                      [
-                            ('Pending', AppTheme.statusColor('Pending')),
-                            (
-                              'Under Review',
-                              AppTheme.statusColor('Under Review'),
-                            ),
-                            ('Assigned', AppTheme.statusColor('Assigned')),
-                            (
-                              'In Progress',
-                              AppTheme.statusColor('In Progress'),
-                            ),
-                            ('Done', AppTheme.statusColor('Done')),
-                            ('Resolved', AppTheme.statusColor('Resolved')),
-                            ('Rejected', AppTheme.statusColor('Rejected')),
-                          ]
-                          .map(
-                            (e) => Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 10,
-                                  height: 10,
-                                  decoration: BoxDecoration(
-                                    color: e.$2,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  e.$1,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppTheme.textMuted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                          .toList(),
-                ),
               ],
+            ),
+          ),
+          // Legend row
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 10),
+            child: Wrap(
+              spacing: 16,
+              runSpacing: 6,
+              children:
+                  [
+                        ('Pending', AppTheme.statusColor('Pending')),
+                        ('Under Review', AppTheme.statusColor('Under Review')),
+                        ('Assigned', AppTheme.statusColor('Assigned')),
+                        ('In Progress', AppTheme.statusColor('In Progress')),
+                        ('Done', AppTheme.statusColor('Done')),
+                        (
+                          'Needs Revision',
+                          AppTheme.statusColor('Needs Revision'),
+                        ),
+                        ('Resolved', AppTheme.statusColor('Resolved')),
+                        ('Rejected', AppTheme.statusColor('Rejected')),
+                      ]
+                      .map(
+                        (e) => Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: e.$2,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              e.$1,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                      .toList(),
             ),
           ),
           const Divider(height: 1),
