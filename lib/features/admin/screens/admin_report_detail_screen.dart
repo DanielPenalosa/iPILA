@@ -664,6 +664,50 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
     );
   }
 
+  void _showRejectDialog(ReportModel report, String adminName) {
+    final remarksCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reject Report'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Provide a reason for rejecting this report.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: remarksCtrl,
+              decoration: const InputDecoration(labelText: 'Reason (required)'),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (remarksCtrl.text.trim().isEmpty) return;
+              Navigator.pop(ctx);
+              await _updateStatus(
+                report.id,
+                AppConstants.statusRejected,
+                adminName,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryRed,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showReturnDialog(ReportModel report, String adminName) {
     final remarksCtrl = TextEditingController();
     showDialog(
@@ -923,6 +967,19 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                                   adminName,
                                 ),
                               ),
+                            // Reject — only before assignment
+                            if (report.assignedDepartment == null &&
+                                report.currentStatus !=
+                                    AppConstants.statusResolved) ...[
+                              const SizedBox(width: 8),
+                              _ActionBtn(
+                                label: 'Reject',
+                                icon: Icons.cancel_outlined,
+                                color: AppTheme.primaryRed,
+                                onTap: () =>
+                                    _showRejectDialog(report, adminName),
+                              ),
+                            ],
                             if (report.currentStatus ==
                                 AppConstants.statusDone) ...[
                               const SizedBox(width: 8),
@@ -1182,7 +1239,40 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                                   if (report.photoUrls.isNotEmpty)
                                     const SizedBox(height: 16),
 
-                                  // Before & After
+                                  // Pending completion photo (dept submitted, not yet approved)
+                                  if (report.pendingAfterPhotoUrl != null &&
+                                      report.currentStatus ==
+                                          AppConstants.statusDone)
+                                    _SectionCard(
+                                      title: '⏳ Pending Completion Photo',
+                                      subtitle:
+                                          'Submitted by ${report.assignedDepartment}. Approve to publish to citizen.',
+                                      child: GestureDetector(
+                                        onTap: () => _showImageViewer(
+                                          context,
+                                          report.pendingAfterPhotoUrl!,
+                                          'Completion Photo (Pending)',
+                                        ),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          child: Image.network(
+                                            report.pendingAfterPhotoUrl!,
+                                            width: double.infinity,
+                                            height: 200,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                  if (report.pendingAfterPhotoUrl != null &&
+                                      report.currentStatus ==
+                                          AppConstants.statusDone)
+                                    const SizedBox(height: 16),
+
+                                  // Before & After (only shown after admin approves)
                                   if (report.afterPhotoUrl != null)
                                     _SectionCard(
                                       title: 'Resolution Evidence',

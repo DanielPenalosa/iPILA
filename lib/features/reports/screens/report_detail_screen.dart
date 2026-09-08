@@ -839,26 +839,8 @@ class _ResidentProgressEntry extends StatelessWidget {
             'by ${update.department}',
             style: TextStyle(fontSize: 11, color: Colors.grey[500]),
           ),
-          if (update.photoUrls.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 70,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: update.photoUrls.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 6),
-                itemBuilder: (_, i) => ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: Image.network(
-                    update.photoUrls[i],
-                    width: 70,
-                    height: 70,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-            ),
-          ],
+          // Note: dept completion photos are not shown here — only shown
+          // after admin approves as the official "after" photo
         ],
       ),
     );

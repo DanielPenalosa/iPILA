@@ -126,7 +126,10 @@ class ReportModel {
   final double longitude;
   final String address;
   final List<String> photoUrls;
-  final String? afterPhotoUrl; // after photo for completion evidence
+  final String?
+  afterPhotoUrl; // after photo for completion evidence — only set after admin approves
+  final String?
+  pendingAfterPhotoUrl; // dept submitted completion photo, pending admin review
   final String? completionRemarks; // admin remarks when completing
   final DateTime? completedAt; // timestamp when completed
   final String currentStatus;
@@ -157,6 +160,7 @@ class ReportModel {
     required this.address,
     required this.photoUrls,
     this.afterPhotoUrl,
+    this.pendingAfterPhotoUrl,
     this.completionRemarks,
     this.completedAt,
     required this.currentStatus,
@@ -191,6 +195,7 @@ class ReportModel {
       address: data['address'] ?? '',
       photoUrls: List<String>.from(data['photoUrls'] ?? []),
       afterPhotoUrl: data['afterPhotoUrl'],
+      pendingAfterPhotoUrl: data['pendingAfterPhotoUrl'],
       completionRemarks: data['completionRemarks'],
       completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
       currentStatus: data['currentStatus'] ?? 'Submitted',
@@ -226,6 +231,7 @@ class ReportModel {
     'address': address,
     'photoUrls': photoUrls,
     'afterPhotoUrl': afterPhotoUrl,
+    'pendingAfterPhotoUrl': pendingAfterPhotoUrl,
     'completionRemarks': completionRemarks,
     'completedAt': completedAt != null
         ? Timestamp.fromDate(completedAt!)
@@ -250,6 +256,7 @@ class ReportModel {
     String? currentStatus,
     List<ReportStatus>? statusHistory,
     String? afterPhotoUrl,
+    String? pendingAfterPhotoUrl,
     String? assignedTo,
     String? assignedDepartment,
     String? assignedDepartmentUserId,
@@ -270,6 +277,7 @@ class ReportModel {
     address: address,
     photoUrls: photoUrls,
     afterPhotoUrl: afterPhotoUrl ?? this.afterPhotoUrl,
+    pendingAfterPhotoUrl: pendingAfterPhotoUrl ?? this.pendingAfterPhotoUrl,
     currentStatus: currentStatus ?? this.currentStatus,
     statusHistory: statusHistory ?? this.statusHistory,
     assignedTo: assignedTo ?? this.assignedTo,

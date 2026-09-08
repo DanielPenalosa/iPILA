@@ -166,7 +166,8 @@ class DepartmentService {
     };
 
     if (photoUrls.isNotEmpty) {
-      updateData['afterPhotoUrl'] = photoUrls.first;
+      updateData['pendingAfterPhotoUrl'] =
+          photoUrls.first; // stored pending admin approval
     }
 
     await _db
@@ -184,7 +185,7 @@ class DepartmentService {
     );
   }
 
-  /// Admin approves — marks as Resolved
+  /// Admin approves — marks as Resolved and promotes pending completion photo
   Future<void> approveResolution({
     required String reportId,
     required String adminName,
@@ -200,12 +201,34 @@ class DepartmentService {
       updatedBy: adminName,
     );
 
-    await _db.collection(AppConstants.reportsCollection).doc(reportId).update({
+    // Get current report to promote pendingAfterPhotoUrl
+    final reportDoc = await _db
+        .collection(AppConstants.reportsCollection)
+        .doc(reportId)
+        .get();
+    final pendingPhoto = reportDoc.data()?['pendingAfterPhotoUrl'] as String?;
+
+    final updateData = <String, dynamic>{
       'currentStatus': AppConstants.statusResolved,
       'completedAt': Timestamp.fromDate(now),
       'updatedAt': Timestamp.fromDate(now),
       'statusHistory': FieldValue.arrayUnion([statusEntry.toMap()]),
-    });
+      'pendingAfterPhotoUrl': FieldValue.delete(),
+    };
+
+    if (remarks != null && remarks.isNotEmpty) {
+      updateData['completionRemarks'] = remarks;
+    }
+
+    // Promote completion photo to public afterPhotoUrl only on admin approval
+    if (pendingPhoto != null) {
+      updateData['afterPhotoUrl'] = pendingPhoto;
+    }
+
+    await _db
+        .collection(AppConstants.reportsCollection)
+        .doc(reportId)
+        .update(updateData);
 
     // Notify reporter
     await _notifications.createNotification(
