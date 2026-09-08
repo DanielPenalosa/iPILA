@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -758,6 +759,37 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                                       value:
                                           '${report.latitude.toStringAsFixed(5)}, ${report.longitude.toStringAsFixed(5)}',
                                     ),
+                                    const SizedBox(height: 4),
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: TextButton.icon(
+                                        onPressed: () =>
+                                            context.go('/admin/map'),
+                                        icon: const Icon(
+                                          Icons.map_outlined,
+                                          size: 15,
+                                        ),
+                                        label: const Text(
+                                          'Go to Map',
+                                          style: TextStyle(fontSize: 13),
+                                        ),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: AppTheme.primaryBlue,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 6,
+                                          ),
+                                          backgroundColor: AppTheme.primaryBlue
+                                              .withValues(alpha: 0.06),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
                                     _DetailRow(
                                       icon: Icons.person_outlined,
                                       label: 'Reporter',

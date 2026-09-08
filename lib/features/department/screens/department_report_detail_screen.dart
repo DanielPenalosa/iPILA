@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -320,6 +321,14 @@ class _DepartmentReportDetailScreenState
                         ),
                       ],
                       const Spacer(),
+                      // Go to Map button
+                      _ActionBtn(
+                        label: 'Go to Map',
+                        icon: Icons.map_outlined,
+                        color: AppTheme.primaryBlue,
+                        onTap: () => context.go('/department/map'),
+                      ),
+                      const SizedBox(width: 8),
                       // Action button — only when dept can act
                       if (report.currentStatus == AppConstants.statusAssigned ||
                           report.currentStatus ==
