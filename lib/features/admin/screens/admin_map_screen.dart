@@ -138,10 +138,19 @@ class _AdminMapScreenState extends State<AdminMapScreen> {
                   spacing: 12,
                   children:
                       [
-                            ('New', Colors.orange),
-                            ('In Progress', AppTheme.primaryBlue),
-                            ('Completed', AppTheme.successGreen),
-                            ('Rejected', AppTheme.primaryRed),
+                            ('Pending', AppTheme.statusColor('Pending')),
+                            (
+                              'Under Review',
+                              AppTheme.statusColor('Under Review'),
+                            ),
+                            ('Assigned', AppTheme.statusColor('Assigned')),
+                            (
+                              'In Progress',
+                              AppTheme.statusColor('In Progress'),
+                            ),
+                            ('Done', AppTheme.statusColor('Done')),
+                            ('Resolved', AppTheme.statusColor('Resolved')),
+                            ('Rejected', AppTheme.statusColor('Rejected')),
                           ]
                           .map(
                             (e) => Row(

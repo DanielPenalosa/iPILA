@@ -136,11 +136,17 @@ class _DepartmentMapScreenState extends State<DepartmentMapScreen> {
                     spacing: 14,
                     children:
                         [
-                              ('Assigned', const Color(0xFFF59E0B)),
-                              ('In Progress', const Color(0xFF3B82F6)),
-                              ('Verification', const Color(0xFF8B5CF6)),
-                              ('Revision', const Color(0xFFDC2626)),
-                              ('Resolved', const Color(0xFF10B981)),
+                              ('Assigned', AppTheme.statusColor('Assigned')),
+                              (
+                                'In Progress',
+                                AppTheme.statusColor('In Progress'),
+                              ),
+                              ('Done', AppTheme.statusColor('Done')),
+                              (
+                                'Needs Revision',
+                                AppTheme.statusColor('Needs Revision'),
+                              ),
+                              ('Resolved', AppTheme.statusColor('Resolved')),
                             ]
                             .map(
                               (e) => Row(
