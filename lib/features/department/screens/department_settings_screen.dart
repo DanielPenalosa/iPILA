@@ -121,29 +121,40 @@ class _SectionTileState extends State<_SectionTile> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOut,
           margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: widget.active
                 ? const Color(0xFF6366F1).withValues(alpha: 0.08)
                 : _hovered
-                ? const Color(0xFFF9FAFB)
+                ? const Color(0xFFF5F6FA)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: widget.active
+                  ? const Color(0xFF6366F1).withValues(alpha: 0.2)
+                  : Colors.transparent,
+            ),
           ),
           child: Row(
             children: [
-              Icon(
-                widget.icon,
-                size: 17,
-                color: widget.active
-                    ? const Color(0xFF6366F1)
-                    : AppTheme.textMuted,
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                child: Icon(
+                  widget.icon,
+                  size: 17,
+                  color: widget.active
+                      ? const Color(0xFF6366F1)
+                      : _hovered
+                      ? AppTheme.textDark
+                      : AppTheme.textMuted,
+                ),
               ),
               const SizedBox(width: 10),
-              Text(
-                widget.label,
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 150),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: widget.active
@@ -151,8 +162,11 @@ class _SectionTileState extends State<_SectionTile> {
                       : FontWeight.normal,
                   color: widget.active
                       ? const Color(0xFF6366F1)
-                      : AppTheme.textDark,
+                      : _hovered
+                      ? AppTheme.textDark
+                      : AppTheme.textMuted,
                 ),
+                child: Text(widget.label),
               ),
             ],
           ),

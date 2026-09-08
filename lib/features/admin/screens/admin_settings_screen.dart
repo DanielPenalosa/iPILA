@@ -46,17 +46,9 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: _sections.length,
-                    itemBuilder: (_, i) => ListTile(
-                      dense: true,
+                    itemBuilder: (_, i) => _SettingsTile(
+                      label: _sections[i],
                       selected: _selectedSection == i,
-                      selectedTileColor: AppTheme.primaryBlue.withValues(
-                        alpha: 0.08,
-                      ),
-                      selectedColor: AppTheme.primaryBlue,
-                      title: Text(
-                        _sections[i],
-                        style: const TextStyle(fontSize: 13),
-                      ),
                       onTap: () => setState(() => _selectedSection = i),
                     ),
                   ),
@@ -1077,6 +1069,71 @@ class _InfoRow extends StatelessWidget {
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Animated settings sidebar tile ───────────────────────────────────────────
+
+class _SettingsTile extends StatefulWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _SettingsTile({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  State<_SettingsTile> createState() => _SettingsTileState();
+}
+
+class _SettingsTileState extends State<_SettingsTile> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOut,
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: widget.selected
+                ? AppTheme.primaryBlue.withValues(alpha: 0.08)
+                : _hovered
+                ? const Color(0xFFF5F6FA)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: widget.selected
+                  ? AppTheme.primaryBlue.withValues(alpha: 0.2)
+                  : Colors.transparent,
+            ),
+          ),
+          child: AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 150),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: widget.selected ? FontWeight.w600 : FontWeight.normal,
+              color: widget.selected
+                  ? AppTheme.primaryBlue
+                  : _hovered
+                  ? AppTheme.textDark
+                  : AppTheme.textMuted,
+            ),
+            child: Text(widget.label),
+          ),
+        ),
       ),
     );
   }
