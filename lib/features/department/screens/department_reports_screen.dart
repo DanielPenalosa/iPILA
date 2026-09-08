@@ -435,10 +435,7 @@ class _DepartmentReportsScreenState extends State<DepartmentReportsScreen> {
                     width: 130,
                     child: Text('STATUS', style: _hStyle),
                   ),
-                  const SizedBox(
-                    width: 100,
-                    child: Text('URGENCY', style: _hStyle),
-                  ),
+                  const Expanded(child: Text('URGENCY', style: _hStyle)),
                 ],
               ),
             ),
@@ -625,6 +622,7 @@ class _ReportRow extends StatelessWidget {
             : Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Checkbox
             SizedBox(
@@ -777,57 +775,51 @@ class _ReportRow extends StatelessWidget {
             ),
 
             // Urgency
-            SizedBox(
-              width: 100,
-              child: report.urgencyLevel != null
-                  ? Align(
-                      alignment: Alignment.centerLeft,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+            report.urgencyLevel != null
+                ? Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _urgencyColor(
+                        report.urgencyLevel,
+                      ).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _urgencyColor(
+                          report.urgencyLevel,
+                        ).withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          report.urgencyLevel == 'High'
+                              ? Icons.arrow_upward_rounded
+                              : report.urgencyLevel == 'Low'
+                              ? Icons.arrow_downward_rounded
+                              : Icons.remove_rounded,
+                          size: 10,
+                          color: _urgencyColor(report.urgencyLevel),
                         ),
-                        decoration: BoxDecoration(
-                          color: _urgencyColor(
-                            report.urgencyLevel,
-                          ).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: _urgencyColor(
-                              report.urgencyLevel,
-                            ).withValues(alpha: 0.25),
+                        const SizedBox(width: 4),
+                        Text(
+                          report.urgencyLevel!,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: _urgencyColor(report.urgencyLevel),
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              report.urgencyLevel == 'High'
-                                  ? Icons.arrow_upward_rounded
-                                  : report.urgencyLevel == 'Low'
-                                  ? Icons.arrow_downward_rounded
-                                  : Icons.remove_rounded,
-                              size: 10,
-                              color: _urgencyColor(report.urgencyLevel),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              report.urgencyLevel!,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: _urgencyColor(report.urgencyLevel),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : Text(
-                      '—',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                      ],
                     ),
-            ),
+                  )
+                : Text(
+                    '—',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                  ),
           ],
         ),
       ),
