@@ -254,6 +254,38 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
       return;
     }
 
+    // Prevent admin from updating when dept is actively working on it
+    final deptInProgress =
+        report.assignedDepartment != null &&
+        report.currentStatus != AppConstants.statusDone &&
+        report.currentStatus != AppConstants.statusResolved;
+
+    if (deptInProgress) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.lock_clock_outlined, color: Colors.orange[700]),
+              const SizedBox(width: 8),
+              const Text('Department In Progress'),
+            ],
+          ),
+          content: Text(
+            'This report is assigned to ${report.assignedDepartment}. '
+            'Status updates are locked until the department marks it as Done.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     String? selectedStatus;
     showModalBottomSheet(
       context: context,
@@ -1430,21 +1462,74 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                   bottom: 16,
                   left: 16,
                   right: 16,
-                  child: AdminHoverButton(
-                    label: report.currentStatus == AppConstants.statusResolved
-                        ? 'Report Resolved'
-                        : 'Update',
-                    icon: report.currentStatus == AppConstants.statusResolved
-                        ? Icons.check_circle
-                        : Icons.update_rounded,
-                    onTap:
-                        (report.currentStatus == AppConstants.statusResolved ||
-                            _isUpdating)
-                        ? null
-                        : () => _showUpdateDialog(report, adminName),
-                    color: report.currentStatus == AppConstants.statusResolved
-                        ? Colors.grey
-                        : AppTheme.primaryBlue,
+                  child: Builder(
+                    builder: (context) {
+                      // When assigned to a department and dept hasn't finished yet,
+                      // admin cannot manually update status — must wait for dept.
+                      final isAssignedToDept =
+                          report.assignedDepartment != null;
+                      final deptInProgress =
+                          isAssignedToDept &&
+                          report.currentStatus != AppConstants.statusDone &&
+                          report.currentStatus != AppConstants.statusResolved;
+
+                      if (deptInProgress) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: Colors.orange.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.lock_clock_outlined,
+                                size: 18,
+                                color: Colors.orange[700],
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Assigned to ${report.assignedDepartment}. Status updates are locked until the department marks it as Done.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.orange[800],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return AdminHoverButton(
+                        label:
+                            report.currentStatus == AppConstants.statusResolved
+                            ? 'Report Resolved'
+                            : 'Update',
+                        icon:
+                            report.currentStatus == AppConstants.statusResolved
+                            ? Icons.check_circle
+                            : Icons.update_rounded,
+                        onTap:
+                            (report.currentStatus ==
+                                    AppConstants.statusResolved ||
+                                _isUpdating)
+                            ? null
+                            : () => _showUpdateDialog(report, adminName),
+                        color:
+                            report.currentStatus == AppConstants.statusResolved
+                            ? Colors.grey
+                            : AppTheme.primaryBlue,
+                      );
+                    },
                   ),
                 ),
               ],

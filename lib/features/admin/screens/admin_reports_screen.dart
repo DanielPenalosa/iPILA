@@ -1330,6 +1330,10 @@ class _ReportRow extends StatelessWidget {
     final id = '#RPT-${report.id.substring(0, 4).toUpperCase()}';
     final isNew = report.currentStatus == AppConstants.statusPending;
     final hasPriority = report.priority >= 2;
+    final deptInProgress =
+        report.assignedDepartment != null &&
+        report.currentStatus != AppConstants.statusDone &&
+        report.currentStatus != AppConstants.statusResolved;
 
     return AdminTableRow(
       onTap: onView,
@@ -1507,9 +1511,11 @@ class _ReportRow extends StatelessWidget {
                   ] else if (report.currentStatus !=
                       AppConstants.statusResolved)
                     _Btn(
-                      label: 'Update',
-                      onTap: onStatusChange,
-                      color: AppTheme.primaryBlue,
+                      label: deptInProgress ? 'Dept Active' : 'Update',
+                      onTap: deptInProgress ? () {} : onStatusChange,
+                      color: deptInProgress
+                          ? Colors.grey
+                          : AppTheme.primaryBlue,
                     ),
                   if (!isNew) ...[
                     const SizedBox(width: 4),

@@ -305,9 +305,6 @@ class _DepartmentReportDetailScreenState
             return const Center(child: Text('Report not found'));
           }
 
-          final canUpdate =
-              report.currentStatus != AppConstants.statusResolved &&
-              report.currentStatus != AppConstants.statusDone;
           final statusColor = _statusColor(report.currentStatus);
 
           return Stack(
@@ -504,43 +501,17 @@ class _DepartmentReportDetailScreenState
                   ],
                 ),
               ),
-              if (canUpdate)
-                Positioned(
-                  bottom: 20,
-                  left: 24,
-                  right: 24,
-                  child: ElevatedButton.icon(
-                    onPressed: _submitting
-                        ? null
-                        : () => _showUpdateSheet(report),
-                    icon: _submitting
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(Icons.add, size: 18),
-                    label: Text(
-                      _submitting ? 'Saving...' : 'Add Progress Update',
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF111111),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      elevation: 0,
-                      textStyle: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+              // ── Bottom action area ─────────────────────────────
+              Positioned(
+                bottom: 20,
+                left: 24,
+                right: 24,
+                child: _DeptBottomAction(
+                  report: report,
+                  submitting: _submitting,
+                  onUpdate: () => _showUpdateSheet(report),
                 ),
+              ),
             ],
           );
         },
@@ -791,6 +762,131 @@ class _UrgencyBadge extends StatelessWidget {
               fontSize: 11,
               fontWeight: FontWeight.w700,
               color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Bottom action widget ──────────────────────────────────────────────────────
+
+class _DeptBottomAction extends StatelessWidget {
+  final ReportModel report;
+  final bool submitting;
+  final VoidCallback onUpdate;
+
+  const _DeptBottomAction({
+    required this.report,
+    required this.submitting,
+    required this.onUpdate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final status = report.currentStatus;
+
+    // Waiting for admin to assign
+    if (status == AppConstants.statusPending ||
+        status == AppConstants.statusUnderReview) {
+      return _InfoBanner(
+        icon: Icons.hourglass_top_rounded,
+        color: const Color(0xFF6366F1),
+        message: 'Waiting for admin to assign this report to your department.',
+      );
+    }
+
+    // Department can act — Assigned or Needs Revision
+    if (status == AppConstants.statusAssigned ||
+        status == AppConstants.statusNeedsRevision ||
+        status == AppConstants.statusInProgress) {
+      return ElevatedButton.icon(
+        onPressed: submitting ? null : onUpdate,
+        icon: submitting
+            ? const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : const Icon(Icons.add, size: 18),
+        label: Text(submitting ? 'Saving...' : 'Add Progress Update'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF111111),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          elevation: 0,
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        ),
+      );
+    }
+
+    // Department submitted as Done — waiting for admin verification
+    if (status == AppConstants.statusDone) {
+      return _InfoBanner(
+        icon: Icons.schedule_rounded,
+        color: const Color(0xFF8B5CF6),
+        message:
+            'Work submitted for admin review. Waiting for final verification.',
+      );
+    }
+
+    // Resolved — fully closed
+    if (status == AppConstants.statusResolved) {
+      return _InfoBanner(
+        icon: Icons.check_circle_outline_rounded,
+        color: const Color(0xFF10B981),
+        message: 'Report resolved. No further updates needed.',
+      );
+    }
+
+    // Rejected or any other terminal state
+    return _InfoBanner(
+      icon: Icons.block_rounded,
+      color: const Color(0xFF9CA3AF),
+      message: 'This report is closed.',
+    );
+  }
+}
+
+class _InfoBanner extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String message;
+
+  const _InfoBanner({
+    required this.icon,
+    required this.color,
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: 12,
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
