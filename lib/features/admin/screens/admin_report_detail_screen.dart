@@ -158,23 +158,6 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
     );
   }
 
-  Future<void> _pickAfterPhoto() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 70,
-    );
-    if (picked != null && !_disposed && mounted) {
-      setState(() {
-        _afterPhotoWeb = picked; // Store XFile for web
-        // Only create File for mobile
-        if (!kIsWeb) {
-          _afterPhoto = File(picked.path);
-        }
-      });
-    }
-  }
-
   Future<void> _updateStatus(
     String reportId,
     String newStatus,
@@ -225,299 +208,6 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
     } finally {
       if (!_disposed && mounted) setState(() => _isUpdating = false);
     }
-  }
-
-  void _showUpdateDialog(ReportModel report, String adminName) {
-    // Prevent updating resolved reports
-    if (report.currentStatus == AppConstants.statusResolved) {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.check_circle, color: AppTheme.successGreen),
-              const SizedBox(width: 8),
-              const Text('Report Completed'),
-            ],
-          ),
-          content: const Text(
-            'This report is marked as completed and locked. No further status updates can be made to maintain data integrity.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
-    // Prevent admin from updating when dept is actively working on it
-    final deptInProgress =
-        report.assignedDepartment != null &&
-        report.currentStatus != AppConstants.statusDone &&
-        report.currentStatus != AppConstants.statusResolved;
-
-    if (deptInProgress) {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.lock_clock_outlined, color: Colors.orange[700]),
-              const SizedBox(width: 8),
-              const Text('Department In Progress'),
-            ],
-          ),
-          content: Text(
-            'This report is assigned to ${report.assignedDepartment}. '
-            'Status updates are locked until the department marks it as Done.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
-    String? selectedStatus;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Update Report Status',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: 'New Status'),
-                items: AppConstants.reportStatuses
-                    .where((s) => s != report.currentStatus)
-                    .map(
-                      (s) => DropdownMenuItem(
-                        value: s,
-                        child: Row(
-                          children: [
-                            Icon(
-                              AppTheme.statusIcon(s),
-                              size: 16,
-                              color: AppTheme.statusColor(s),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(s),
-                          ],
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setModalState(() => selectedStatus = v),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _noteCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Note (optional)',
-                  hintText: 'Add a note for this status update...',
-                ),
-                maxLines: 2,
-              ),
-              if (selectedStatus == AppConstants.statusResolved) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryYellow.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: AppTheme.primaryYellow.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        color: AppTheme.primaryYellow,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'This will mark the report as officially Resolved.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.primaryYellow,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                AdminHoverButton(
-                  label: (_afterPhoto != null || _afterPhotoWeb != null)
-                      ? 'After photo added ✓'
-                      : 'Add After Photo (optional)',
-                  icon: Icons.add_a_photo_outlined,
-                  onTap: () async {
-                    await _pickAfterPhoto();
-                    setModalState(() {});
-                  },
-                  outlined: true,
-                  color: (_afterPhoto != null || _afterPhotoWeb != null)
-                      ? AppTheme.successGreen
-                      : null,
-                ),
-              ],
-              const SizedBox(height: 16),
-              AdminHoverButton(
-                label: selectedStatus == AppConstants.statusResolved
-                    ? 'Resolve'
-                    : 'Update',
-                onTap: selectedStatus == null
-                    ? null
-                    : () {
-                        final status = selectedStatus!;
-                        if (Navigator.canPop(ctx)) {
-                          Navigator.pop(ctx);
-                        }
-                        if (status == AppConstants.statusResolved) {
-                          _showCompletionConfirmation(
-                            report,
-                            status,
-                            adminName,
-                          );
-                        } else {
-                          _updateStatus(report.id, status, adminName);
-                        }
-                      },
-                color: selectedStatus == AppConstants.statusResolved
-                    ? AppTheme.successGreen
-                    : AppTheme.primaryBlue,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showCompletionConfirmation(
-    ReportModel report,
-    String status,
-    String adminName,
-  ) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: AppTheme.primaryYellow),
-            const SizedBox(width: 8),
-            const Text('Final Confirmation'),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'You are about to mark this report as COMPLETED.',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'This means:',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              _bulletPoint('The issue has been fully resolved'),
-              _bulletPoint('Before & after photos will be published'),
-              _bulletPoint('Citizens will be notified of completion'),
-              _bulletPoint('The report will be LOCKED (no further edits)'),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.coral.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: AppTheme.coral.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.lock_outline, color: AppTheme.coral, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'This action cannot be undone. Are you absolutely sure?',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.coral,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _updateStatus(report.id, status, adminName);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.successGreen,
-            ),
-            child: const Text('Yes, Mark as Completed'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _bulletPoint(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 8, bottom: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('• ', style: TextStyle(fontSize: 16)),
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
-        ],
-      ),
-    );
   }
 
   void _showAssignToDepartmentDialog(ReportModel report, String adminName) {
@@ -908,697 +598,598 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
               return const Center(child: Text('Report not found.'));
             }
 
-            return Stack(
-              children: [
-                SingleChildScrollView(
-                  padding: const EdgeInsets.only(bottom: 100),
-                  child: Column(
-                    children: [
-                      // ── Top action bar ─────────────────────────────
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border(
-                            bottom: BorderSide(color: Colors.grey[200]!),
+            return SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 40),
+              child: Column(
+                children: [
+                  // ── Top action bar ─────────────────────────────
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border(
+                        bottom: BorderSide(color: Colors.grey[200]!),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        // Status badge
+                        _StatusBadge(status: report.currentStatus),
+                        const SizedBox(width: 12),
+                        // Department chip
+                        if (report.assignedDepartment != null)
+                          _InfoChip(
+                            icon: Icons.business_outlined,
+                            label: report.assignedDepartment!,
+                            color: Colors.purple,
+                          )
+                        else
+                          _InfoChip(
+                            icon: Icons.person_outline,
+                            label: 'Unassigned',
+                            color: Colors.grey,
                           ),
-                        ),
-                        child: Row(
-                          children: [
-                            // Status badge
-                            _StatusBadge(status: report.currentStatus),
-                            const SizedBox(width: 12),
-                            // Department chip
-                            if (report.assignedDepartment != null)
-                              _InfoChip(
-                                icon: Icons.business_outlined,
-                                label: report.assignedDepartment!,
-                                color: Colors.purple,
-                              )
-                            else
-                              _InfoChip(
-                                icon: Icons.person_outline,
-                                label: 'Unassigned',
-                                color: Colors.grey,
-                              ),
-                            // Urgency chip
-                            if (report.urgencyLevel != null) ...[
-                              const SizedBox(width: 8),
-                              _InfoChip(
-                                icon: Icons.flag_outlined,
-                                label: report.urgencyLevel!,
-                                color: _urgencyColor(report.urgencyLevel),
-                              ),
-                            ],
-                            const Spacer(),
-                            // Action buttons
-                            if (report.assignedDepartment == null &&
-                                report.currentStatus !=
-                                    AppConstants.statusResolved)
-                              _ActionBtn(
-                                label: 'Assign Dept',
-                                icon: Icons.business_outlined,
-                                color: Colors.purple,
-                                onTap: () => _showAssignToDepartmentDialog(
-                                  report,
-                                  adminName,
+                        // Urgency chip
+                        if (report.urgencyLevel != null) ...[
+                          const SizedBox(width: 8),
+                          _InfoChip(
+                            icon: Icons.flag_outlined,
+                            label: report.urgencyLevel!,
+                            color: _urgencyColor(report.urgencyLevel),
+                          ),
+                        ],
+                        const Spacer(),
+                        // Action buttons
+                        if (report.assignedDepartment == null &&
+                            report.currentStatus != AppConstants.statusResolved)
+                          _ActionBtn(
+                            label: 'Assign Dept',
+                            icon: Icons.business_outlined,
+                            color: Colors.purple,
+                            onTap: () => _showAssignToDepartmentDialog(
+                              report,
+                              adminName,
+                            ),
+                          ),
+                        // Reject — only before assignment
+                        if (report.assignedDepartment == null &&
+                            report.currentStatus !=
+                                AppConstants.statusResolved) ...[
+                          const SizedBox(width: 8),
+                          _ActionBtn(
+                            label: 'Reject',
+                            icon: Icons.cancel_outlined,
+                            color: AppTheme.primaryRed,
+                            onTap: () => _showRejectDialog(report, adminName),
+                          ),
+                        ],
+                        if (report.currentStatus ==
+                            AppConstants.statusDone) ...[
+                          const SizedBox(width: 8),
+                          _ActionBtn(
+                            label: 'Resolve',
+                            icon: Icons.check_circle_outline,
+                            color: AppTheme.successGreen,
+                            onTap: () => _showVerifyDialog(report, adminName),
+                          ),
+                          const SizedBox(width: 8),
+                          _ActionBtn(
+                            label: 'Return',
+                            icon: Icons.replay_outlined,
+                            color: Colors.orange,
+                            onTap: () => _showReturnDialog(report, adminName),
+                          ),
+                        ],
+                        if (report.currentStatus !=
+                                AppConstants.statusResolved &&
+                            report.currentStatus !=
+                                AppConstants.statusDone) ...[
+                          const SizedBox(width: 8),
+                          _ActionBtn(
+                            label: report.urgencyLevel ?? 'Set Urgency',
+                            icon: Icons.flag_outlined,
+                            color: _urgencyColor(report.urgencyLevel),
+                            onTap: () => _showUrgencyDialog(report),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  // ── Main content — two columns ──────────────────
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ── Left column ──────────────────────────
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Resolved / locked banner
+                              if (report.currentStatus ==
+                                  AppConstants.statusResolved) ...[
+                                _Banner(
+                                  icon: Icons.lock_outline,
+                                  color: AppTheme.successGreen,
+                                  message:
+                                      'This report is resolved and locked. No further status updates can be made.',
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                              // Dept locked banner
+                              if (report.assignedDepartment != null &&
+                                  report.currentStatus !=
+                                      AppConstants.statusDone &&
+                                  report.currentStatus !=
+                                      AppConstants.statusResolved) ...[
+                                _Banner(
+                                  icon: Icons.lock_clock_outlined,
+                                  color: Colors.orange,
+                                  message:
+                                      'Assigned to ${report.assignedDepartment}. Status locked until department marks it Done.',
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+
+                              // Report info card
+                              _SectionCard(
+                                title: 'Report Information',
+                                child: Column(
+                                  children: [
+                                    _DetailRow(
+                                      icon: Icons.category_outlined,
+                                      label: 'Category',
+                                      value: report.category,
+                                    ),
+                                    _DetailRow(
+                                      icon: Icons.location_on_outlined,
+                                      label: 'Barangay',
+                                      value: 'Brgy. ${report.barangay}',
+                                    ),
+                                    _DetailRow(
+                                      icon: Icons.gps_fixed,
+                                      label: 'Coordinates',
+                                      value:
+                                          '${report.latitude.toStringAsFixed(5)}, ${report.longitude.toStringAsFixed(5)}',
+                                    ),
+                                    _DetailRow(
+                                      icon: Icons.person_outlined,
+                                      label: 'Reporter',
+                                      value: report.isAnonymous
+                                          ? 'Anonymous'
+                                          : '${report.userFullName} · Brgy. ${report.userBarangay}',
+                                    ),
+                                    _DetailRow(
+                                      icon: Icons.access_time_outlined,
+                                      label: 'Submitted',
+                                      value: DateFormat(
+                                        'MMM d, yyyy · h:mm a',
+                                      ).format(report.createdAt),
+                                    ),
+                                    const Divider(height: 24),
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Description',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppTheme.textMuted,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            report.description,
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              height: 1.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            // Reject — only before assignment
-                            if (report.assignedDepartment == null &&
-                                report.currentStatus !=
-                                    AppConstants.statusResolved) ...[
-                              const SizedBox(width: 8),
-                              _ActionBtn(
-                                label: 'Reject',
-                                icon: Icons.cancel_outlined,
-                                color: AppTheme.primaryRed,
-                                onTap: () =>
-                                    _showRejectDialog(report, adminName),
-                              ),
-                            ],
-                            if (report.currentStatus ==
-                                AppConstants.statusDone) ...[
-                              const SizedBox(width: 8),
-                              _ActionBtn(
-                                label: 'Resolve',
-                                icon: Icons.check_circle_outline,
-                                color: AppTheme.successGreen,
-                                onTap: () =>
-                                    _showVerifyDialog(report, adminName),
-                              ),
-                              const SizedBox(width: 8),
-                              _ActionBtn(
-                                label: 'Return',
-                                icon: Icons.replay_outlined,
-                                color: Colors.orange,
-                                onTap: () =>
-                                    _showReturnDialog(report, adminName),
-                              ),
-                            ],
-                            if (report.currentStatus !=
-                                    AppConstants.statusResolved &&
-                                report.currentStatus !=
-                                    AppConstants.statusDone) ...[
-                              const SizedBox(width: 8),
-                              _ActionBtn(
-                                label: report.urgencyLevel ?? 'Set Urgency',
-                                icon: Icons.flag_outlined,
-                                color: _urgencyColor(report.urgencyLevel),
-                                onTap: () => _showUrgencyDialog(report),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
+                              const SizedBox(height: 16),
 
-                      // ── Main content — two columns ──────────────────
-                      Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // ── Left column ──────────────────────────
-                            Expanded(
-                              flex: 3,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Resolved / locked banner
-                                  if (report.currentStatus ==
-                                      AppConstants.statusResolved) ...[
-                                    _Banner(
-                                      icon: Icons.lock_outline,
-                                      color: AppTheme.successGreen,
-                                      message:
-                                          'This report is resolved and locked. No further status updates can be made.',
-                                    ),
-                                    const SizedBox(height: 16),
-                                  ],
-                                  // Dept locked banner
-                                  if (report.assignedDepartment != null &&
-                                      report.currentStatus !=
-                                          AppConstants.statusDone &&
-                                      report.currentStatus !=
-                                          AppConstants.statusResolved) ...[
-                                    _Banner(
-                                      icon: Icons.lock_clock_outlined,
-                                      color: Colors.orange,
-                                      message:
-                                          'Assigned to ${report.assignedDepartment}. Status locked until department marks it Done.',
-                                    ),
-                                    const SizedBox(height: 16),
-                                  ],
-
-                                  // Report info card
-                                  _SectionCard(
-                                    title: 'Report Information',
-                                    child: Column(
-                                      children: [
-                                        _DetailRow(
-                                          icon: Icons.category_outlined,
-                                          label: 'Category',
-                                          value: report.category,
-                                        ),
-                                        _DetailRow(
-                                          icon: Icons.location_on_outlined,
-                                          label: 'Barangay',
-                                          value: 'Brgy. ${report.barangay}',
-                                        ),
-                                        _DetailRow(
-                                          icon: Icons.gps_fixed,
-                                          label: 'Coordinates',
-                                          value:
-                                              '${report.latitude.toStringAsFixed(5)}, ${report.longitude.toStringAsFixed(5)}',
-                                        ),
-                                        _DetailRow(
-                                          icon: Icons.person_outlined,
-                                          label: 'Reporter',
-                                          value: report.isAnonymous
-                                              ? 'Anonymous'
-                                              : '${report.userFullName} · Brgy. ${report.userBarangay}',
-                                        ),
-                                        _DetailRow(
-                                          icon: Icons.access_time_outlined,
-                                          label: 'Submitted',
-                                          value: DateFormat(
-                                            'MMM d, yyyy · h:mm a',
-                                          ).format(report.createdAt),
-                                        ),
-                                        const Divider(height: 24),
-                                        Align(
-                                          alignment: Alignment.centerLeft,
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              const Text(
-                                                'Description',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: AppTheme.textMuted,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 6),
-                                              Text(
-                                                report.description,
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                  height: 1.5,
-                                                ),
-                                              ),
-                                            ],
+                              // Community attention card
+                              if (report.followerCount > 0)
+                                _SectionCard(
+                                  title: 'Community Attention',
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: _getPriorityColor(
+                                            report.priority,
+                                          ).withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
                                           ),
                                         ),
-                                      ],
+                                        child: Icon(
+                                          Icons.people_outline,
+                                          color: _getPriorityColor(
+                                            report.priority,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '${report.followerCount} ${report.followerCount == 1 ? 'follower' : 'followers'}',
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w700,
+                                                color: _getPriorityColor(
+                                                  report.priority,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            const Text(
+                                              'This report has gained community attention.',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: AppTheme.textMuted,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 5,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _getPriorityColor(
+                                            report.priority,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          _getPriorityLabel(report.priority),
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                              if (report.followerCount > 0)
+                                const SizedBox(height: 16),
+
+                              // Photos
+                              if (report.photoUrls.isNotEmpty)
+                                _SectionCard(
+                                  title: 'Submitted Photos',
+                                  child: SizedBox(
+                                    height: 160,
+                                    child: ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: report.photoUrls.length,
+                                      itemBuilder: (_, i) => GestureDetector(
+                                        onTap: () => _showImageViewer(
+                                          context,
+                                          report.photoUrls[i],
+                                          'Photo ${i + 1}',
+                                        ),
+                                        child: Container(
+                                          margin: const EdgeInsets.only(
+                                            right: 10,
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                            child: Image.network(
+                                              report.photoUrls[i],
+                                              width: 160,
+                                              height: 160,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(height: 16),
+                                ),
 
-                                  // Community attention card
-                                  if (report.followerCount > 0)
-                                    _SectionCard(
-                                      title: 'Community Attention',
-                                      child: Row(
+                              if (report.photoUrls.isNotEmpty)
+                                const SizedBox(height: 16),
+
+                              // Pending completion photo (dept submitted, not yet approved)
+                              if (report.pendingAfterPhotoUrl != null &&
+                                  report.currentStatus ==
+                                      AppConstants.statusDone)
+                                _SectionCard(
+                                  title: '⏳ Pending Completion Photo',
+                                  subtitle:
+                                      'Submitted by ${report.assignedDepartment}. Review and approve or return.',
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      GestureDetector(
+                                        onTap: () => _showImageViewer(
+                                          context,
+                                          report.pendingAfterPhotoUrl!,
+                                          'Completion Photo (Pending)',
+                                        ),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          child: Image.network(
+                                            report.pendingAfterPhotoUrl!,
+                                            width: double.infinity,
+                                            height: 200,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 14),
+                                      Row(
                                         children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(10),
-                                            decoration: BoxDecoration(
-                                              color: _getPriorityColor(
-                                                report.priority,
-                                              ).withValues(alpha: 0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                            ),
-                                            child: Icon(
-                                              Icons.people_outline,
-                                              color: _getPriorityColor(
-                                                report.priority,
+                                          Expanded(
+                                            child: OutlinedButton.icon(
+                                              onPressed: () =>
+                                                  _showReturnDialog(
+                                                    report,
+                                                    adminName,
+                                                  ),
+                                              icon: const Icon(
+                                                Icons.replay_outlined,
+                                                size: 16,
+                                              ),
+                                              label: const Text('Return'),
+                                              style: OutlinedButton.styleFrom(
+                                                foregroundColor: Colors.orange,
+                                                side: const BorderSide(
+                                                  color: Colors.orange,
+                                                ),
                                               ),
                                             ),
                                           ),
-                                          const SizedBox(width: 14),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: ElevatedButton.icon(
+                                              onPressed: () =>
+                                                  _showVerifyDialog(
+                                                    report,
+                                                    adminName,
+                                                  ),
+                                              icon: const Icon(
+                                                Icons.check_circle_outline,
+                                                size: 16,
+                                              ),
+                                              label: const Text(
+                                                'Approve & Resolve',
+                                              ),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    AppTheme.successGreen,
+                                                foregroundColor: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                              if (report.pendingAfterPhotoUrl != null &&
+                                  report.currentStatus ==
+                                      AppConstants.statusDone)
+                                const SizedBox(height: 16),
+
+                              // Before & After (only shown after admin approves)
+                              if (report.afterPhotoUrl != null)
+                                _SectionCard(
+                                  title: 'Resolution Evidence',
+                                  subtitle: report.completedAt != null
+                                      ? 'Completed: ${DateFormat('MMM d, yyyy · h:mm a').format(report.completedAt!)}'
+                                      : null,
+                                  child: Column(
+                                    children: [
+                                      Row(
+                                        children: [
                                           Expanded(
                                             child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
                                               children: [
-                                                Text(
-                                                  '${report.followerCount} ${report.followerCount == 1 ? 'follower' : 'followers'}',
-                                                  style: TextStyle(
-                                                    fontSize: 15,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: _getPriorityColor(
-                                                      report.priority,
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 4,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.grey[200],
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          6,
+                                                        ),
+                                                  ),
+                                                  child: const Text(
+                                                    'BEFORE',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: AppTheme.textMuted,
                                                     ),
                                                   ),
                                                 ),
-                                                const SizedBox(height: 2),
-                                                const Text(
-                                                  'This report has gained community attention.',
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: AppTheme.textMuted,
+                                                const SizedBox(height: 8),
+                                                GestureDetector(
+                                                  onTap: () => _showImageViewer(
+                                                    context,
+                                                    report.photoUrls.first,
+                                                    'Before',
+                                                  ),
+                                                  child: AspectRatio(
+                                                    aspectRatio: 4 / 3,
+                                                    child: ClipRRect(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
+                                                      child: Image.network(
+                                                        report.photoUrls.first,
+                                                        fit: BoxFit.cover,
+                                                      ),
+                                                    ),
                                                   ),
                                                 ),
                                               ],
                                             ),
                                           ),
-                                          Container(
+                                          Padding(
                                             padding: const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 5,
+                                              horizontal: 12,
                                             ),
-                                            decoration: BoxDecoration(
-                                              color: _getPriorityColor(
-                                                report.priority,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                            ),
-                                            child: Text(
-                                              _getPriorityLabel(
-                                                report.priority,
-                                              ),
-                                              style: const TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w700,
-                                                color: Colors.white,
-                                              ),
+                                            child: Icon(
+                                              Icons.arrow_forward_rounded,
+                                              color: AppTheme.successGreen,
+                                              size: 28,
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    ),
-
-                                  if (report.followerCount > 0)
-                                    const SizedBox(height: 16),
-
-                                  // Photos
-                                  if (report.photoUrls.isNotEmpty)
-                                    _SectionCard(
-                                      title: 'Submitted Photos',
-                                      child: SizedBox(
-                                        height: 160,
-                                        child: ListView.builder(
-                                          scrollDirection: Axis.horizontal,
-                                          itemCount: report.photoUrls.length,
-                                          itemBuilder: (_, i) =>
-                                              GestureDetector(
-                                                onTap: () => _showImageViewer(
-                                                  context,
-                                                  report.photoUrls[i],
-                                                  'Photo ${i + 1}',
-                                                ),
-                                                child: Container(
-                                                  margin: const EdgeInsets.only(
-                                                    right: 10,
-                                                  ),
-                                                  child: ClipRRect(
+                                          Expanded(
+                                            child: Column(
+                                              children: [
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 4,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        AppTheme.successGreen,
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                          10,
+                                                          6,
                                                         ),
-                                                    child: Image.network(
-                                                      report.photoUrls[i],
-                                                      width: 160,
-                                                      height: 160,
-                                                      fit: BoxFit.cover,
+                                                  ),
+                                                  child: const Text(
+                                                    'AFTER',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Colors.white,
                                                     ),
                                                   ),
                                                 ),
-                                              ),
+                                                const SizedBox(height: 8),
+                                                GestureDetector(
+                                                  onTap: () => _showImageViewer(
+                                                    context,
+                                                    report.afterPhotoUrl!,
+                                                    'After',
+                                                  ),
+                                                  child: AspectRatio(
+                                                    aspectRatio: 4 / 3,
+                                                    child: ClipRRect(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
+                                                      child: Image.network(
+                                                        report.afterPhotoUrl!,
+                                                        fit: BoxFit.cover,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (report.completionRemarks != null &&
+                                          report
+                                              .completionRemarks!
+                                              .isNotEmpty) ...[
+                                        const SizedBox(height: 14),
+                                        const Divider(height: 1),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          report.completionRemarks!,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: AppTheme.textMuted,
+                                            height: 1.5,
+                                          ),
                                         ),
-                                      ),
-                                    ),
-
-                                  if (report.photoUrls.isNotEmpty)
-                                    const SizedBox(height: 16),
-
-                                  // Pending completion photo (dept submitted, not yet approved)
-                                  if (report.pendingAfterPhotoUrl != null &&
-                                      report.currentStatus ==
-                                          AppConstants.statusDone)
-                                    _SectionCard(
-                                      title: '⏳ Pending Completion Photo',
-                                      subtitle:
-                                          'Submitted by ${report.assignedDepartment}. Review and approve or return.',
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: [
-                                          GestureDetector(
-                                            onTap: () => _showImageViewer(
-                                              context,
-                                              report.pendingAfterPhotoUrl!,
-                                              'Completion Photo (Pending)',
-                                            ),
-                                            child: ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              child: Image.network(
-                                                report.pendingAfterPhotoUrl!,
-                                                width: double.infinity,
-                                                height: 200,
-                                                fit: BoxFit.cover,
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 14),
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: OutlinedButton.icon(
-                                                  onPressed: () =>
-                                                      _showReturnDialog(
-                                                        report,
-                                                        adminName,
-                                                      ),
-                                                  icon: const Icon(
-                                                    Icons.replay_outlined,
-                                                    size: 16,
-                                                  ),
-                                                  label: const Text('Return'),
-                                                  style:
-                                                      OutlinedButton.styleFrom(
-                                                        foregroundColor:
-                                                            Colors.orange,
-                                                        side: const BorderSide(
-                                                          color: Colors.orange,
-                                                        ),
-                                                      ),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 10),
-                                              Expanded(
-                                                child: ElevatedButton.icon(
-                                                  onPressed: () =>
-                                                      _showVerifyDialog(
-                                                        report,
-                                                        adminName,
-                                                      ),
-                                                  icon: const Icon(
-                                                    Icons.check_circle_outline,
-                                                    size: 16,
-                                                  ),
-                                                  label: const Text(
-                                                    'Approve & Resolve',
-                                                  ),
-                                                  style:
-                                                      ElevatedButton.styleFrom(
-                                                        backgroundColor:
-                                                            AppTheme
-                                                                .successGreen,
-                                                        foregroundColor:
-                                                            Colors.white,
-                                                      ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-
-                                  if (report.pendingAfterPhotoUrl != null &&
-                                      report.currentStatus ==
-                                          AppConstants.statusDone)
-                                    const SizedBox(height: 16),
-
-                                  // Before & After (only shown after admin approves)
-                                  if (report.afterPhotoUrl != null)
-                                    _SectionCard(
-                                      title: 'Resolution Evidence',
-                                      subtitle: report.completedAt != null
-                                          ? 'Completed: ${DateFormat('MMM d, yyyy · h:mm a').format(report.completedAt!)}'
-                                          : null,
-                                      child: Column(
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Column(
-                                                  children: [
-                                                    Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 10,
-                                                            vertical: 4,
-                                                          ),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.grey[200],
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              6,
-                                                            ),
-                                                      ),
-                                                      child: const Text(
-                                                        'BEFORE',
-                                                        style: TextStyle(
-                                                          fontSize: 11,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          color: AppTheme
-                                                              .textMuted,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 8),
-                                                    GestureDetector(
-                                                      onTap: () =>
-                                                          _showImageViewer(
-                                                            context,
-                                                            report
-                                                                .photoUrls
-                                                                .first,
-                                                            'Before',
-                                                          ),
-                                                      child: AspectRatio(
-                                                        aspectRatio: 4 / 3,
-                                                        child: ClipRRect(
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                8,
-                                                              ),
-                                                          child: Image.network(
-                                                            report
-                                                                .photoUrls
-                                                                .first,
-                                                            fit: BoxFit.cover,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 12,
-                                                    ),
-                                                child: Icon(
-                                                  Icons.arrow_forward_rounded,
-                                                  color: AppTheme.successGreen,
-                                                  size: 28,
-                                                ),
-                                              ),
-                                              Expanded(
-                                                child: Column(
-                                                  children: [
-                                                    Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 10,
-                                                            vertical: 4,
-                                                          ),
-                                                      decoration: BoxDecoration(
-                                                        color: AppTheme
-                                                            .successGreen,
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              6,
-                                                            ),
-                                                      ),
-                                                      child: const Text(
-                                                        'AFTER',
-                                                        style: TextStyle(
-                                                          fontSize: 11,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          color: Colors.white,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 8),
-                                                    GestureDetector(
-                                                      onTap: () =>
-                                                          _showImageViewer(
-                                                            context,
-                                                            report
-                                                                .afterPhotoUrl!,
-                                                            'After',
-                                                          ),
-                                                      child: AspectRatio(
-                                                        aspectRatio: 4 / 3,
-                                                        child: ClipRRect(
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                8,
-                                                              ),
-                                                          child: Image.network(
-                                                            report
-                                                                .afterPhotoUrl!,
-                                                            fit: BoxFit.cover,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          if (report.completionRemarks !=
-                                                  null &&
-                                              report
-                                                  .completionRemarks!
-                                                  .isNotEmpty) ...[
-                                            const SizedBox(height: 14),
-                                            const Divider(height: 1),
-                                            const SizedBox(height: 12),
-                                            Text(
-                                              report.completionRemarks!,
-                                              style: const TextStyle(
-                                                fontSize: 13,
-                                                color: AppTheme.textMuted,
-                                                height: 1.5,
-                                              ),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                    ),
-
-                                  if (report.afterPhotoUrl != null)
-                                    const SizedBox(height: 16),
-
-                                  // Follow-ups
-                                  _AdminFollowUpsView(reportId: report.id),
-
-                                  // Feedback
-                                  if (report.currentStatus ==
-                                      AppConstants.statusResolved) ...[
-                                    const SizedBox(height: 16),
-                                    _AdminFeedbackView(reportId: report.id),
-                                  ],
-                                ],
-                              ),
-                            ),
-
-                            const SizedBox(width: 20),
-
-                            // ── Right column ──────────────────────────
-                            SizedBox(
-                              width: 300,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Timeline
-                                  _SectionCard(
-                                    title: 'Status Timeline',
-                                    child: ReportTimeline(
-                                      history: report.statusHistory,
-                                    ),
+                                      ],
+                                    ],
                                   ),
-                                ],
-                              ),
-                            ),
-                          ],
+                                ),
+
+                              if (report.afterPhotoUrl != null)
+                                const SizedBox(height: 16),
+
+                              // Follow-ups
+                              _AdminFollowUpsView(reportId: report.id),
+
+                              // Feedback
+                              if (report.currentStatus ==
+                                  AppConstants.statusResolved) ...[
+                                const SizedBox(height: 16),
+                                _AdminFeedbackView(reportId: report.id),
+                              ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                Positioned(
-                  bottom: 16,
-                  left: 16,
-                  right: 16,
-                  child: Builder(
-                    builder: (context) {
-                      // When assigned to a department and dept hasn't finished yet,
-                      // admin cannot manually update status — must wait for dept.
-                      final isAssignedToDept =
-                          report.assignedDepartment != null;
-                      final deptInProgress =
-                          isAssignedToDept &&
-                          report.currentStatus != AppConstants.statusDone &&
-                          report.currentStatus != AppConstants.statusResolved;
 
-                      if (deptInProgress) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: Colors.orange.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
+                        const SizedBox(width: 20),
+
+                        // ── Right column ──────────────────────────
+                        SizedBox(
+                          width: 300,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.lock_clock_outlined,
-                                size: 18,
-                                color: Colors.orange[700],
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  'Assigned to ${report.assignedDepartment}. Status updates are locked until the department marks it as Done.',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.orange[800],
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                              // Timeline
+                              _SectionCard(
+                                title: 'Status Timeline',
+                                child: ReportTimeline(
+                                  history: report.statusHistory,
                                 ),
                               ),
                             ],
                           ),
-                        );
-                      }
-
-                      return AdminHoverButton(
-                        label:
-                            report.currentStatus == AppConstants.statusResolved
-                            ? 'Report Resolved'
-                            : 'Update',
-                        icon:
-                            report.currentStatus == AppConstants.statusResolved
-                            ? Icons.check_circle
-                            : Icons.update_rounded,
-                        onTap:
-                            (report.currentStatus ==
-                                    AppConstants.statusResolved ||
-                                _isUpdating)
-                            ? null
-                            : () => _showUpdateDialog(report, adminName),
-                        color:
-                            report.currentStatus == AppConstants.statusResolved
-                            ? Colors.grey
-                            : AppTheme.primaryBlue,
-                      );
-                    },
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           },
         ),
