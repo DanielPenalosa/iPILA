@@ -580,14 +580,6 @@ class _DepartmentReportDetailScreenState
                               ),
                               const SizedBox(height: 16),
                             ],
-
-                            // Status timeline
-                            _SectionCard(
-                              title: 'Status Timeline',
-                              child: _StatusTimeline(
-                                history: report.statusHistory,
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -598,8 +590,8 @@ class _DepartmentReportDetailScreenState
                       SizedBox(
                         width: 300,
                         child: _SectionCard(
-                          title: 'Progress Updates',
-                          child: _Timeline(report: report),
+                          title: 'Status Timeline',
+                          child: _StatusTimeline(history: report.statusHistory),
                         ),
                       ),
                     ],
@@ -954,158 +946,6 @@ class _DetailRow extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ── Progress updates timeline ─────────────────────────────────────────────────
-
-class _Timeline extends StatelessWidget {
-  final ReportModel report;
-  const _Timeline({required this.report});
-
-  Color _color(String s) {
-    switch (s) {
-      case 'Assigned':
-        return const Color(0xFFF59E0B);
-      case 'In Progress':
-        return const Color(0xFF3B82F6);
-      case 'Done':
-        return const Color(0xFF8B5CF6);
-      case 'Needs Revision':
-        return const Color(0xFFDC2626);
-      case 'Resolved':
-        return const Color(0xFF10B981);
-      default:
-        return const Color(0xFF9CA3AF);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final updates = [...report.progressUpdates]
-      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-
-    if (updates.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 8),
-        child: Text(
-          'No progress updates yet.',
-          style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
-        ),
-      );
-    }
-
-    return Column(
-      children: updates.asMap().entries.map((entry) {
-        final i = entry.key;
-        final u = entry.value;
-        final c = _color(u.status);
-        final isLast = i == updates.length - 1;
-
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 20,
-              child: Column(
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(color: c, shape: BoxShape.circle),
-                  ),
-                  if (!isLast)
-                    Container(
-                      width: 1.5,
-                      height: 56,
-                      color: const Color(0xFFF3F4F6),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: c.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            u.status,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: c,
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          DateFormat('MMM d, h:mm a').format(u.timestamp),
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Color(0xFFD1D5DB),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'By ${u.updatedBy}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
-                    if (u.remarks != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        u.remarks!,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF374151),
-                        ),
-                      ),
-                    ],
-                    if (u.photoUrls.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        height: 60,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: u.photoUrls.length,
-                          separatorBuilder: (_, __) => const SizedBox(width: 6),
-                          itemBuilder: (_, j) => ClipRRect(
-                            borderRadius: BorderRadius.circular(6),
-                            child: Image.network(
-                              u.photoUrls[j],
-                              width: 60,
-                              height: 60,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ],
-        );
-      }).toList(),
     );
   }
 }
