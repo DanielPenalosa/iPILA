@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
@@ -13,6 +15,7 @@ class AuthProvider extends ChangeNotifier {
   AuthStatus _status = AuthStatus.initial;
   UserModel? _user;
   String? _errorMessage;
+  Timer? _signOutDebounce;
 
   AuthStatus get status => _status;
   UserModel? get user => _user;
@@ -27,10 +30,27 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _onAuthStateChanged(User? firebaseUser) async {
     if (firebaseUser == null) {
+      // On web, the file picker causes a brief focus loss that can fire a null
+      // auth event. Debounce it — only sign out if null persists for 2 seconds.
+      if (kIsWeb && _status == AuthStatus.authenticated) {
+        _signOutDebounce?.cancel();
+        _signOutDebounce = Timer(const Duration(seconds: 2), () {
+          // Re-check the actual current Firebase user before signing out
+          final stillNull = _authService.currentUser == null;
+          if (stillNull) {
+            _user = null;
+            _status = AuthStatus.unauthenticated;
+            notifyListeners();
+          }
+        });
+        return;
+      }
+      _signOutDebounce?.cancel();
       _user = null;
       _status = AuthStatus.unauthenticated;
       notifyListeners();
     } else {
+      _signOutDebounce?.cancel();
       // If we're already handling sign-in manually (status == loading),
       // skip — signIn() will set the final status to avoid race conditions.
       if (_status == AuthStatus.loading) return;
@@ -158,6 +178,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    _signOutDebounce?.cancel();
     await _authService.signOut();
     _user = null;
     _status = AuthStatus.unauthenticated;
