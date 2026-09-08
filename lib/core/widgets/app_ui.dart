@@ -694,9 +694,26 @@ class _AdminTableRowState extends State<AdminTableRow> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          color: _hovered
-              ? AppTheme.primaryBlue.withValues(alpha: 0.02)
-              : Colors.transparent,
+          decoration: BoxDecoration(
+            color: _hovered
+                ? AppTheme.primaryBlue.withValues(alpha: 0.05)
+                : Colors.transparent,
+            border: Border(
+              left: BorderSide(
+                color: _hovered ? AppTheme.primaryBlue : Colors.transparent,
+                width: 3,
+              ),
+            ),
+            boxShadow: _hovered
+                ? [
+                    BoxShadow(
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.06),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : [],
+          ),
           child: widget.child,
         ),
       ),
