@@ -1246,24 +1246,81 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                                     _SectionCard(
                                       title: '⏳ Pending Completion Photo',
                                       subtitle:
-                                          'Submitted by ${report.assignedDepartment}. Approve to publish to citizen.',
-                                      child: GestureDetector(
-                                        onTap: () => _showImageViewer(
-                                          context,
-                                          report.pendingAfterPhotoUrl!,
-                                          'Completion Photo (Pending)',
-                                        ),
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
+                                          'Submitted by ${report.assignedDepartment}. Review and approve or return.',
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          GestureDetector(
+                                            onTap: () => _showImageViewer(
+                                              context,
+                                              report.pendingAfterPhotoUrl!,
+                                              'Completion Photo (Pending)',
+                                            ),
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              child: Image.network(
+                                                report.pendingAfterPhotoUrl!,
+                                                width: double.infinity,
+                                                height: 200,
+                                                fit: BoxFit.cover,
+                                              ),
+                                            ),
                                           ),
-                                          child: Image.network(
-                                            report.pendingAfterPhotoUrl!,
-                                            width: double.infinity,
-                                            height: 200,
-                                            fit: BoxFit.cover,
+                                          const SizedBox(height: 14),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: OutlinedButton.icon(
+                                                  onPressed: () =>
+                                                      _showReturnDialog(
+                                                        report,
+                                                        adminName,
+                                                      ),
+                                                  icon: const Icon(
+                                                    Icons.replay_outlined,
+                                                    size: 16,
+                                                  ),
+                                                  label: const Text('Return'),
+                                                  style:
+                                                      OutlinedButton.styleFrom(
+                                                        foregroundColor:
+                                                            Colors.orange,
+                                                        side: const BorderSide(
+                                                          color: Colors.orange,
+                                                        ),
+                                                      ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Expanded(
+                                                child: ElevatedButton.icon(
+                                                  onPressed: () =>
+                                                      _showVerifyDialog(
+                                                        report,
+                                                        adminName,
+                                                      ),
+                                                  icon: const Icon(
+                                                    Icons.check_circle_outline,
+                                                    size: 16,
+                                                  ),
+                                                  label: const Text(
+                                                    'Approve & Resolve',
+                                                  ),
+                                                  style:
+                                                      ElevatedButton.styleFrom(
+                                                        backgroundColor:
+                                                            AppTheme
+                                                                .successGreen,
+                                                        foregroundColor:
+                                                            Colors.white,
+                                                      ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ),
+                                        ],
                                       ),
                                     ),
 
