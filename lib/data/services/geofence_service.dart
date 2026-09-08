@@ -87,11 +87,16 @@ class GeofenceService {
         );
       }
 
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
+      final position =
+          await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.medium, // medium is faster on iOS
+              timeLimit: Duration(seconds: 15),
+            ),
+          ).timeout(
+            const Duration(seconds: 20),
+            onTimeout: () => throw Exception('Location request timed out.'),
+          );
 
       final isInside = isInsidePila(position.latitude, position.longitude);
 

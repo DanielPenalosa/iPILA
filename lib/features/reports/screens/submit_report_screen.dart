@@ -35,6 +35,15 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
   bool _gettingLocation = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Reset any stale submit status from a previous attempt
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ReportProvider>().reset();
+    });
+  }
+
+  @override
   void dispose() {
     _descCtrl.dispose();
     super.dispose();
@@ -49,23 +58,36 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
       return;
     }
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: source);
+    final picked = await picker.pickImage(
+      source: source,
+      imageQuality: 70, // Apply quality at picker level for all platforms
+      maxWidth: 1280,
+      maxHeight: 720,
+    );
     if (picked != null) {
       if (kIsWeb) {
         setState(() => _photosWeb.add(picked));
       } else {
-        final dir = await getTemporaryDirectory();
-        final targetPath =
-            '${dir.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final compressed = await FlutterImageCompress.compressAndGetFile(
-          picked.path,
-          targetPath,
-          quality: 70,
-          minWidth: 1280,
-          minHeight: 720,
-        );
-        if (compressed != null) {
-          setState(() => _photos.add(File(compressed.path)));
+        try {
+          final dir = await getTemporaryDirectory();
+          final targetPath =
+              '${dir.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          final compressed = await FlutterImageCompress.compressAndGetFile(
+            picked.path,
+            targetPath,
+            quality: 70,
+            minWidth: 1280,
+            minHeight: 720,
+          );
+          if (compressed != null) {
+            setState(() => _photos.add(File(compressed.path)));
+          } else {
+            // Compression failed — use original photo as fallback
+            setState(() => _photos.add(File(picked.path)));
+          }
+        } catch (_) {
+          // Compression not supported on this platform — use original
+          setState(() => _photos.add(File(picked.path)));
         }
       }
     }
@@ -114,8 +136,11 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
       return;
     }
 
-    final auth = context.read<AuthProvider>();
+    // Prevent double-submit
     final provider = context.read<ReportProvider>();
+    if (provider.submitStatus == ReportSubmitStatus.loading) return;
+
+    final auth = context.read<AuthProvider>();
     final user = auth.user!;
     final success = await provider.submitReport(
       userId: user.uid,
@@ -138,6 +163,16 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
         type: ToastType.success,
       );
       context.go('/report/${provider.lastReportId}');
+    } else if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Submission failed. Please check your connection and try again.',
+          ),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 4),
+        ),
+      );
     }
   }
 
