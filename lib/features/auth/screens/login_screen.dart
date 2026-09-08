@@ -97,36 +97,38 @@ class _LoginScreenState extends State<LoginScreen>
     await auth.waitForUser();
     if (!mounted) return;
 
-    if (kIsWeb && !_isMobileWeb() && !auth.isAdmin) {
+    // On web desktop, only allow admin and department users
+    if (kIsWeb &&
+        !_isMobileWeb(context) &&
+        !auth.isAdmin &&
+        !auth.isDepartment) {
       await auth.signOut();
       setState(
         () => _desktopBlockError =
-            'This portal is for admin use only. Please use the mobile app.',
+            'This portal is for admin/department use only. Please use the mobile app.',
       );
       return;
     }
 
-    context.go(auth.isAdmin ? '/admin' : '/home');
+    setState(() => _desktopBlockError = null);
+    if (auth.isAdmin) {
+      context.go('/admin');
+    } else if (auth.isDepartment) {
+      context.go('/department');
+    } else {
+      context.go('/home');
+    }
   }
 
-  bool _isMobileWeb() {
+  bool _isMobileWeb(BuildContext context) {
     if (!kIsWeb) return false;
-    final width =
-        WidgetsBinding
-            .instance
-            .platformDispatcher
-            .views
-            .first
-            .physicalSize
-            .width /
-        WidgetsBinding.instance.platformDispatcher.views.first.devicePixelRatio;
-    return width < 768;
+    return MediaQuery.of(context).size.width < 768;
   }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final isWeb = kIsWeb && !_isMobileWeb();
+    final isWeb = kIsWeb && !_isMobileWeb(context);
 
     if (isWeb) {
       return Scaffold(
