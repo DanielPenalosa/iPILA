@@ -383,10 +383,14 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
       return;
     }
     if (_latitude == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please get your GPS location first.')),
-      );
-      return;
+      // DEV: GPS check temporarily skipped for testing
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   const SnackBar(content: Text('Please get your GPS location first.')),
+      // );
+      // return;
+      _latitude = 14.2500; // DEV: default coords inside Pila
+      _longitude = 121.3667;
+      _isInsidePila = true;
     }
     // DEV: location restriction temporarily disabled for testing
     // if (!_isInsidePila) {
@@ -647,7 +651,7 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
                 ),
 
               ElevatedButton.icon(
-                onPressed: (isLoading || !_isInsidePila) ? null : _submit,
+                onPressed: isLoading ? null : _submit,
                 icon: isLoading
                     ? const SizedBox(
                         width: 18,
