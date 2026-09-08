@@ -300,8 +300,11 @@ class ReportDetailScreen extends StatelessWidget {
                 ReportStatusBanner(status: report.currentStatus),
                 const SizedBox(height: 16),
 
-                // Follow Up button (not for own reports)
-                if (!isOwnReport && currentUserId != null) ...[
+                // Follow Up button (not for own reports, only on active reports)
+                if (!isOwnReport &&
+                    currentUserId != null &&
+                    report.currentStatus != AppConstants.statusResolved &&
+                    report.currentStatus != AppConstants.statusRejected) ...[
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
