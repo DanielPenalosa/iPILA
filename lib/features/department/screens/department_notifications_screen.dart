@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
@@ -118,13 +119,7 @@ class DepartmentNotificationsScreen extends StatelessWidget {
                       color: Color(0xFFF9FAFB),
                       indent: 56,
                     ),
-                    itemBuilder: (_, i) => _NotifTile(
-                      n: notifications[i],
-                      onTap: () {
-                        if (!notifications[i].isRead)
-                          _markRead(notifications[i].id);
-                      },
-                    ),
+                    itemBuilder: (_, i) => _NotifTile(n: notifications[i]),
                   ),
                 ),
             ],
@@ -166,8 +161,14 @@ class _Empty extends StatelessWidget {
 
 class _NotifTile extends StatelessWidget {
   final NotificationModel n;
-  final VoidCallback onTap;
-  const _NotifTile({required this.n, required this.onTap});
+  const _NotifTile({required this.n});
+
+  Future<void> _markRead(String docId) async {
+    await FirebaseFirestore.instance
+        .collection(AppConstants.notificationsCollection)
+        .doc(docId)
+        .update({'isRead': true});
+  }
 
   IconData get _icon {
     switch (n.type) {
@@ -201,75 +202,100 @@ class _NotifTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        decoration: BoxDecoration(
-          color: n.isRead ? Colors.transparent : const Color(0xFFFAFAFF),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Icon
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: _color.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
+    final hasReport = n.reportId != null && n.reportId!.isNotEmpty;
+    return MouseRegion(
+      cursor: hasReport ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      child: InkWell(
+        onTap: () {
+          if (!n.isRead) _markRead(n.id);
+          if (hasReport) {
+            context.go('/department/reports/${n.reportId}');
+          }
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          decoration: BoxDecoration(
+            color: n.isRead ? Colors.transparent : const Color(0xFFFAFAFF),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: _color.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(_icon, size: 16, color: _color),
               ),
-              child: Icon(_icon, size: 16, color: _color),
-            ),
-            const SizedBox(width: 14),
-            // Text
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    n.title,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: n.isRead ? FontWeight.w500 : FontWeight.w700,
-                      color: const Color(0xFF111111),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      n.title,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: n.isRead
+                            ? FontWeight.w500
+                            : FontWeight.w700,
+                        color: const Color(0xFF111111),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    n.message,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF6B7280),
+                    const SizedBox(height: 3),
+                    Text(
+                      n.message,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF6B7280),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    DateFormat('MMM d, yyyy · h:mm a').format(n.createdAt),
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Color(0xFFD1D5DB),
+                    const SizedBox(height: 5),
+                    Row(
+                      children: [
+                        Text(
+                          DateFormat(
+                            'MMM d, yyyy · h:mm a',
+                          ).format(n.createdAt),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFFD1D5DB),
+                          ),
+                        ),
+                        if (hasReport) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            '· Tap to view report →',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: _color,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-            // Unread dot
-            if (!n.isRead)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Container(
-                  width: 7,
-                  height: 7,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF6366F1),
-                    shape: BoxShape.circle,
-                  ),
+                  ],
                 ),
               ),
-          ],
+              if (!n.isRead)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Container(
+                    width: 7,
+                    height: 7,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF6366F1),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

@@ -260,98 +260,110 @@ class _NotifCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: notif.isRead ? Colors.white : color.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(10),
-        border: Border(
-          left: BorderSide(
-            color: notif.isRead ? Colors.grey[300]! : color,
-            width: notif.isRead ? 2 : 3,
-          ),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              icon,
-              size: 20,
-              color: notif.isRead ? Colors.grey[400] : color,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          notif.title,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: notif.isRead
-                                ? FontWeight.w500
-                                : FontWeight.w700,
-                            color: notif.isRead
-                                ? AppTheme.textMuted
-                                : AppTheme.textDark,
-                          ),
-                        ),
-                      ),
-                      if (!notif.isRead)
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: color,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    notif.message,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: notif.isRead ? Colors.grey[500] : Colors.grey[700],
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _timeAgo(notif.createdAt),
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.textMuted,
-                    ),
-                  ),
-                ],
+    return MouseRegion(
+      cursor: onView != null
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
+      child: GestureDetector(
+        onTap: onView ?? onRead,
+        child: Container(
+          decoration: BoxDecoration(
+            color: notif.isRead ? Colors.white : color.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(10),
+            border: Border(
+              left: BorderSide(
+                color: notif.isRead ? Colors.grey[300]! : color,
+                width: notif.isRead ? 2 : 3,
               ),
             ),
-            const SizedBox(width: 8),
-            Column(
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (onView != null)
-                  AdminHoverButton(
-                    label: 'View',
-                    onTap: onView!,
-                    color: AppTheme.primaryBlue,
-                    outlined: true,
-                    small: true,
+                Icon(
+                  icon,
+                  size: 20,
+                  color: notif.isRead ? Colors.grey[400] : color,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              notif.title,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: notif.isRead
+                                    ? FontWeight.w500
+                                    : FontWeight.w700,
+                                color: notif.isRead
+                                    ? AppTheme.textMuted
+                                    : AppTheme.textDark,
+                              ),
+                            ),
+                          ),
+                          if (!notif.isRead)
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: color,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        notif.message,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: notif.isRead
+                              ? Colors.grey[500]
+                              : Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Text(
+                            _timeAgo(notif.createdAt),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.textMuted,
+                            ),
+                          ),
+                          if (onView != null) ...[
+                            const SizedBox(width: 8),
+                            Text(
+                              '· Tap to view report →',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: color,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
                   ),
-                if (!notif.isRead) ...[
-                  const SizedBox(height: 4),
+                ),
+                const SizedBox(width: 8),
+                if (!notif.isRead)
                   AdminHoverButton(
                     label: 'Read',
                     onTap: onRead,
@@ -359,10 +371,9 @@ class _NotifCard extends StatelessWidget {
                     outlined: true,
                     small: true,
                   ),
-                ],
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -584,77 +595,90 @@ class _AlertRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border(left: BorderSide(color: _color, width: 3)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+    return MouseRegion(
+      cursor: onView != null
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
+      child: GestureDetector(
+        onTap: onView,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border(left: BorderSide(color: _color, width: 3)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(_icon, size: 18, color: _color),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppTheme.textDark,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: '$_label: ',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: _color,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(_icon, size: 18, color: _color),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    RichText(
+                      text: TextSpan(
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.textDark,
                         ),
+                        children: [
+                          TextSpan(
+                            text: '$_label: ',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: _color,
+                            ),
+                          ),
+                          TextSpan(text: alert.message),
+                        ],
                       ),
-                      TextSpan(text: alert.message),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          alert.time,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.textMuted,
+                          ),
+                        ),
+                        if (onView != null) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            '· Tap to view →',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: _color,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  alert.time,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppTheme.textMuted,
-                  ),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+              AdminHoverButton(
+                label: 'Dismiss',
+                onTap: onDismiss,
+                color: AppTheme.textMuted,
+                outlined: true,
+                small: true,
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          if (onView != null) ...[
-            AdminHoverButton(
-              label: 'View',
-              onTap: onView!,
-              color: AppTheme.primaryBlue,
-              outlined: true,
-              small: true,
-            ),
-            const SizedBox(width: 6),
-          ],
-          AdminHoverButton(
-            label: 'Dismiss',
-            onTap: onDismiss,
-            color: AppTheme.textMuted,
-            outlined: true,
-            small: true,
-          ),
-        ],
+        ),
       ),
     );
   }
