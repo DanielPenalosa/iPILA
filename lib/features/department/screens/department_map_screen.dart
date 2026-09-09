@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -726,226 +727,376 @@ class _ReportDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 0,
+      backgroundColor: Colors.transparent,
       child: Container(
-        width: 500,
-        padding: const EdgeInsets.all(24),
+        width: 480,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 40,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.location_on_outlined,
-                    color: statusColor,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        report.category,
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF111111),
-                        ),
-                      ),
-                      Text(
-                        'Brgy. ${report.barangay}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF9CA3AF),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.close,
-                    size: 18,
-                    color: Color(0xFF9CA3AF),
-                  ),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Divider(color: Color(0xFFF3F4F6)),
-            const SizedBox(height: 12),
-
-            // Status badge
+            // ── Coloured header banner ──────────────────────────────────────
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              padding: const EdgeInsets.fromLTRB(20, 20, 16, 20),
               decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                report.currentStatus,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: statusColor,
+                gradient: LinearGradient(
+                  colors: [
+                    statusColor.withValues(alpha: 0.15),
+                    statusColor.withValues(alpha: 0.04),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
               ),
-            ),
-            const SizedBox(height: 14),
-
-            // Info rows
-            _DialogRow(
-              icon: Icons.person_outline,
-              label: 'Reporter',
-              value: report.isAnonymous ? 'Anonymous' : report.userFullName,
-            ),
-            _DialogRow(
-              icon: Icons.location_on_outlined,
-              label: 'Address',
-              value: report.address.isNotEmpty
-                  ? report.address
-                  : 'Brgy. ${report.barangay}',
-            ),
-            _DialogRow(
-              icon: Icons.calendar_today_outlined,
-              label: 'Reported',
-              value: _timeAgo(report.createdAt),
-            ),
-            _DialogRow(
-              icon: Icons.update_outlined,
-              label: 'Updated',
-              value: DateFormat(
-                'MMM d, yyyy – h:mm a',
-              ).format(report.updatedAt),
-            ),
-            if (report.assignedDepartment != null)
-              _DialogRow(
-                icon: Icons.business_outlined,
-                label: 'Department',
-                value: report.assignedDepartment!,
-              ),
-            const SizedBox(height: 12),
-
-            // Description
-            const Text(
-              'Description',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF9CA3AF),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              report.description,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Color(0xFF374151),
-                height: 1.5,
-              ),
-            ),
-
-            // Photos
-            if (report.photoUrls.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              const Text(
-                'Photos',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF9CA3AF),
-                ),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 80,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: report.photoUrls.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (_, i) => ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      report.photoUrls[i],
-                      width: 80,
-                      height: 80,
-                      fit: BoxFit.cover,
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.location_on_outlined,
+                      color: statusColor,
+                      size: 22,
                     ),
                   ),
-                ),
-              ),
-            ],
-
-            // Latest progress update
-            if (report.progressUpdates.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              const Text(
-                'Latest Update',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF9CA3AF),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Builder(
-                builder: (_) {
-                  final latest = ([
-                    ...report.progressUpdates,
-                  ]..sort((a, b) => b.timestamp.compareTo(a.timestamp))).first;
-                  return Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF9FAFB),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFF3F4F6)),
-                    ),
+                  const SizedBox(width: 14),
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          latest.status,
+                          report.category,
                           style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF374151),
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF111827),
                           ),
                         ),
-                        if (latest.remarks != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            latest.remarks!,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF6B7280),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.place_outlined,
+                              size: 12,
+                              color: Color(0xFF9CA3AF),
                             ),
-                          ),
-                        ],
-                        const SizedBox(height: 4),
-                        Text(
-                          'By ${latest.updatedBy} · ${DateFormat('MMM d, h:mm a').format(latest.timestamp)}',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Color(0xFFD1D5DB),
-                          ),
+                            const SizedBox(width: 3),
+                            Text(
+                              'Brgy. ${report.barangay}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF9CA3AF),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  );
-                },
+                  ),
+                  // Status chip
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                          color: statusColor.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      report.currentStatus,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: statusColor,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: () => Navigator.pop(context),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      child: const Icon(
+                        Icons.close,
+                        size: 18,
+                        color: Color(0xFF9CA3AF),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
+
+            // ── Body ────────────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Info grid
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                    ),
+                    child: Column(
+                      children: [
+                        _DialogRow(
+                          icon: Icons.person_outline,
+                          label: 'Reporter',
+                          value: report.isAnonymous
+                              ? 'Anonymous'
+                              : report.userFullName,
+                        ),
+                        const Divider(height: 16, color: Color(0xFFE5E7EB)),
+                        _DialogRow(
+                          icon: Icons.location_on_outlined,
+                          label: 'Address',
+                          value: report.address.isNotEmpty
+                              ? report.address
+                              : 'Brgy. ${report.barangay}',
+                        ),
+                        const Divider(height: 16, color: Color(0xFFE5E7EB)),
+                        _DialogRow(
+                          icon: Icons.calendar_today_outlined,
+                          label: 'Reported',
+                          value: _timeAgo(report.createdAt),
+                        ),
+                        const Divider(height: 16, color: Color(0xFFE5E7EB)),
+                        _DialogRow(
+                          icon: Icons.update_outlined,
+                          label: 'Updated',
+                          value: DateFormat(
+                            'MMM d, yyyy – h:mm a',
+                          ).format(report.updatedAt),
+                        ),
+                        if (report.assignedDepartment != null) ...[
+                          const Divider(height: 16, color: Color(0xFFE5E7EB)),
+                          _DialogRow(
+                            icon: Icons.business_outlined,
+                            label: 'Department',
+                            value: report.assignedDepartment!,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Description
+                  const Text(
+                    'DESCRIPTION',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF9CA3AF),
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                    ),
+                    child: Text(
+                      report.description.isNotEmpty
+                          ? report.description
+                          : '—',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF374151),
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+
+                  // Photos
+                  if (report.photoUrls.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    const Text(
+                      'PHOTOS',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF9CA3AF),
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 80,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: report.photoUrls.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(width: 8),
+                        itemBuilder: (_, i) => ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            report.photoUrls[i],
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  // Latest progress update
+                  if (report.progressUpdates.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    const Text(
+                      'LATEST UPDATE',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF9CA3AF),
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Builder(
+                      builder: (_) {
+                        final latest = ([
+                          ...report.progressUpdates,
+                        ]..sort(
+                                (a, b) =>
+                                    b.timestamp.compareTo(a.timestamp)))
+                            .first;
+                        return Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF9FAFB),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                                color: const Color(0xFFE5E7EB)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: statusColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    latest.status,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF374151),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (latest.remarks != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  latest.remarks!,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF6B7280),
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 4),
+                              Text(
+                                'By ${latest.updatedBy} · ${DateFormat('MMM d, h:mm a').format(latest.timestamp)}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Color(0xFFD1D5DB),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+
+            // ── Footer ──────────────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              decoration: const BoxDecoration(
+                border:
+                    Border(top: BorderSide(color: Color(0xFFF3F4F6))),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF9CA3AF),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                    ),
+                    child: const Text('Close'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      context.push('/department/reports/${report.id}');
+                    },
+                    icon: const Icon(Icons.open_in_new, size: 16),
+                    label: const Text('View Full Report'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: statusColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 11),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -966,29 +1117,24 @@ class _DialogRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Icon(icon, size: 15, color: const Color(0xFFD1D5DB)),
-          const SizedBox(width: 8),
-          Text(
-            '$label:',
-            style: const TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: const Color(0xFFD1D5DB)),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF374151),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF374151),
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
