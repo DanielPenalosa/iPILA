@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_constants.dart';
@@ -10,7 +11,36 @@ import '../../../data/models/user_model.dart';
 import '../../../data/services/department_service.dart';
 import '../../../data/services/barangay_service.dart';
 import '../../../data/services/user_management_service.dart';
+import '../../../firebase_options.dart';
 import 'admin_shell.dart';
+
+/// Creates a user in a secondary Firebase app so the admin session
+/// is never disturbed. Returns the new user's UID.
+Future<String> _createAuthUserSecondary(
+    String email, String password) async {
+  // Use a unique name so we don't collide with the default app.
+  const secondaryAppName = 'secondary_create_user';
+
+  FirebaseApp? secondaryApp;
+  try {
+    secondaryApp = Firebase.app(secondaryAppName);
+  } catch (_) {
+    // Not yet initialised — create it.
+    secondaryApp = await Firebase.initializeApp(
+      name: secondaryAppName,
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
+
+  final secondaryAuth = FirebaseAuth.instanceFor(app: secondaryApp);
+  final credential = await secondaryAuth.createUserWithEmailAndPassword(
+    email: email,
+    password: password,
+  );
+  final uid = credential.user!.uid;
+  await secondaryAuth.signOut();
+  return uid;
+}
 
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
@@ -180,37 +210,34 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   ? null
                   : () async {
                       setDialog(() => creating = true);
+                      // Capture messenger before async gap so context is safe.
+                      final messenger = ScaffoldMessenger.of(context);
                       try {
-                        // Create Firebase Auth account
-                        final credential = await FirebaseAuth.instance
-                            .createUserWithEmailAndPassword(
-                              email: emailCtrl.text.trim(),
-                              password: passCtrl.text.trim(),
-                            );
+                        final uid = await _createAuthUserSecondary(
+                          emailCtrl.text.trim(),
+                          passCtrl.text.trim(),
+                        );
                         await _deptService.createDepartmentUser(
-                          uid: credential.user!.uid,
+                          uid: uid,
                           fullName: nameCtrl.text.trim().isEmpty
                               ? selectedDept!
                               : nameCtrl.text.trim(),
                           email: emailCtrl.text.trim(),
                           department: selectedDept!,
                         );
-                        // Sign back in as admin (creating another account signs you out)
                         if (ctx.mounted) Navigator.pop(ctx);
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Department account created for $selectedDept',
-                              ),
-                              backgroundColor: AppTheme.successGreen,
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Department account created for $selectedDept',
                             ),
-                          );
-                        }
+                            backgroundColor: AppTheme.successGreen,
+                          ),
+                        );
                       } catch (e) {
                         setDialog(() => creating = false);
                         if (ctx.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          messenger.showSnackBar(
                             SnackBar(
                               content: Text('Error: $e'),
                               backgroundColor: AppTheme.primaryRed,
@@ -294,14 +321,15 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   ? null
                   : () async {
                       setDialog(() => creating = true);
+                      // Capture messenger before async gap so context is safe.
+                      final messenger = ScaffoldMessenger.of(context);
                       try {
-                        final credential = await FirebaseAuth.instance
-                            .createUserWithEmailAndPassword(
-                          email: emailCtrl.text.trim(),
-                          password: passCtrl.text.trim(),
+                        final uid = await _createAuthUserSecondary(
+                          emailCtrl.text.trim(),
+                          passCtrl.text.trim(),
                         );
                         await _brgyService.createBarangayUser(
-                          uid: credential.user!.uid,
+                          uid: uid,
                           fullName: nameCtrl.text.trim().isEmpty
                               ? 'Brgy. $selectedBarangay'
                               : nameCtrl.text.trim(),
@@ -309,19 +337,17 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                           barangay: selectedBarangay!,
                         );
                         if (ctx.mounted) Navigator.pop(ctx);
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  'Barangay account created for $selectedBarangay'),
-                              backgroundColor: AppTheme.successGreen,
-                            ),
-                          );
-                        }
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                'Barangay account created for $selectedBarangay'),
+                            backgroundColor: AppTheme.successGreen,
+                          ),
+                        );
                       } catch (e) {
                         setDialog(() => creating = false);
                         if (ctx.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          messenger.showSnackBar(
                             SnackBar(
                               content: Text('Error: $e'),
                               backgroundColor: AppTheme.primaryRed,
