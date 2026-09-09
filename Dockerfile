@@ -1,6 +1,6 @@
 # iPILA - Municipal Waste Management System
-# Build: 2026-09-09-v8 - Protect admin's own account from suspend/delete actions
-# Force rebuild: 2026-09-09-c
+# Build: 2026-09-09-v9 - Reports page defaults to New filter (Pending + Under Review)
+# Force rebuild: 2026-09-09-d
 FROM ghcr.io/cirruslabs/flutter:stable AS build
 
 WORKDIR /app

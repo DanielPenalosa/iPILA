@@ -24,7 +24,7 @@ class AdminReportsScreen extends StatefulWidget {
 class _AdminReportsScreenState extends State<AdminReportsScreen>
     with SingleTickerProviderStateMixin {
   final ReportService _service = ReportService();
-  String _filter = 'All';
+  String _filter = 'New';
   String _search = '';
   late TabController _tabController;
 
@@ -65,7 +65,8 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
     if (_filter != 'All') {
       list = list.where((r) {
         if (_filter == 'New')
-          return r.currentStatus == AppConstants.statusPending;
+          return r.currentStatus == AppConstants.statusPending ||
+              r.currentStatus == AppConstants.statusUnderReview;
         if (_filter == 'Overdue') return r.currentStatus == 'Overdue';
         return r.currentStatus == _filter;
       }).toList();
