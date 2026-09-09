@@ -764,8 +764,13 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                                       alignment: Alignment.centerLeft,
                                       child: TextButton.icon(
                                         onPressed: () => context.go(
-                                            '/admin/map?lat=${report.latitude}&lng=${report.longitude}&reportId=${report.id}',
-                                          ),
+                                          '/admin/map',
+                                          extra: {
+                                            'lat': report.latitude,
+                                            'lng': report.longitude,
+                                            'reportId': report.id,
+                                          },
+                                        ),
                                         icon: const Icon(
                                           Icons.map_outlined,
                                           size: 15,

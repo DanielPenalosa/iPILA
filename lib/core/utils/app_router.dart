@@ -257,11 +257,14 @@ GoRouter createRouter(AuthProvider authProvider) {
             routes: [
               GoRoute(
                 path: '/admin/map',
-                builder: (_, s) => AdminMapScreen(
-                  focusLat: double.tryParse(s.uri.queryParameters['lat'] ?? ''),
-                  focusLng: double.tryParse(s.uri.queryParameters['lng'] ?? ''),
-                  focusReportId: s.uri.queryParameters['reportId'],
-                ),
+                builder: (_, s) {
+                  final extra = s.extra as Map<String, dynamic>?;
+                  return AdminMapScreen(
+                    focusLat: extra?['lat'] as double?,
+                    focusLng: extra?['lng'] as double?,
+                    focusReportId: extra?['reportId'] as String?,
+                  );
+                },
               ),
             ],
           ),
@@ -332,11 +335,14 @@ GoRouter createRouter(AuthProvider authProvider) {
             routes: [
               GoRoute(
                 path: '/department/map',
-                builder: (_, s) => DepartmentMapScreen(
-                  focusLat: double.tryParse(s.uri.queryParameters['lat'] ?? ''),
-                  focusLng: double.tryParse(s.uri.queryParameters['lng'] ?? ''),
-                  focusReportId: s.uri.queryParameters['reportId'],
-                ),
+                builder: (_, s) {
+                  final extra = s.extra as Map<String, dynamic>?;
+                  return DepartmentMapScreen(
+                    focusLat: extra?['lat'] as double?,
+                    focusLng: extra?['lng'] as double?,
+                    focusReportId: extra?['reportId'] as String?,
+                  );
+                },
               ),
             ],
           ),

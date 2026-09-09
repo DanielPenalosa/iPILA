@@ -31,7 +31,8 @@ class _DepartmentMapScreenState extends State<DepartmentMapScreen> {
   String _filterStatus = 'All';
   String _filterBarangay = 'All';
   String _mapStyle = 'Street';
-  ReportModel? _pendingFocusReport;
+  bool _didFocus = false;
+  bool _didOpenDialog = false;
 
   static const _center = LatLng(14.1637, 121.8647);
 
@@ -48,30 +49,20 @@ class _DepartmentMapScreenState extends State<DepartmentMapScreen> {
   void initState() {
     super.initState();
     _mapController = MapController();
-    if (widget.focusLat != null && widget.focusLng != null) {
-      _scheduleFocus(widget.focusLat!, widget.focusLng!);
-    }
   }
 
   @override
-  void didUpdateWidget(DepartmentMapScreen old) {
-    super.didUpdateWidget(old);
-    if (widget.focusLat != null &&
-        widget.focusLng != null &&
-        (widget.focusLat != old.focusLat ||
-            widget.focusLng != old.focusLng ||
-            widget.focusReportId != old.focusReportId)) {
-      _pendingFocusReport = null; // reset so dialog fires again
-      _scheduleFocus(widget.focusLat!, widget.focusLng!);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didFocus && widget.focusLat != null && widget.focusLng != null) {
+      _didFocus = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _mapController.move(
+          LatLng(widget.focusLat!, widget.focusLng!),
+          16,
+        );
+      });
     }
-  }
-
-  void _scheduleFocus(double lat, double lng) {
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        _mapController.move(LatLng(lat, lng), 16.0);
-      }
-    });
   }
 
   @override
@@ -103,18 +94,21 @@ class _DepartmentMapScreenState extends State<DepartmentMapScreen> {
         final all = snapshot.data ?? [];
         final filtered = _applyFilters(all);
 
-        // Auto-open dialog for focused report once data loads
-        if (widget.focusReportId != null && _pendingFocusReport == null) {
-          final match = all.where((r) => r.id == widget.focusReportId).firstOrNull;
-          if (match != null) {
-            _pendingFocusReport = match;
+        // Auto-open the focused report dialog once data loads
+        if (widget.focusReportId != null && !_didOpenDialog && all.isNotEmpty) {
+          final target = all.cast<ReportModel?>().firstWhere(
+            (r) => r!.id == widget.focusReportId,
+            orElse: () => null,
+          );
+          if (target != null) {
+            _didOpenDialog = true;
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
                 showDialog(
                   context: context,
                   builder: (_) => _ReportDialog(
-                    report: match,
-                    statusColor: _statusColor(match.currentStatus),
+                    report: target,
+                    statusColor: AppTheme.statusColor(target.currentStatus),
                   ),
                 );
               }
@@ -243,11 +237,9 @@ class _DepartmentMapScreenState extends State<DepartmentMapScreen> {
                       children: [
                         FlutterMap(
                           mapController: _mapController,
-                          options: MapOptions(
-                            initialCenter: widget.focusLat != null
-                                ? LatLng(widget.focusLat!, widget.focusLng!)
-                                : _center,
-                            initialZoom: widget.focusLat != null ? 16.0 : 13,
+                          options: const MapOptions(
+                            initialCenter: _center,
+                            initialZoom: 13,
                           ),
                           children: [
                             TileLayer(
@@ -261,11 +253,10 @@ class _DepartmentMapScreenState extends State<DepartmentMapScreen> {
                             MarkerLayer(
                               markers: filtered.map((r) {
                                 final color = _statusColor(r.currentStatus);
-                                final isFocus = r.id == widget.focusReportId;
                                 return Marker(
                                   point: LatLng(r.latitude, r.longitude),
-                                  width: isFocus ? 44 : 36,
-                                  height: isFocus ? 44 : 36,
+                                  width: 36,
+                                  height: 36,
                                   child: GestureDetector(
                                     onTap: () => showDialog(
                                       context: context,
@@ -280,14 +271,14 @@ class _DepartmentMapScreenState extends State<DepartmentMapScreen> {
                                         shape: BoxShape.circle,
                                         border: Border.all(
                                           color: Colors.white,
-                                          width: isFocus ? 3 : 2,
+                                          width: 2,
                                         ),
                                         boxShadow: [
                                           BoxShadow(
                                             color: color.withValues(
-                                              alpha: isFocus ? 0.7 : 0.35,
+                                              alpha: 0.35,
                                             ),
-                                            blurRadius: isFocus ? 12 : 6,
+                                            blurRadius: 6,
                                             offset: const Offset(0, 2),
                                           ),
                                         ],

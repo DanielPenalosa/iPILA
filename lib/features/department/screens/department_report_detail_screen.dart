@@ -342,7 +342,12 @@ class _DepartmentReportDetailScreenState
                         icon: Icons.map_outlined,
                         color: AppTheme.primaryBlue,
                         onTap: () => context.go(
-                          '/department/map?lat=${report.latitude}&lng=${report.longitude}&reportId=${report.id}',
+                          '/department/map',
+                          extra: {
+                            'lat': report.latitude,
+                            'lng': report.longitude,
+                            'reportId': report.id,
+                          },
                         ),
                       ),
                       const SizedBox(width: 8),
