@@ -259,6 +259,10 @@ class _NotificationsTab extends StatelessWidget {
                     color: color,
                     icon: icon,
                     onRead: () => service.markAsRead(n.id),
+                    onDelete: () => FirebaseFirestore.instance
+                        .collection(AppConstants.notificationsCollection)
+                        .doc(n.id)
+                        .delete(),
                     onView: onView,
                     actionLabel: actionLabel,
                   );
@@ -279,12 +283,14 @@ class _NotifCard extends StatelessWidget {
   final VoidCallback onRead;
   final VoidCallback? onView;
   final String? actionLabel;
+  final VoidCallback onDelete;
 
   const _NotifCard({
     required this.notif,
     required this.color,
     required this.icon,
     required this.onRead,
+    required this.onDelete,
     this.onView,
     this.actionLabel,
   });
@@ -394,14 +400,28 @@ class _NotifCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                if (!notif.isRead)
-                  AdminHoverButton(
-                    label: 'Read',
-                    onTap: onRead,
-                    color: AppTheme.textMuted,
-                    outlined: true,
-                    small: true,
-                  ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (!notif.isRead)
+                      AdminHoverButton(
+                        label: 'Read',
+                        onTap: onRead,
+                        color: AppTheme.textMuted,
+                        outlined: true,
+                        small: true,
+                      ),
+                    if (!notif.isRead) const SizedBox(height: 6),
+                    AdminHoverButton(
+                      label: 'Delete',
+                      onTap: onDelete,
+                      color: AppTheme.primaryRed,
+                      outlined: true,
+                      small: true,
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

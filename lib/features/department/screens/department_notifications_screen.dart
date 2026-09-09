@@ -24,13 +24,6 @@ class DepartmentNotificationsScreen extends StatelessWidget {
     await batch.commit();
   }
 
-  Future<void> _markRead(String docId) async {
-    await FirebaseFirestore.instance
-        .collection(AppConstants.notificationsCollection)
-        .doc(docId)
-        .update({'isRead': true});
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
@@ -170,6 +163,13 @@ class _NotifTile extends StatelessWidget {
         .update({'isRead': true});
   }
 
+  Future<void> _delete(String docId) async {
+    await FirebaseFirestore.instance
+        .collection(AppConstants.notificationsCollection)
+        .doc(docId)
+        .delete();
+  }
+
   IconData get _icon {
     switch (n.type) {
       case 'assignment':
@@ -294,6 +294,31 @@ class _NotifTile extends StatelessWidget {
                     ),
                   ),
                 ),
+              const SizedBox(width: 8),
+              MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: () => _delete(n.id),
+                  child: Tooltip(
+                    message: 'Delete',
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: const Color(0xFFFECACA),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.delete_outline,
+                        size: 14,
+                        color: Color(0xFFDC2626),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

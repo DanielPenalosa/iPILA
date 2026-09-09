@@ -1,6 +1,6 @@
 # iPILA - Municipal Waste Management System
-# Build: 2026-09-09-v12 - Swap toolbar rows: controls on top, filters on bottom
-# Force rebuild: 2026-09-09-g
+# Build: 2026-09-09-v13 - Add delete notification for admin and department
+# Force rebuild: 2026-09-09-h
 FROM ghcr.io/cirruslabs/flutter:stable AS build
 
 WORKDIR /app
