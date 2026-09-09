@@ -1,6 +1,6 @@
 # iPILA - Municipal Waste Management System
-# Build: 2026-09-09-v10 - Update report filters to match current statuses
-# Force rebuild: 2026-09-09-e
+# Build: 2026-09-09-v11 - Fix reports toolbar layout: filters row + controls row
+# Force rebuild: 2026-09-09-f
 FROM ghcr.io/cirruslabs/flutter:stable AS build
 
 WORKDIR /app

@@ -828,223 +828,243 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
           children: [
             Container(
               color: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              child: Row(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ..._filters.map(
-                    (f) => Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: _FilterChip(
-                        label: f,
-                        selected: _filter == f,
-                        onTap: () => setState(() => _filter = f),
-                      ),
+                  // ── Row 1: Status filter chips ──────────────────
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: _filters
+                          .map(
+                            (f) => Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: _FilterChip(
+                                label: f,
+                                selected: _filter == f,
+                                onTap: () => setState(() => _filter = f),
+                              ),
+                            ),
+                          )
+                          .toList(),
                     ),
                   ),
-                  const Spacer(),
-                  // Date range filter button
-                  InkWell(
-                    key: _dateButtonKey,
-                    onTap: _showDateRangePicker,
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 9,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: _dateRange != null
-                              ? AppTheme.primaryBlue
-                              : const Color(0xFFE0E0E0),
-                          width: _dateRange != null ? 1.5 : 1,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                        color: _dateRange != null
-                            ? AppTheme.primaryBlue.withValues(alpha: 0.08)
-                            : Colors.white,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.calendar_today_rounded,
-                            size: 16,
-                            color: _dateRange != null
-                                ? AppTheme.primaryBlue
-                                : Colors.grey[600],
+                  const SizedBox(height: 10),
+                  // ── Row 2: Search + Date + Priority + Export ────
+                  Row(
+                    children: [
+                      // Search
+                      SizedBox(
+                        width: 220,
+                        height: 36,
+                        child: TextField(
+                          onChanged: (v) => setState(() => _search = v),
+                          decoration: InputDecoration(
+                            hintText: 'Search reports...',
+                            hintStyle: const TextStyle(fontSize: 12),
+                            prefixIcon: const Icon(Icons.search, size: 16),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 0,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE0E0E0),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE0E0E0),
+                              ),
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _dateRangeLabel,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: _dateRange != null
-                                  ? FontWeight.w600
-                                  : FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Date range picker
+                      InkWell(
+                        key: _dateButtonKey,
+                        onTap: _showDateRangePicker,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          height: 36,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            border: Border.all(
                               color: _dateRange != null
                                   ? AppTheme.primaryBlue
-                                  : Colors.grey[700],
+                                  : const Color(0xFFE0E0E0),
+                              width: _dateRange != null ? 1.5 : 1,
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.arrow_drop_down,
-                            size: 20,
+                            borderRadius: BorderRadius.circular(8),
                             color: _dateRange != null
-                                ? AppTheme.primaryBlue
-                                : Colors.grey[600],
+                                ? AppTheme.primaryBlue.withValues(alpha: 0.08)
+                                : Colors.white,
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (_dateRange != null) ...[
-                    const SizedBox(width: 6),
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _dateRange = null;
-                          _dateRangeLabel = 'All Time';
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryRed.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: AppTheme.primaryRed.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.clear,
-                          size: 16,
-                          color: AppTheme.primaryRed,
-                        ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(width: 12),
-                  SizedBox(
-                    width: 200,
-                    height: 36,
-                    child: TextField(
-                      onChanged: (v) => setState(() => _search = v),
-                      decoration: InputDecoration(
-                        hintText: 'Search reports...',
-                        hintStyle: const TextStyle(fontSize: 12),
-                        prefixIcon: const Icon(Icons.search, size: 16),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE0E0E0),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE0E0E0),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.calendar_today_rounded,
+                                size: 15,
+                                color: _dateRange != null
+                                    ? AppTheme.primaryBlue
+                                    : Colors.grey[600],
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _dateRangeLabel,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: _dateRange != null
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
+                                  color: _dateRange != null
+                                      ? AppTheme.primaryBlue
+                                      : Colors.grey[700],
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.arrow_drop_down,
+                                size: 18,
+                                color: _dateRange != null
+                                    ? AppTheme.primaryBlue
+                                    : Colors.grey[600],
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Priority sort toggle
-                  Tooltip(
-                    message: _sortByPriority
-                        ? 'Sorting by priority'
-                        : 'Sort by priority',
-                    child: InkWell(
-                      onTap: () =>
-                          setState(() => _sortByPriority = !_sortByPriority),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        height: 36,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        decoration: BoxDecoration(
-                          color: _sortByPriority
-                              ? Colors.red.withValues(alpha: 0.1)
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: _sortByPriority
-                                ? Colors.red.withValues(alpha: 0.5)
-                                : const Color(0xFFE0E0E0),
-                            width: _sortByPriority ? 1.5 : 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.local_fire_department_rounded,
-                              size: 15,
-                              color: _sortByPriority
-                                  ? Colors.red[700]
-                                  : Colors.grey[500],
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Priority',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: _sortByPriority
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
-                                color: _sortByPriority
-                                    ? Colors.red[700]
-                                    : Colors.grey[700],
+                      if (_dateRange != null) ...[
+                        const SizedBox(width: 4),
+                        GestureDetector(
+                          onTap: () => setState(() {
+                            _dateRange = null;
+                            _dateRangeLabel = 'All Time';
+                          }),
+                          child: Container(
+                            height: 36,
+                            width: 36,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryRed.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: AppTheme.primaryRed.withValues(
+                                  alpha: 0.3,
+                                ),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Export button
-                  Tooltip(
-                    message: 'Export reports',
-                    child: InkWell(
-                      onTap: () => ReportExportService.showExportDialog(
-                        context,
-                        filtered,
-                        label: 'Export Reports',
-                        filePrefix: 'admin_reports',
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        height: 36,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: const Color(0xFFE0E0E0)),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.download_outlined,
+                            child: const Icon(
+                              Icons.clear,
                               size: 16,
-                              color: Color(0xFF374151),
+                              color: AppTheme.primaryRed,
                             ),
-                            SizedBox(width: 6),
-                            Text(
-                              'Export',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF374151),
+                          ),
+                        ),
+                      ],
+                      const Spacer(),
+                      // Priority sort toggle
+                      Tooltip(
+                        message: _sortByPriority
+                            ? 'Sorting by priority'
+                            : 'Sort by priority',
+                        child: InkWell(
+                          onTap: () => setState(
+                            () => _sortByPriority = !_sortByPriority,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            height: 36,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            decoration: BoxDecoration(
+                              color: _sortByPriority
+                                  ? Colors.red.withValues(alpha: 0.1)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: _sortByPriority
+                                    ? Colors.red.withValues(alpha: 0.5)
+                                    : const Color(0xFFE0E0E0),
+                                width: _sortByPriority ? 1.5 : 1,
                               ),
                             ),
-                          ],
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.local_fire_department_rounded,
+                                  size: 15,
+                                  color: _sortByPriority
+                                      ? Colors.red[700]
+                                      : Colors.grey[500],
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Priority',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: _sortByPriority
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                    color: _sortByPriority
+                                        ? Colors.red[700]
+                                        : Colors.grey[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      // Export button
+                      Tooltip(
+                        message: 'Export reports',
+                        child: InkWell(
+                          onTap: () => ReportExportService.showExportDialog(
+                            context,
+                            filtered,
+                            label: 'Export Reports',
+                            filePrefix: 'admin_reports',
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            height: 36,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: const Color(0xFFE0E0E0),
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.download_outlined,
+                                  size: 16,
+                                  color: Color(0xFF374151),
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Export',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF374151),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 12),
                 ],
               ),
             ),
