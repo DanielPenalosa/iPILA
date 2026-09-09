@@ -100,11 +100,15 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
           .toList();
     }
 
-    // Sort by priority descending if toggled
+    // Filter to only urgent reports if toggled
     if (_sortByPriority) {
+      list = list.where((r) => r.urgencyLevel != null).toList();
+      // Sort within urgent reports by urgency level (High > Medium > Low)
+      const order = {'High': 0, 'Medium': 1, 'Low': 2};
       list.sort((a, b) {
-        final pc = b.priority.compareTo(a.priority);
-        return pc != 0 ? pc : b.createdAt.compareTo(a.createdAt);
+        final uo = (order[a.urgencyLevel] ?? 3)
+            .compareTo(order[b.urgencyLevel] ?? 3);
+        return uo != 0 ? uo : b.createdAt.compareTo(a.createdAt);
       });
     }
 
