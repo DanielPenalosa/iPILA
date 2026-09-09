@@ -9,16 +9,7 @@ import '../../../data/services/report_service.dart';
 import 'admin_shell.dart';
 
 class AdminMapScreen extends StatefulWidget {
-  final double? focusLat;
-  final double? focusLng;
-  final String? focusReportId;
-
-  const AdminMapScreen({
-    super.key,
-    this.focusLat,
-    this.focusLng,
-    this.focusReportId,
-  });
+  const AdminMapScreen({super.key});
 
   @override
   State<AdminMapScreen> createState() => _AdminMapScreenState();
@@ -31,27 +22,11 @@ class _AdminMapScreenState extends State<AdminMapScreen> {
   String _filterCategory = 'All';
   bool _clusterMarkers = true;
   String _mapStyle = 'Street';
-  bool _didFocus = false;
-  bool _didOpenDialog = false;
 
   @override
   void initState() {
     super.initState();
     _mapController = MapController();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_didFocus && widget.focusLat != null && widget.focusLng != null) {
-      _didFocus = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _mapController.move(
-          LatLng(widget.focusLat!, widget.focusLng!),
-          16,
-        );
-      });
-    }
   }
 
   @override
@@ -168,25 +143,6 @@ class _AdminMapScreenState extends State<AdminMapScreen> {
               builder: (context, snapshot) {
                 final reports = snapshot.data ?? [];
                 final filtered = _applyFilters(reports);
-
-                // Auto-open the focused report dialog once data loads
-                if (widget.focusReportId != null && !_didOpenDialog && reports.isNotEmpty) {
-                  final target = reports.cast<ReportModel?>().firstWhere(
-                    (r) => r!.id == widget.focusReportId,
-                    orElse: () => null,
-                  );
-                  if (target != null) {
-                    _didOpenDialog = true;
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) {
-                        showDialog(
-                          context: context,
-                          builder: (_) => _ReportDialog(report: target),
-                        );
-                      }
-                    });
-                  }
-                }
 
                 return Row(
                   children: [
@@ -813,6 +769,7 @@ class _ReportDialog extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 0,
       backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
       child: Container(
         width: 480,
         decoration: BoxDecoration(
@@ -828,7 +785,11 @@ class _ReportDialog extends StatelessWidget {
         ),
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.82,
+            maxHeight: MediaQuery.of(context).size.height -
+                MediaQuery.of(context).viewInsets.bottom -
+                MediaQuery.of(context).padding.top -
+                MediaQuery.of(context).padding.bottom -
+                80,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

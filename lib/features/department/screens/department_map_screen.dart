@@ -11,16 +11,7 @@ import '../../../data/services/department_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class DepartmentMapScreen extends StatefulWidget {
-  final double? focusLat;
-  final double? focusLng;
-  final String? focusReportId;
-
-  const DepartmentMapScreen({
-    super.key,
-    this.focusLat,
-    this.focusLng,
-    this.focusReportId,
-  });
+  const DepartmentMapScreen({super.key});
 
   @override
   State<DepartmentMapScreen> createState() => _DepartmentMapScreenState();
@@ -31,8 +22,6 @@ class _DepartmentMapScreenState extends State<DepartmentMapScreen> {
   String _filterStatus = 'All';
   String _filterBarangay = 'All';
   String _mapStyle = 'Street';
-  bool _didFocus = false;
-  bool _didOpenDialog = false;
 
   static const _center = LatLng(14.1637, 121.8647);
 
@@ -49,20 +38,6 @@ class _DepartmentMapScreenState extends State<DepartmentMapScreen> {
   void initState() {
     super.initState();
     _mapController = MapController();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_didFocus && widget.focusLat != null && widget.focusLng != null) {
-      _didFocus = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _mapController.move(
-          LatLng(widget.focusLat!, widget.focusLng!),
-          16,
-        );
-      });
-    }
   }
 
   @override
@@ -93,28 +68,6 @@ class _DepartmentMapScreenState extends State<DepartmentMapScreen> {
       builder: (context, snapshot) {
         final all = snapshot.data ?? [];
         final filtered = _applyFilters(all);
-
-        // Auto-open the focused report dialog once data loads
-        if (widget.focusReportId != null && !_didOpenDialog && all.isNotEmpty) {
-          final target = all.cast<ReportModel?>().firstWhere(
-            (r) => r!.id == widget.focusReportId,
-            orElse: () => null,
-          );
-          if (target != null) {
-            _didOpenDialog = true;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                showDialog(
-                  context: context,
-                  builder: (_) => _ReportDialog(
-                    report: target,
-                    statusColor: AppTheme.statusColor(target.currentStatus),
-                  ),
-                );
-              }
-            });
-          }
-        }
 
         // Build barangay list from actual reports
         final barangays = [
@@ -777,6 +730,7 @@ class _ReportDialog extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 0,
       backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
       child: Container(
         width: 480,
         decoration: BoxDecoration(
@@ -792,7 +746,11 @@ class _ReportDialog extends StatelessWidget {
         ),
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.82,
+            maxHeight: MediaQuery.of(context).size.height -
+                MediaQuery.of(context).viewInsets.bottom -
+                MediaQuery.of(context).padding.top -
+                MediaQuery.of(context).padding.bottom -
+                80,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
