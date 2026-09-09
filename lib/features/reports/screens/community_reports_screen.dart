@@ -358,8 +358,6 @@ class _CommunityReportCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = AppTheme.statusColor(report.currentStatus);
-    final priorityLabel = _getPriorityLabel(report.priority);
-    final priorityColor = _getPriorityColor(report.priority);
 
     return GestureDetector(
       onTap: onTap,
@@ -431,23 +429,39 @@ class _CommunityReportCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (report.priority > 1)
+                      if (report.urgencyLevel != null)
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: priorityColor.withValues(alpha: 0.12),
+                            color: _urgencyColor(report.urgencyLevel)
+                                .withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Text(
-                            priorityLabel,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: priorityColor,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                report.urgencyLevel == 'Critical'
+                                    ? Icons.arrow_upward_rounded
+                                    : report.urgencyLevel == 'Moderate'
+                                        ? Icons.remove_rounded
+                                        : Icons.arrow_downward_rounded,
+                                size: 10,
+                                color: _urgencyColor(report.urgencyLevel),
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                report.urgencyLevel!,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: _urgencyColor(report.urgencyLevel),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                     ],
@@ -461,6 +475,30 @@ class _CommunityReportCard extends StatelessWidget {
                       fontSize: 13,
                       color: AppTheme.textDark,
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Reporter name
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.person_outline,
+                        size: 14,
+                        color: Colors.grey[500],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        report.isAnonymous
+                            ? 'Anonymous'
+                            : report.userFullName,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontStyle: report.isAnonymous
+                              ? FontStyle.italic
+                              : FontStyle.normal,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -537,33 +575,16 @@ class _CommunityReportCard extends StatelessWidget {
     );
   }
 
-  String _getPriorityLabel(int priority) {
-    switch (priority) {
-      case 5:
-        return 'CRITICAL';
-      case 4:
-        return 'HIGH';
-      case 3:
-        return 'MEDIUM';
-      case 2:
-        return 'LOW';
+  Color _urgencyColor(String? urgency) {
+    switch (urgency) {
+      case 'Critical':
+        return const Color(0xFFDC2626);
+      case 'Moderate':
+        return const Color(0xFFF59E0B);
+      case 'Minor':
+        return const Color(0xFF10B981);
       default:
-        return 'NORMAL';
-    }
-  }
-
-  Color _getPriorityColor(int priority) {
-    switch (priority) {
-      case 5:
-        return Colors.red;
-      case 4:
-        return Colors.orange;
-      case 3:
-        return Colors.amber;
-      case 2:
-        return Colors.blue;
-      default:
-        return Colors.grey;
+        return const Color(0xFF9CA3AF);
     }
   }
 }
