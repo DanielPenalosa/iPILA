@@ -543,11 +543,11 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
 
   Color _urgencyColor(String? urgency) {
     switch (urgency) {
-      case 'High':
+      case 'Critical':
         return const Color(0xFFDC2626);
-      case 'Medium':
+      case 'Moderate':
         return const Color(0xFFF59E0B);
-      case 'Low':
+      case 'Minor':
         return const Color(0xFF10B981);
       default:
         return const Color(0xFF9CA3AF);
@@ -563,7 +563,7 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
           title: const Text('Set Urgency Level'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            children: ['High', 'Medium', 'Low'].map((level) {
+            children: ['Critical', 'Moderate', 'Minor'].map((level) {
               final color = _urgencyColor(level);
               return RadioListTile<String>(
                 value: level,
@@ -572,9 +572,9 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                 title: Row(
                   children: [
                     Icon(
-                      level == 'High'
+                      level == 'Critical'
                           ? Icons.arrow_upward_rounded
-                          : level == 'Low'
+                          : level == 'Minor'
                           ? Icons.arrow_downward_rounded
                           : Icons.remove_rounded,
                       size: 16,

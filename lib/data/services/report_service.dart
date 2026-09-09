@@ -615,9 +615,9 @@ class ReportService {
   /// Auto-derive urgencyLevel from follower count.
   /// Returns null when there are no followers (clears urgency).
   String? _autoUrgency(int followerCount) {
-    if (followerCount >= 3) return 'High';
-    if (followerCount >= 2) return 'Medium';
-    if (followerCount >= 1) return 'Low';
+    if (followerCount >= 3) return 'Critical';
+    if (followerCount >= 2) return 'Moderate';
+    if (followerCount >= 1) return 'Minor';
     return null;
   }
 

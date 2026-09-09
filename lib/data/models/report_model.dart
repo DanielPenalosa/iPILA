@@ -147,7 +147,7 @@ class ReportModel {
   final List<String> followers; // Users tracking this report
   final int followerCount; // Number of followers/supporters
   final int priority; // Auto-calculated priority based on followers
-  final String? urgencyLevel; // Manual urgency: 'High', 'Medium', 'Low'
+  final String? urgencyLevel; // Auto/manual urgency: 'Critical', 'Moderate', 'Minor'
 
   ReportModel({
     required this.id,

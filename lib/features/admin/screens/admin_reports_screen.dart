@@ -104,7 +104,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
     if (_sortByPriority) {
       list = list.where((r) => r.urgencyLevel != null).toList();
       // Sort within urgent reports by urgency level (High > Medium > Low)
-      const order = {'High': 0, 'Medium': 1, 'Low': 2};
+      const order = {'Critical': 0, 'Moderate': 1, 'Minor': 2};
       list.sort((a, b) {
         final uo = (order[a.urgencyLevel] ?? 3)
             .compareTo(order[b.urgencyLevel] ?? 3);
@@ -1539,9 +1539,9 @@ class _ReportRow extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            report.urgencyLevel == 'High'
+                            report.urgencyLevel == 'Critical'
                                 ? Icons.arrow_upward_rounded
-                                : report.urgencyLevel == 'Medium'
+                                : report.urgencyLevel == 'Moderate'
                                     ? Icons.remove_rounded
                                     : Icons.arrow_downward_rounded,
                             size: 10,
@@ -1609,11 +1609,11 @@ class _ReportRow extends StatelessWidget {
 
 Color _urgencyColor(String? urgency) {
   switch (urgency) {
-    case 'High':
+    case 'Critical':
       return const Color(0xFFDC2626);
-    case 'Medium':
+    case 'Moderate':
       return const Color(0xFFF59E0B);
-    case 'Low':
+    case 'Minor':
       return const Color(0xFF10B981);
     default:
       return const Color(0xFF9CA3AF);
