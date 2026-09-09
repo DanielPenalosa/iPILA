@@ -24,7 +24,7 @@ class AdminReportsScreen extends StatefulWidget {
 class _AdminReportsScreenState extends State<AdminReportsScreen>
     with SingleTickerProviderStateMixin {
   final ReportService _service = ReportService();
-  String _filter = 'New';
+  String _filter = 'Pending';
   String _search = '';
   late TabController _tabController;
 
@@ -42,7 +42,17 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
   final GlobalKey _dateButtonKey = GlobalKey();
   OverlayEntry? _calendarOverlay;
 
-  static const _filters = ['All', 'New', 'In Progress', 'Completed', 'Overdue'];
+  static const _filters = [
+    'All',
+    'Pending',
+    'Under Review',
+    'Assigned',
+    'In Progress',
+    'Done',
+    'Needs Revision',
+    'Resolved',
+    'Rejected',
+  ];
   bool _sortByPriority = false;
 
   @override
@@ -63,13 +73,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
 
     // Apply status filter
     if (_filter != 'All') {
-      list = list.where((r) {
-        if (_filter == 'New')
-          return r.currentStatus == AppConstants.statusPending ||
-              r.currentStatus == AppConstants.statusUnderReview;
-        if (_filter == 'Overdue') return r.currentStatus == 'Overdue';
-        return r.currentStatus == _filter;
-      }).toList();
+      list = list.where((r) => r.currentStatus == _filter).toList();
     }
 
     // Apply date range filter
