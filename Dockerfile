@@ -1,6 +1,6 @@
 # iPILA - Municipal Waste Management System
-# Build: 2026-09-09-v13 - Add delete notification for admin and department
-# Force rebuild: 2026-09-09-h
+# Build: 2026-09-10-v14 - Redesign map report modal + fix View Full Report navigation
+# Force rebuild: 2026-09-10-a
 FROM ghcr.io/cirruslabs/flutter:stable AS build
 
 WORKDIR /app
