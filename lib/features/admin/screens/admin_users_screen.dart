@@ -607,7 +607,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     .where((u) => u.isPending && u.role == 'resident')
                     .toList();
                 final active = all.where((u) => u.isApproved).toList();
-                final filtered = _search.isEmpty
+                final filteredAll = _search.isEmpty
                     ? active
                     : active
                           .where(
@@ -620,6 +620,17 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                 ),
                           )
                           .toList();
+                // Split by role
+                final citizens = filteredAll
+                    .where((u) => u.role == 'resident')
+                    .toList();
+                final deptUsers = filteredAll
+                    .where((u) => u.isDepartment)
+                    .toList();
+                final admins = filteredAll
+                    .where((u) => u.isAdmin)
+                    .toList();
+                final filtered = filteredAll;
 
                 return SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
@@ -824,87 +835,223 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                               )
                             : ValueListenableBuilder<Set<String>>(
                                 valueListenable: _selectedActive,
-                                builder: (_, sel, __) => Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Bulk bar
-                                    if (sel.isNotEmpty)
-                                      _UserBulkBar(
-                                        count: sel.length,
-                                        actions: [
-                                          _BulkAction(
-                                            label: 'Suspend',
-                                            color: Colors.orange,
-                                            onTap: () =>
-                                                _bulkActiveAction('suspend'),
+                                builder: (_, sel, __) {
+                                  // Shared table header
+                                  final tableHeader = _TableHeader(
+                                    cols: const [
+                                      '',
+                                      'NAME',
+                                      'EMAIL',
+                                      'BARANGAY',
+                                      'PHONE',
+                                      'ROLE',
+                                      'STATUS',
+                                      'REGISTERED',
+                                      'ACTIONS',
+                                    ],
+                                    widths: const [
+                                      36,
+                                      150,
+                                      180,
+                                      110,
+                                      120,
+                                      70,
+                                      80,
+                                      100,
+                                      0,
+                                    ],
+                                    selectAll:
+                                        filtered.isNotEmpty &&
+                                        sel.length == filtered.length,
+                                    onSelectAll: () {
+                                      if (sel.length == filtered.length) {
+                                        _selectedActive.value = {};
+                                      } else {
+                                        _selectedActive.value = Set.from(
+                                          filtered.map((u) => u.uid),
+                                        );
+                                      }
+                                    },
+                                  );
+
+                                  Widget buildGroup(
+                                    List<UserModel> users,
+                                    String label,
+                                    Color accent,
+                                    IconData icon,
+                                  ) {
+                                    if (users.isEmpty) return const SizedBox();
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // Group label bar
+                                        Container(
+                                          margin: const EdgeInsets.fromLTRB(
+                                            16,
+                                            12,
+                                            16,
+                                            0,
                                           ),
-                                          _BulkAction(
-                                            label: 'Reactivate',
-                                            color: AppTheme.successGreen,
-                                            onTap: () =>
-                                                _bulkActiveAction('reactivate'),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 7,
                                           ),
-                                          _BulkAction(
-                                            label: 'Delete',
-                                            color: AppTheme.primaryRed,
-                                            onTap: () =>
-                                                _bulkActiveAction('delete'),
+                                          decoration: BoxDecoration(
+                                            color: accent.withValues(
+                                              alpha: 0.07,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: accent.withValues(
+                                                alpha: 0.25,
+                                              ),
+                                            ),
                                           ),
-                                        ],
-                                        onClear: () =>
-                                            _selectedActive.value = {},
-                                      ),
-                                    _TableHeader(
-                                      cols: const [
-                                        '',
-                                        'NAME',
-                                        'EMAIL',
-                                        'BARANGAY',
-                                        'PHONE',
-                                        'ROLE',
-                                        'STATUS',
-                                        'REGISTERED',
-                                        'ACTIONS',
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                icon,
+                                                size: 14,
+                                                color: accent,
+                                              ),
+                                              const SizedBox(width: 7),
+                                              Text(
+                                                label,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: accent,
+                                                  letterSpacing: 0.3,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 1,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: accent.withValues(
+                                                    alpha: 0.15,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                                child: Text(
+                                                  '${users.length}',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: accent,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        // Rows with left accent border
+                                        Container(
+                                          margin: const EdgeInsets.fromLTRB(
+                                            16,
+                                            6,
+                                            16,
+                                            0,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            border: Border(
+                                              left: BorderSide(
+                                                color: accent,
+                                                width: 3,
+                                              ),
+                                            ),
+                                            borderRadius:
+                                                const BorderRadius.only(
+                                                  bottomLeft: Radius.circular(
+                                                    4,
+                                                  ),
+                                                  topLeft: Radius.circular(4),
+                                                ),
+                                          ),
+                                          child: Column(
+                                            children: users.map((u) {
+                                              return _ActiveRow(
+                                                user: u,
+                                                isSelected: sel.contains(u.uid),
+                                                onToggleSelect: () =>
+                                                    _toggleActive(u.uid),
+                                                onToggleSuspend: () =>
+                                                    u.isActive
+                                                    ? _handleSuspend(u)
+                                                    : _handleReactivate(u),
+                                                onDelete: () =>
+                                                    _handleDeleteAccount(u),
+                                                accentColor: accent,
+                                              );
+                                            }).toList(),
+                                          ),
+                                        ),
                                       ],
-                                      widths: const [
-                                        36,
-                                        150,
-                                        180,
-                                        110,
-                                        120,
-                                        70,
-                                        80,
-                                        100,
-                                        0,
-                                      ],
-                                      selectAll:
-                                          filtered.isNotEmpty &&
-                                          sel.length == filtered.length,
-                                      onSelectAll: () {
-                                        if (sel.length == filtered.length) {
-                                          _selectedActive.value = {};
-                                        } else {
-                                          _selectedActive.value = Set.from(
-                                            filtered.map((u) => u.uid),
-                                          );
-                                        }
-                                      },
-                                    ),
-                                    const Divider(height: 1),
-                                    ...filtered.map(
-                                      (u) => _ActiveRow(
-                                        user: u,
-                                        isSelected: sel.contains(u.uid),
-                                        onToggleSelect: () =>
-                                            _toggleActive(u.uid),
-                                        onToggleSuspend: () => u.isActive
-                                            ? _handleSuspend(u)
-                                            : _handleReactivate(u),
-                                        onDelete: () => _handleDeleteAccount(u),
+                                    );
+                                  }
+
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      if (sel.isNotEmpty)
+                                        _UserBulkBar(
+                                          count: sel.length,
+                                          actions: [
+                                            _BulkAction(
+                                              label: 'Suspend',
+                                              color: Colors.orange,
+                                              onTap: () =>
+                                                  _bulkActiveAction('suspend'),
+                                            ),
+                                            _BulkAction(
+                                              label: 'Reactivate',
+                                              color: AppTheme.successGreen,
+                                              onTap: () => _bulkActiveAction(
+                                                'reactivate',
+                                              ),
+                                            ),
+                                            _BulkAction(
+                                              label: 'Delete',
+                                              color: AppTheme.primaryRed,
+                                              onTap: () =>
+                                                  _bulkActiveAction('delete'),
+                                            ),
+                                          ],
+                                          onClear: () =>
+                                              _selectedActive.value = {},
+                                        ),
+                                      tableHeader,
+                                      const Divider(height: 1),
+                                      buildGroup(
+                                        citizens,
+                                        'Citizens',
+                                        AppTheme.primaryBlue,
+                                        Icons.people_outline,
                                       ),
-                                    ),
-                                  ],
-                                ),
+                                      buildGroup(
+                                        deptUsers,
+                                        'Department',
+                                        Colors.purple,
+                                        Icons.business_outlined,
+                                      ),
+                                      buildGroup(
+                                        admins,
+                                        'Admin',
+                                        const Color(0xFFDC2626),
+                                        Icons.admin_panel_settings_outlined,
+                                      ),
+                                      const SizedBox(height: 8),
+                                    ],
+                                  );
+                                },
                               ),
                       ),
                       const SizedBox(height: 24),
@@ -1289,19 +1436,24 @@ class _ActiveRow extends StatelessWidget {
   final VoidCallback onToggleSelect;
   final VoidCallback onToggleSuspend;
   final VoidCallback onDelete;
+  final Color? accentColor;
   const _ActiveRow({
     required this.user,
     required this.isSelected,
     required this.onToggleSelect,
     required this.onToggleSuspend,
     required this.onDelete,
+    this.accentColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final date = DateFormat('MMM d, y').format(user.createdAt);
+    final accent = accentColor ?? AppTheme.primaryBlue;
     return Container(
-      color: isSelected ? const Color(0xFFF0F4FF) : null,
+      color: isSelected
+          ? accent.withValues(alpha: 0.07)
+          : null,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Row(
@@ -1320,13 +1472,13 @@ class _ActiveRow extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 14,
-                    backgroundColor: AppTheme.primaryBlue,
+                    backgroundColor: accent.withValues(alpha: 0.15),
                     child: Text(
                       user.fullName.isNotEmpty
                           ? user.fullName[0].toUpperCase()
                           : '?',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: accent,
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1370,14 +1522,15 @@ class _ActiveRow extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                  color: accent.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: accent.withValues(alpha: 0.3)),
                 ),
                 child: Text(
                   user.role,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
-                    color: AppTheme.primaryBlue,
+                    color: accent,
                     fontWeight: FontWeight.w600,
                   ),
                   textAlign: TextAlign.center,
