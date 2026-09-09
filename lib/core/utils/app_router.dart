@@ -30,12 +30,14 @@ import '../../features/department/screens/department_report_detail_screen.dart';
 import '../../features/department/screens/department_map_screen.dart';
 import '../../features/department/screens/department_notifications_screen.dart';
 import '../../features/department/screens/department_settings_screen.dart';
+import '../../features/department/screens/department_analytics_screen.dart';
 import '../../features/barangay/screens/barangay_scaffold_widget.dart';
 import '../../features/barangay/screens/barangay_dashboard_screen.dart';
 import '../../features/barangay/screens/barangay_reports_screen.dart';
 import '../../features/barangay/screens/barangay_report_detail_screen.dart';
 import '../../features/barangay/screens/barangay_map_screen.dart';
 import '../../features/barangay/screens/barangay_notifications_screen.dart';
+import '../../features/barangay/screens/barangay_analytics_screen.dart';
 import '../../features/barangay/screens/barangay_settings_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -69,11 +71,13 @@ final _adminAlertsKey = GlobalKey<NavigatorState>();
 final _adminSettingsKey = GlobalKey<NavigatorState>();
 final _deptDashKey = GlobalKey<NavigatorState>();
 final _deptReportsKey = GlobalKey<NavigatorState>();
+final _deptAnalyticsKey = GlobalKey<NavigatorState>();
 final _deptMapKey = GlobalKey<NavigatorState>();
 final _deptNotificationsKey = GlobalKey<NavigatorState>();
 final _deptSettingsKey = GlobalKey<NavigatorState>();
 final _brgyDashKey = GlobalKey<NavigatorState>();
 final _brgyReportsKey = GlobalKey<NavigatorState>();
+final _brgyAnalyticsKey = GlobalKey<NavigatorState>();
 final _brgyMapKey = GlobalKey<NavigatorState>();
 final _brgyNotificationsKey = GlobalKey<NavigatorState>();
 final _brgySettingsKey = GlobalKey<NavigatorState>();
@@ -342,6 +346,15 @@ GoRouter createRouter(AuthProvider authProvider) {
             ],
           ),
           StatefulShellBranch(
+            navigatorKey: _deptAnalyticsKey,
+            routes: [
+              GoRoute(
+                path: '/department/analytics',
+                builder: (_, s) => const DepartmentAnalyticsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
             navigatorKey: _deptMapKey,
             routes: [
               GoRoute(
@@ -400,6 +413,15 @@ GoRouter createRouter(AuthProvider authProvider) {
                     ),
                   ),
                 ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _brgyAnalyticsKey,
+            routes: [
+              GoRoute(
+                path: '/barangay/analytics',
+                builder: (_, s) => const BarangayAnalyticsScreen(),
               ),
             ],
           ),

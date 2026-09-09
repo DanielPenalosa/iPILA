@@ -20,9 +20,10 @@ class _BarangayScaffoldWidgetState extends State<BarangayScaffoldWidget> {
   static const _navItems = [
     _NavItem(label: 'Dashboard', icon: Icons.grid_view_rounded, index: 0),
     _NavItem(label: 'Reports', icon: Icons.assignment_outlined, index: 1),
-    _NavItem(label: 'Map', icon: Icons.map_outlined, index: 2),
-    _NavItem(label: 'Notifications', icon: Icons.notifications_outlined, index: 3),
-    _NavItem(label: 'Settings', icon: Icons.settings_outlined, index: 4),
+    _NavItem(label: 'Analytics', icon: Icons.bar_chart_outlined, index: 2),
+    _NavItem(label: 'Map', icon: Icons.map_outlined, index: 3),
+    _NavItem(label: 'Notifications', icon: Icons.notifications_outlined, index: 4),
+    _NavItem(label: 'Settings', icon: Icons.settings_outlined, index: 5),
   ];
 
   @override
@@ -98,7 +99,7 @@ class _BarangayScaffoldWidgetState extends State<BarangayScaffoldWidget> {
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       itemCount: _navItems.length,
                       itemBuilder: (_, i) {
-                        final badge = i == 3 && unread > 0 ? unread : null;
+                        final badge = i == 4 && unread > 0 ? unread : null;
                         return _SidebarItem(
                           item: _navItems[i],
                           isActive: currentIndex == i,
