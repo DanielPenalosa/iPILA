@@ -1,6 +1,6 @@
 # iPILA - Municipal Waste Management System
-# Build: 2026-09-09-v7 - Grouped users by role (Citizens / Department / Admin) with color outlines
-# Force rebuild: 2026-09-09-b
+# Build: 2026-09-09-v8 - Protect admin's own account from suspend/delete actions
+# Force rebuild: 2026-09-09-c
 FROM ghcr.io/cirruslabs/flutter:stable AS build
 
 WORKDIR /app

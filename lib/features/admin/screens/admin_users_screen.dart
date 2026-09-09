@@ -880,6 +880,10 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                     Color accent,
                                     IconData icon,
                                   ) {
+                                    final currentUid = FirebaseAuth
+                                        .instance
+                                        .currentUser
+                                        ?.uid;
                                     if (users.isEmpty) return const SizedBox();
                                     return Column(
                                       crossAxisAlignment:
@@ -989,6 +993,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                                 onDelete: () =>
                                                     _handleDeleteAccount(u),
                                                 accentColor: accent,
+                                                isSelf: u.uid == currentUid,
                                               );
                                             }).toList(),
                                           ),
@@ -1437,6 +1442,7 @@ class _ActiveRow extends StatelessWidget {
   final VoidCallback onToggleSuspend;
   final VoidCallback onDelete;
   final Color? accentColor;
+  final bool isSelf;
   const _ActiveRow({
     required this.user,
     required this.isSelected,
@@ -1444,6 +1450,7 @@ class _ActiveRow extends StatelessWidget {
     required this.onToggleSuspend,
     required this.onDelete,
     this.accentColor,
+    this.isSelf = false,
   });
 
   @override
@@ -1460,11 +1467,13 @@ class _ActiveRow extends StatelessWidget {
           children: [
             SizedBox(
               width: 36,
-              child: Checkbox(
-                value: isSelected,
-                onChanged: (_) => onToggleSelect(),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
+              child: isSelf
+                  ? const SizedBox(width: 36)
+                  : Checkbox(
+                      value: isSelected,
+                      onChanged: (_) => onToggleSelect(),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
             ),
             SizedBox(
               width: 150,
@@ -1568,19 +1577,52 @@ class _ActiveRow extends StatelessWidget {
             Expanded(
               child: Row(
                 children: [
-                  _ActionBtn(
-                    label: user.isActive ? 'Suspend' : 'Reactivate',
-                    color: user.isActive
-                        ? Colors.orange
-                        : AppTheme.successGreen,
-                    onTap: onToggleSuspend,
-                  ),
-                  const SizedBox(width: 8),
-                  _ActionBtn(
-                    label: 'Delete',
-                    color: AppTheme.primaryRed,
-                    onTap: onDelete,
-                  ),
+                  if (isSelf)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.lock_outline,
+                            size: 12,
+                            color: Color(0xFF9CA3AF),
+                          ),
+                          SizedBox(width: 5),
+                          Text(
+                            'Your account',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF9CA3AF),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else ...[
+                    _ActionBtn(
+                      label: user.isActive ? 'Suspend' : 'Reactivate',
+                      color: user.isActive
+                          ? Colors.orange
+                          : AppTheme.successGreen,
+                      onTap: onToggleSuspend,
+                    ),
+                    const SizedBox(width: 8),
+                    _ActionBtn(
+                      label: 'Delete',
+                      color: AppTheme.primaryRed,
+                      onTap: onDelete,
+                    ),
+                  ],
                 ],
               ),
             ),
