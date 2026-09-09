@@ -24,6 +24,21 @@ class _DepartmentReportDetailScreenState
   final _service = DepartmentService();
   bool _submitting = false;
 
+  void _openImageViewer(
+    BuildContext context,
+    List<String> urls,
+    int initialIndex,
+  ) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (_) => _FullScreenImageViewer(
+        urls: urls,
+        initialIndex: initialIndex,
+      ),
+    );
+  }
+
   void _showUpdateSheet(ReportModel report) {
     final auth = context.read<AuthProvider>();
     String? selectedStatus;
@@ -241,125 +256,6 @@ class _DepartmentReportDetailScreenState
     );
   }
 
-  void _showImageViewer(
-    BuildContext context,
-    List<String> urls,
-    int initialIndex,
-  ) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.9),
-      builder: (ctx) {
-        int current = initialIndex;
-        return StatefulBuilder(
-          builder: (ctx, setDialog) => Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding: const EdgeInsets.all(12),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                InteractiveViewer(
-                  minScale: 0.5,
-                  maxScale: 5.0,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      urls[current],
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, e, s) => const Padding(
-                        padding: EdgeInsets.all(40),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.broken_image,
-                              size: 56,
-                              color: Colors.white54,
-                            ),
-                            SizedBox(height: 12),
-                            Text(
-                              'Failed to load image',
-                              style: TextStyle(color: Colors.white54),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                // Close button
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.close,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ),
-                // Counter badge
-                Positioned(
-                  top: 4,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '${current + 1} / ${urls.length}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                // Prev button
-                if (urls.length > 1 && current > 0)
-                  Positioned(
-                    left: 0,
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.chevron_left,
-                        color: Colors.white,
-                        size: 36,
-                      ),
-                      onPressed: () => setDialog(() => current = current - 1),
-                    ),
-                  ),
-                // Next button
-                if (urls.length > 1 && current < urls.length - 1)
-                  Positioned(
-                    right: 0,
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.chevron_right,
-                        color: Colors.white,
-                        size: 36,
-                      ),
-                      onPressed: () => setDialog(() => current = current + 1),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -554,53 +450,23 @@ class _DepartmentReportDetailScreenState
                                     scrollDirection: Axis.horizontal,
                                     itemCount: report.photoUrls.length,
                                     itemBuilder: (_, i) => GestureDetector(
-                                      onTap: () => _showImageViewer(
+                                      onTap: () => _openImageViewer(
                                         context,
                                         report.photoUrls,
                                         i,
                                       ),
                                       child: Container(
-                                        margin: const EdgeInsets.only(
-                                          right: 10,
-                                        ),
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                          child: Stack(
-                                            alignment: Alignment.center,
-                                            children: [
-                                              Image.network(
-                                                report.photoUrls[i],
-                                                width: 140,
-                                                height: 140,
-                                                fit: BoxFit.cover,
-                                              ),
-                                              Positioned(
-                                                bottom: 6,
-                                                right: 6,
-                                                child: Container(
-                                                  padding: const EdgeInsets.all(
-                                                    4,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.black
-                                                        .withValues(
-                                                          alpha: 0.45,
-                                                        ),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          6,
-                                                        ),
-                                                  ),
-                                                  child: const Icon(
-                                                    Icons.zoom_in_rounded,
-                                                    size: 14,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
+                                        margin: const EdgeInsets.only(right: 10),
+                                        child: MouseRegion(
+                                          cursor: SystemMouseCursors.click,
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(10),
+                                            child: Image.network(
+                                              report.photoUrls[i],
+                                              width: 140,
+                                              height: 140,
+                                              fit: BoxFit.cover,
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -660,14 +526,24 @@ class _DepartmentReportDetailScreenState
                                                 ),
                                               ),
                                               const SizedBox(height: 8),
-                                              AspectRatio(
-                                                aspectRatio: 4 / 3,
-                                                child: ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  child: Image.network(
-                                                    report.photoUrls.first,
-                                                    fit: BoxFit.cover,
+                                              GestureDetector(
+                                                onTap: () => _openImageViewer(
+                                                  context,
+                                                  report.photoUrls,
+                                                  0,
+                                                ),
+                                                child: MouseRegion(
+                                                  cursor: SystemMouseCursors.click,
+                                                  child: AspectRatio(
+                                                    aspectRatio: 4 / 3,
+                                                    child: ClipRRect(
+                                                      borderRadius:
+                                                          BorderRadius.circular(8),
+                                                      child: Image.network(
+                                                        report.photoUrls.first,
+                                                        fit: BoxFit.cover,
+                                                      ),
+                                                    ),
                                                   ),
                                                 ),
                                               ),
@@ -712,14 +588,24 @@ class _DepartmentReportDetailScreenState
                                                 ),
                                               ),
                                               const SizedBox(height: 8),
-                                              AspectRatio(
-                                                aspectRatio: 4 / 3,
-                                                child: ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                  child: Image.network(
-                                                    report.afterPhotoUrl!,
-                                                    fit: BoxFit.cover,
+                                              GestureDetector(
+                                                onTap: () => _openImageViewer(
+                                                  context,
+                                                  [report.afterPhotoUrl!],
+                                                  0,
+                                                ),
+                                                child: MouseRegion(
+                                                  cursor: SystemMouseCursors.click,
+                                                  child: AspectRatio(
+                                                    aspectRatio: 4 / 3,
+                                                    child: ClipRRect(
+                                                      borderRadius:
+                                                          BorderRadius.circular(8),
+                                                      child: Image.network(
+                                                        report.afterPhotoUrl!,
+                                                        fit: BoxFit.cover,
+                                                      ),
+                                                    ),
                                                   ),
                                                 ),
                                               ),
@@ -1119,7 +1005,165 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-// ── Full status timeline (all pipeline steps) ─────────────────────────────────
+// ── Full-screen image viewer ──────────────────────────────────────────────────
+
+class _FullScreenImageViewer extends StatefulWidget {
+  final List<String> urls;
+  final int initialIndex;
+  const _FullScreenImageViewer({
+    required this.urls,
+    required this.initialIndex,
+  });
+
+  @override
+  State<_FullScreenImageViewer> createState() => _FullScreenImageViewerState();
+}
+
+class _FullScreenImageViewerState extends State<_FullScreenImageViewer> {
+  late int _current;
+  late final PageController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _current = widget.initialIndex;
+    _ctrl = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: EdgeInsets.zero,
+      child: Stack(
+        children: [
+          // Page view
+          PageView.builder(
+            controller: _ctrl,
+            itemCount: widget.urls.length,
+            onPageChanged: (i) => setState(() => _current = i),
+            itemBuilder: (_, i) => InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 5.0,
+              child: Center(
+                child: Image.network(
+                  widget.urls[i],
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
+
+          // Close button
+          Positioned(
+            top: 16,
+            right: 16,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                padding: const EdgeInsets.all(8),
+                child: const Icon(Icons.close, color: Colors.white, size: 20),
+              ),
+            ),
+          ),
+
+          // Prev arrow
+          if (_current > 0)
+            Positioned(
+              left: 12,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: GestureDetector(
+                  onTap: () => _ctrl.previousPage(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeInOut,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: const Icon(
+                      Icons.chevron_left,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Next arrow
+          if (_current < widget.urls.length - 1)
+            Positioned(
+              right: 12,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: GestureDetector(
+                  onTap: () => _ctrl.nextPage(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeInOut,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: const Icon(
+                      Icons.chevron_right,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Page indicator
+          if (widget.urls.length > 1)
+            Positioned(
+              bottom: 20,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  widget.urls.length,
+                  (i) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: _current == i ? 18 : 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: _current == i
+                          ? Colors.white
+                          : Colors.white54,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 
 class _StatusTimeline extends StatelessWidget {
   final List<ReportStatus> history;

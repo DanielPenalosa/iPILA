@@ -1,6 +1,6 @@
 # iPILA - Municipal Waste Management System
-# Build: 2026-09-08-v5 - Comments/ratings, follow concern, admin alerts, priority system
-# Force rebuild: 2026-09-08
+# Build: 2026-09-09-v6 - Clickable images in department report detail (submitted photos + resolution evidence)
+# Force rebuild: 2026-09-09
 FROM ghcr.io/cirruslabs/flutter:stable AS build
 
 WORKDIR /app
