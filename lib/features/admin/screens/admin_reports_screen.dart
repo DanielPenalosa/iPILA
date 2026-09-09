@@ -1499,25 +1499,68 @@ class _ReportRow extends StatelessWidget {
             ),
             SizedBox(
               width: 110,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  report.currentStatus,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: color,
-                    fontWeight: FontWeight.w600,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      report.currentStatus,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                  if (report.urgencyLevel != null) ...[
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _urgencyColor(report.urgencyLevel)
+                            .withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            report.urgencyLevel == 'High'
+                                ? Icons.arrow_upward_rounded
+                                : report.urgencyLevel == 'Medium'
+                                    ? Icons.remove_rounded
+                                    : Icons.arrow_downward_rounded,
+                            size: 10,
+                            color: _urgencyColor(report.urgencyLevel),
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            report.urgencyLevel!,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: _urgencyColor(report.urgencyLevel),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             Expanded(
@@ -1561,6 +1604,19 @@ class _ReportRow extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+Color _urgencyColor(String? urgency) {
+  switch (urgency) {
+    case 'High':
+      return const Color(0xFFDC2626);
+    case 'Medium':
+      return const Color(0xFFF59E0B);
+    case 'Low':
+      return const Color(0xFF10B981);
+    default:
+      return const Color(0xFF9CA3AF);
   }
 }
 
