@@ -23,6 +23,7 @@ import '../../features/admin/screens/admin_settings_screen.dart';
 import '../../features/analytics/screens/analytics_screen.dart';
 import '../../features/alerts/screens/alerts_screen.dart';
 import '../../features/help/screens/faq_screen.dart';
+import '../../features/profile/screens/profile_screen.dart';
 import '../../features/department/screens/department_scaffold_widget.dart';
 import '../../features/department/screens/department_dashboard_screen.dart';
 import '../../features/department/screens/department_reports_screen.dart';
@@ -504,83 +505,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-    final user = auth.user;
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('My Profile')),
-      body: user == null
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                const SizedBox(height: 20),
-                const CircleAvatar(
-                  radius: 40,
-                  backgroundColor: Color(0xFF0038A8),
-                  child: Icon(Icons.person, size: 40, color: Colors.white),
-                ),
-                const SizedBox(height: 12),
-                Center(
-                  child: Text(
-                    user.fullName,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Center(
-                  child: Text(
-                    'Brgy. ${user.barangay}',
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Card(
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.email_outlined),
-                        title: const Text('Email'),
-                        subtitle: Text(user.email),
-                      ),
-                      ListTile(
-                        leading: const Icon(Icons.phone_outlined),
-                        title: const Text('Phone'),
-                        subtitle: Text(user.phone),
-                      ),
-                      ListTile(
-                        leading: const Icon(Icons.badge_outlined),
-                        title: const Text('Role'),
-                        subtitle: Text(user.role.toUpperCase()),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: () => auth.signOut(),
-                  icon: const Icon(Icons.logout, color: Colors.red),
-                  label: const Text(
-                    'Sign Out',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red),
-                  ),
-                ),
-              ],
-            ),
     );
   }
 }
