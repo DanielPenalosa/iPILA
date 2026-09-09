@@ -832,26 +832,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Row 1: Status filter chips ──────────────────
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: _filters
-                          .map(
-                            (f) => Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: _FilterChip(
-                                label: f,
-                                selected: _filter == f,
-                                onTap: () => setState(() => _filter = f),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  // ── Row 2: Search + Date + Priority + Export ────
+                  // ── Row 1: Search + Date + Priority + Export ────
                   Row(
                     children: [
                       // Search
@@ -1063,6 +1044,25 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  // ── Row 2: Status filter chips ──────────────────
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: _filters
+                          .map(
+                            (f) => Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: _FilterChip(
+                                label: f,
+                                selected: _filter == f,
+                                onTap: () => setState(() => _filter = f),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
                   ),
                   const SizedBox(height: 12),
                 ],
