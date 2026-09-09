@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/widgets/app_ui.dart';
 import '../../../data/models/report_model.dart';
 import '../../../data/services/report_service.dart';
 import 'admin_shell.dart';
@@ -751,148 +751,6 @@ class _ReportDialog extends StatelessWidget {
   final ReportModel report;
   const _ReportDialog({required this.report});
 
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        width: 500,
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.statusColor(
-                      report.currentStatus,
-                    ).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    AppTheme.statusIcon(report.currentStatus),
-                    color: AppTheme.statusColor(report.currentStatus),
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        report.category,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        'Brgy. ${report.barangay}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppTheme.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            _InfoRow(
-              icon: Icons.person,
-              label: 'Reporter',
-              value: report.isAnonymous ? 'Anonymous' : report.userFullName,
-            ),
-            _InfoRow(
-              icon: Icons.location_on,
-              label: 'Location',
-              value: report.address,
-            ),
-            _InfoRow(
-              icon: Icons.flag,
-              label: 'Status',
-              value: report.currentStatus,
-              valueColor: AppTheme.statusColor(report.currentStatus),
-            ),
-            _InfoRow(
-              icon: Icons.access_time,
-              label: 'Reported',
-              value: _formatDate(report.createdAt),
-            ),
-            if (report.followerCount > 0)
-              _InfoRow(
-                icon: Icons.group,
-                label: 'Followers',
-                value: '${report.followerCount} citizens',
-              ),
-            const SizedBox(height: 16),
-            const Text(
-              'Description',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textMuted,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(report.description, style: const TextStyle(fontSize: 14)),
-            if (report.photoUrls.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              const Text(
-                'Photos',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textMuted,
-                ),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 80,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: report.photoUrls.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (_, i) => ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      report.photoUrls[i],
-                      width: 80,
-                      height: 80,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                AdminHoverButton(
-                  label: 'View Full Report',
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Navigate to report detail
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final diff = now.difference(date);
@@ -901,46 +759,317 @@ class _ReportDialog extends StatelessWidget {
     if (diff.inDays < 7) return '${diff.inDays} days ago';
     return '${date.month}/${date.day}/${date.year}';
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColor = AppTheme.statusColor(report.currentStatus);
+    final statusIcon = AppTheme.statusIcon(report.currentStatus);
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      child: Container(
+        width: 480,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 40,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Coloured header banner ──────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 20, 16, 20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    statusColor.withValues(alpha: 0.15),
+                    statusColor.withValues(alpha: 0.04),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(statusIcon, color: statusColor, size: 22),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          report.category,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF111827),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Icon(Icons.place_outlined, size: 12, color: AppTheme.textMuted),
+                            const SizedBox(width: 3),
+                            Text(
+                              'Brgy. ${report.barangay}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Status chip
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      report.currentStatus,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: statusColor,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: () => Navigator.pop(context),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      child: const Icon(Icons.close, size: 18, color: AppTheme.textMuted),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Body ────────────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Info grid
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                    ),
+                    child: Column(
+                      children: [
+                        _InfoRow(
+                          icon: Icons.person_outline,
+                          label: 'Reporter',
+                          value: report.isAnonymous ? 'Anonymous' : report.userFullName,
+                        ),
+                        const Divider(height: 16, color: Color(0xFFE5E7EB)),
+                        _InfoRow(
+                          icon: Icons.location_on_outlined,
+                          label: 'Location',
+                          value: report.address.isNotEmpty
+                              ? report.address
+                              : 'Brgy. ${report.barangay}',
+                        ),
+                        const Divider(height: 16, color: Color(0xFFE5E7EB)),
+                        _InfoRow(
+                          icon: Icons.access_time_outlined,
+                          label: 'Reported',
+                          value: _formatDate(report.createdAt),
+                        ),
+                        if (report.followerCount > 0) ...[
+                          const Divider(height: 16, color: Color(0xFFE5E7EB)),
+                          _InfoRow(
+                            icon: Icons.group_outlined,
+                            label: 'Followers',
+                            value: '${report.followerCount} citizens',
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Description
+                  _SectionLabel(label: 'Description'),
+                  const SizedBox(height: 6),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                    ),
+                    child: Text(
+                      report.description.isNotEmpty ? report.description : '—',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF374151),
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+
+                  // Photos
+                  if (report.photoUrls.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    _SectionLabel(label: 'Photos'),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 80,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: report.photoUrls.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (_, i) => ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            report.photoUrls[i],
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+
+            // ── Footer ──────────────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: Color(0xFFF3F4F6))),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.textMuted,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    ),
+                    child: const Text('Close'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      context.push('/admin/reports/${report.id}');
+                    },
+                    icon: const Icon(Icons.open_in_new, size: 16),
+                    label: const Text('View Full Report'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFF59E0B),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String label;
+  const _SectionLabel({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label.toUpperCase(),
+      style: const TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        color: AppTheme.textMuted,
+        letterSpacing: 0.8,
+      ),
+    );
+  }
 }
 
 class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  final Color? valueColor;
 
   const _InfoRow({
     required this.icon,
     required this.label,
     required this.value,
-    this.valueColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: AppTheme.textMuted),
-          const SizedBox(width: 8),
-          Text(
-            '$label:',
-            style: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: AppTheme.textMuted),
+        const SizedBox(width: 8),
+        Text(
+          '$label',
+          style: const TextStyle(
+            fontSize: 12,
+            color: AppTheme.textMuted,
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: valueColor ?? AppTheme.textDark,
-              ),
-            ),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF111827),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
