@@ -225,6 +225,9 @@ class _ModernRegisterScreenState extends State<ModernRegisterScreen> {
                                       validator: (v) => v == null || v.isEmpty
                                           ? 'First name is required'
                                           : null,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
                                   Expanded(
                                     child: TextFormField(
                                       controller: _lastNameCtrl,
@@ -235,6 +238,11 @@ class _ModernRegisterScreenState extends State<ModernRegisterScreen> {
                                       validator: (v) => v == null || v.isEmpty
                                           ? 'Last name is required'
                                           : null,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
                               TextFormField(
                                 controller: _emailCtrl,
                                 keyboardType: TextInputType.emailAddress,
