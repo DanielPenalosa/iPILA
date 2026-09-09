@@ -1,6 +1,6 @@
 # iPILA - Municipal Waste Management System
-# Build: 2026-09-10-v15 - Fix map report modal overflow with scrollable body
-# Force rebuild: 2026-09-10-b
+# Build: 2026-09-10-v16 - Go to Map navigates to exact report pin and auto-opens dialog
+# Force rebuild: 2026-09-10-c
 FROM ghcr.io/cirruslabs/flutter:stable AS build
 
 WORKDIR /app
