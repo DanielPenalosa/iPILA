@@ -1,5 +1,5 @@
 # iPILA - Municipal Waste Management System
-# Build: 2026-09-10-v16 - Go to Map flies to exact pin + opens report dialog
+# Build: 2026-09-10-v16 - Fix map modal clipping with insetPadding and safe area height
 # Force rebuild: 2026-09-10-c
 FROM ghcr.io/cirruslabs/flutter:stable AS build
 
