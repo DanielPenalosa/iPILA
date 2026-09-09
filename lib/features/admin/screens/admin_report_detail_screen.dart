@@ -647,7 +647,7 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                         if (report.assignedDepartment == null &&
                             report.currentStatus != AppConstants.statusResolved)
                           _ActionBtn(
-                            label: 'Assign Dept',
+                            label: 'Assign',
                             icon: Icons.business_outlined,
                             color: Colors.purple,
                             onTap: () => _showAssignToDepartmentDialog(
@@ -763,14 +763,8 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                                     Align(
                                       alignment: Alignment.centerLeft,
                                       child: TextButton.icon(
-                                        onPressed: () => context.go(
-                                          '/admin/map',
-                                          extra: {
-                                            'lat': report.latitude,
-                                            'lng': report.longitude,
-                                            'reportId': report.id,
-                                          },
-                                        ),
+                                        onPressed: () =>
+                                            context.go('/admin/map'),
                                         icon: const Icon(
                                           Icons.map_outlined,
                                           size: 15,

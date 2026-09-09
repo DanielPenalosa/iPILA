@@ -63,6 +63,7 @@ class UserModel {
 
   bool get isAdmin => role == 'admin' || role == 'superadmin';
   bool get isDepartment => role == 'department';
+  bool get isBarangay => role == 'barangay';
   bool get isApproved => approvalStatus == 'approved';
   bool get isPending => approvalStatus == 'pending';
   bool get isRejected => approvalStatus == 'rejected';

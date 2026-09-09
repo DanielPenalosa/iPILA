@@ -30,6 +30,13 @@ import '../../features/department/screens/department_report_detail_screen.dart';
 import '../../features/department/screens/department_map_screen.dart';
 import '../../features/department/screens/department_notifications_screen.dart';
 import '../../features/department/screens/department_settings_screen.dart';
+import '../../features/barangay/screens/barangay_scaffold_widget.dart';
+import '../../features/barangay/screens/barangay_dashboard_screen.dart';
+import '../../features/barangay/screens/barangay_reports_screen.dart';
+import '../../features/barangay/screens/barangay_report_detail_screen.dart';
+import '../../features/barangay/screens/barangay_map_screen.dart';
+import '../../features/barangay/screens/barangay_notifications_screen.dart';
+import '../../features/barangay/screens/barangay_settings_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -65,6 +72,11 @@ final _deptReportsKey = GlobalKey<NavigatorState>();
 final _deptMapKey = GlobalKey<NavigatorState>();
 final _deptNotificationsKey = GlobalKey<NavigatorState>();
 final _deptSettingsKey = GlobalKey<NavigatorState>();
+final _brgyDashKey = GlobalKey<NavigatorState>();
+final _brgyReportsKey = GlobalKey<NavigatorState>();
+final _brgyMapKey = GlobalKey<NavigatorState>();
+final _brgyNotificationsKey = GlobalKey<NavigatorState>();
+final _brgySettingsKey = GlobalKey<NavigatorState>();
 
 GoRouter createRouter(AuthProvider authProvider) {
   return GoRouter(
@@ -85,6 +97,7 @@ GoRouter createRouter(AuthProvider authProvider) {
       if (isAuthenticated && (loc == '/login' || loc == '/register')) {
         if (authProvider.isAdmin) return '/admin';
         if (authProvider.isDepartment) return '/department';
+        if (authProvider.isBarangay) return '/barangay';
         return '/home';
       }
       if (isAuthenticated &&
@@ -101,6 +114,11 @@ GoRouter createRouter(AuthProvider authProvider) {
       if (isAuthenticated &&
           !authProvider.isDepartment &&
           loc.startsWith('/department')) {
+        return authProvider.isAdmin ? '/admin' : '/home';
+      }
+      if (isAuthenticated &&
+          !authProvider.isBarangay &&
+          loc.startsWith('/barangay')) {
         return authProvider.isAdmin ? '/admin' : '/home';
       }
       return null;
@@ -257,14 +275,7 @@ GoRouter createRouter(AuthProvider authProvider) {
             routes: [
               GoRoute(
                 path: '/admin/map',
-                builder: (_, s) {
-                  final extra = s.extra as Map<String, dynamic>?;
-                  return AdminMapScreen(
-                    focusLat: extra?['lat'] as double?,
-                    focusLng: extra?['lng'] as double?,
-                    focusReportId: extra?['reportId'] as String?,
-                  );
-                },
+                builder: (_, s) => const AdminMapScreen(),
               ),
             ],
           ),
@@ -335,14 +346,7 @@ GoRouter createRouter(AuthProvider authProvider) {
             routes: [
               GoRoute(
                 path: '/department/map',
-                builder: (_, s) {
-                  final extra = s.extra as Map<String, dynamic>?;
-                  return DepartmentMapScreen(
-                    focusLat: extra?['lat'] as double?,
-                    focusLng: extra?['lng'] as double?,
-                    focusReportId: extra?['reportId'] as String?,
-                  );
-                },
+                builder: (_, s) => const DepartmentMapScreen(),
               ),
             ],
           ),
@@ -361,6 +365,68 @@ GoRouter createRouter(AuthProvider authProvider) {
               GoRoute(
                 path: '/department/settings',
                 builder: (_, s) => const DepartmentSettingsScreen(),
+              ),
+            ],
+          ),
+        ],
+      ),
+
+      // Barangay portal — sidebar shell (mirrors department)
+      StatefulShellRoute.indexedStack(
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state, shell) =>
+            BarangayScaffoldWidget(navigationShell: shell),
+        branches: [
+          StatefulShellBranch(
+            navigatorKey: _brgyDashKey,
+            routes: [
+              GoRoute(
+                path: '/barangay',
+                builder: (_, s) => const BarangayDashboardScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _brgyReportsKey,
+            routes: [
+              GoRoute(
+                path: '/barangay/reports',
+                builder: (_, s) => const BarangayReportsScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (_, s) => BarangayReportDetailScreen(
+                      reportId: s.pathParameters['id']!,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _brgyMapKey,
+            routes: [
+              GoRoute(
+                path: '/barangay/map',
+                builder: (_, s) => const BarangayMapScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _brgyNotificationsKey,
+            routes: [
+              GoRoute(
+                path: '/barangay/notifications',
+                builder: (_, s) => const BarangayNotificationsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _brgySettingsKey,
+            routes: [
+              GoRoute(
+                path: '/barangay/settings',
+                builder: (_, s) => const BarangaySettingsScreen(),
               ),
             ],
           ),

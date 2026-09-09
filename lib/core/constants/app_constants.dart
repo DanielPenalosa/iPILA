@@ -60,6 +60,7 @@ class AppConstants {
   static const String roleAdmin = 'admin';
   static const String roleSuperAdmin = 'superadmin';
   static const String roleDepartment = 'department';
+  static const String roleBarangay = 'barangay';
 
   // Firestore collections
   static const String departmentsCollection = 'departments';

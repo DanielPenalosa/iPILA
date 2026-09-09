@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_ui.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/services/department_service.dart';
+import '../../../data/services/barangay_service.dart';
 import '../../../data/services/user_management_service.dart';
 import 'admin_shell.dart';
 
@@ -22,6 +23,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   final _db = FirebaseFirestore.instance;
   final _userService = UserManagementService();
   final _deptService = DepartmentService();
+  final _brgyService = BarangayService();
   String _search = '';
 
   // Bulk selection — ValueNotifier to avoid full StreamBuilder rebuilds
@@ -230,6 +232,113 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                         color: Colors.white,
                       ),
                     )
+                  : const Text('Create'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCreateBarangayDialog() {
+    String? selectedBarangay;
+    final nameCtrl = TextEditingController();
+    final emailCtrl = TextEditingController();
+    final passCtrl = TextEditingController();
+    bool creating = false;
+
+    showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setDialog) => AlertDialog(
+          title: const Text('Create Barangay Account'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(labelText: 'Barangay'),
+                  value: selectedBarangay,
+                  items: AppConstants.barangays
+                      .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                      .toList(),
+                  onChanged: (v) => setDialog(() => selectedBarangay = v),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Account Name'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: emailCtrl,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: passCtrl,
+                  decoration: const InputDecoration(labelText: 'Password'),
+                  obscureText: true,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: creating || selectedBarangay == null
+                  ? null
+                  : () async {
+                      setDialog(() => creating = true);
+                      try {
+                        final credential = await FirebaseAuth.instance
+                            .createUserWithEmailAndPassword(
+                          email: emailCtrl.text.trim(),
+                          password: passCtrl.text.trim(),
+                        );
+                        await _brgyService.createBarangayUser(
+                          uid: credential.user!.uid,
+                          fullName: nameCtrl.text.trim().isEmpty
+                              ? 'Brgy. $selectedBarangay'
+                              : nameCtrl.text.trim(),
+                          email: emailCtrl.text.trim(),
+                          barangay: selectedBarangay!,
+                        );
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  'Barangay account created for $selectedBarangay'),
+                              backgroundColor: AppTheme.successGreen,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setDialog(() => creating = false);
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: AppTheme.primaryRed,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF10B981),
+                foregroundColor: Colors.white,
+              ),
+              child: creating
+                  ? const SizedBox(
+                      width: 16, height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
                   : const Text('Create'),
             ),
           ],
@@ -1135,9 +1244,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                           color: Colors.purple.withValues(
                                             alpha: 0.1,
                                           ),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
+                                          borderRadius: BorderRadius.circular(8),
                                         ),
                                         child: const Text(
                                           'Department',
@@ -1151,6 +1258,99 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                     ),
                                   )
                                   .toList(),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Barangay Accounts
+                      _SectionCard(
+                        header: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Barangay Accounts',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: _showCreateBarangayDialog,
+                              icon: const Icon(Icons.add, size: 16),
+                              label: const Text('Add Barangay'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF10B981),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                textStyle: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                        child: StreamBuilder<List<UserModel>>(
+                          stream: _brgyService.getBarangayUsers(),
+                          builder: (ctx, snap) {
+                            final brgyUsers = snap.data ?? [];
+                            if (brgyUsers.isEmpty) {
+                              return const Padding(
+                                padding: EdgeInsets.all(20),
+                                child: Text(
+                                  'No barangay accounts yet.',
+                                  style: TextStyle(color: AppTheme.textMuted),
+                                ),
+                              );
+                            }
+                            return Column(
+                              children: brgyUsers.map((u) {
+                                return ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: const Color(0xFF10B981)
+                                        .withValues(alpha: 0.15),
+                                    child: const Icon(
+                                      Icons.location_city_outlined,
+                                      color: Color(0xFF10B981),
+                                      size: 18,
+                                    ),
+                                  ),
+                                  title: Text(
+                                    u.barangay.isNotEmpty
+                                        ? 'Brgy. ${u.barangay}'
+                                        : u.fullName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    u.email,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  trailing: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF10B981)
+                                          .withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Text(
+                                      'Barangay',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Color(0xFF10B981),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
                             );
                           },
                         ),
