@@ -185,12 +185,12 @@ class HomeScreen extends StatelessWidget {
                 _QuickCard(
                   icon: Icons.groups_outlined,
                   label: 'Community Reports',
-                  onTap: () => context.push('/community-reports'),
+                  onTap: () => context.go('/community-reports'),
                 ),
                 _QuickCard(
                   icon: Icons.notifications_outlined,
                   label: 'Notifications',
-                  onTap: () => context.go('/alerts'),
+                  onTap: () => context.push('/alerts'),
                 ),
               ],
             ),
@@ -269,7 +269,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 GestureDetector(
-                  onTap: () => context.push('/community-reports'),
+                  onTap: () => context.go('/community-reports'),
                   child: const Text(
                     'See all →',
                     style: TextStyle(

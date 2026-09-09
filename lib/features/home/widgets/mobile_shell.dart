@@ -87,7 +87,7 @@ class MobileShell extends StatelessWidget {
                       Icons.notifications_outlined,
                       color: AppTheme.textDark,
                     ),
-                    onPressed: () => context.go('/alerts'),
+                    onPressed: () => context.push('/alerts'),
                   ),
                   if (unread > 0)
                     Positioned(
@@ -123,7 +123,11 @@ class MobileShell extends StatelessWidget {
       body: Stack(
         children: [
           child,
-          const Positioned(right: 16, bottom: 16, child: PilaBotWidget()),
+          Positioned(
+            right: 16,
+            bottom: currentIndex >= 0 ? 80 : 16,
+            child: const PilaBotWidget(),
+          ),
         ],
       ),
       bottomNavigationBar: _BottomNav(currentIndex: currentIndex),
@@ -204,7 +208,7 @@ class _BottomNav extends StatelessWidget {
                 icon: Icons.menu_book_outlined,
                 activeIcon: Icons.menu_book,
                 label: 'Laws',
-                index: 3,
+                index: 2,
                 currentIndex: currentIndex,
                 onTap: () => context.go('/ordinances'),
               ),
@@ -212,7 +216,7 @@ class _BottomNav extends StatelessWidget {
                 icon: Icons.people_outline,
                 activeIcon: Icons.people,
                 label: 'Community',
-                index: 4,
+                index: 3,
                 currentIndex: currentIndex,
                 onTap: () => context.go('/community-reports'),
               ),

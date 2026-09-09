@@ -659,7 +659,7 @@ class _AdminHoverCardState extends State<AdminHoverCard> {
             ],
           ),
           transform: _hovered
-              ? (Matrix4.identity()..translate(0.0, -1.0, 0.0))
+              ? (Matrix4.identity()..translate(0.0, -1.0))
               : Matrix4.identity(),
           child: widget.child,
         ),

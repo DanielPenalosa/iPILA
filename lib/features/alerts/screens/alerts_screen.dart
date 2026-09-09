@@ -20,7 +20,7 @@ class AlertsScreen extends StatelessWidget {
 
     return MobileShell(
       title: 'Notifications',
-      currentIndex: -1, // Not in bottom nav anymore
+      currentIndex: -1,
       showBack: true,
       actions: [
         PopupMenuButton<String>(

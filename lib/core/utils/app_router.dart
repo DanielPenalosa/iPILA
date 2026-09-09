@@ -125,6 +125,7 @@ GoRouter createRouter(AuthProvider authProvider) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state, shell) => shell,
         branches: [
+          // index 0 — Home
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -134,6 +135,7 @@ GoRouter createRouter(AuthProvider authProvider) {
               ),
             ],
           ),
+          // index 1 — My Reports
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -143,6 +145,7 @@ GoRouter createRouter(AuthProvider authProvider) {
               ),
             ],
           ),
+          // index 2 — Ordinances / Laws
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -152,12 +155,13 @@ GoRouter createRouter(AuthProvider authProvider) {
               ),
             ],
           ),
+          // index 3 — Community Reports
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/alerts',
+                path: '/community-reports',
                 pageBuilder: (_, s) =>
-                    NoTransitionPage(child: const AlertsScreen()),
+                    NoTransitionPage(child: const CommunityReportsScreen()),
               ),
             ],
           ),
@@ -169,8 +173,9 @@ GoRouter createRouter(AuthProvider authProvider) {
         pageBuilder: (_, s) => _fadePage(const SubmitReportScreen(), s),
       ),
       GoRoute(
-        path: '/community-reports',
-        pageBuilder: (_, s) => _fadePage(const CommunityReportsScreen(), s),
+        path: '/alerts',
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (_, s) => _fadePage(const AlertsScreen(), s),
       ),
       GoRoute(
         path: '/report/:id',

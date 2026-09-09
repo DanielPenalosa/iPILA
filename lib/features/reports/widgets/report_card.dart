@@ -31,7 +31,7 @@ class ReportCard extends StatelessWidget {
                         width: 70,
                         height: 70,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _e, _s) => _placeholder(),
+                        errorBuilder: (_, e, s) => _placeholder(),
                       )
                     : _placeholder(),
               ),

@@ -6,10 +6,12 @@ import 'package:image_picker/image_picker.dart';
 import '../models/user_model.dart';
 import '../../core/constants/app_constants.dart';
 import 'cloudinary_service.dart';
+import 'notification_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final _notifications = NotificationService();
 
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -86,7 +88,43 @@ class AuthService {
     // Sign out immediately — they must wait for approval
     await _auth.signOut();
 
+    // Notify all admins about the new registration
+    await _notifyAdminsOfRegistration(
+      fullName: fullName,
+      email: email,
+      barangay: barangay,
+      userId: credential.user!.uid,
+    );
+
     return user;
+  }
+
+  /// Notify all admins/superadmins that a new user registered
+  Future<void> _notifyAdminsOfRegistration({
+    required String fullName,
+    required String email,
+    required String barangay,
+    required String userId,
+  }) async {
+    try {
+      final adminsSnap = await _db
+          .collection(AppConstants.usersCollection)
+          .where('role', whereIn: ['admin', 'superadmin'])
+          .get();
+
+      for (final adminDoc in adminsSnap.docs) {
+        await _notifications.createNotification(
+          userId: adminDoc.id,
+          title: '👤 New Registration: $fullName',
+          body:
+              '$fullName ($email) from Brgy. $barangay submitted a registration request and is waiting for approval.',
+          type: 'new_user_registration',
+          data: {'registrantUserId': userId, 'type': 'new_user_registration'},
+        );
+      }
+    } catch (e) {
+      debugPrint('Error notifying admins of registration: $e');
+    }
   }
 
   Future<UserModel?> signIn({

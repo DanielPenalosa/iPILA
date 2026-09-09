@@ -12,6 +12,34 @@ class DepartmentService {
   final _uuid = const Uuid();
   final _notifications = NotificationService();
 
+  /// Notify all admins/superadmins
+  Future<void> _notifyAdmins({
+    required String title,
+    required String body,
+    required String type,
+    String reportId = '',
+  }) async {
+    try {
+      final adminsSnap = await _db
+          .collection(AppConstants.usersCollection)
+          .where('role', whereIn: ['admin', 'superadmin'])
+          .get();
+      for (final adminDoc in adminsSnap.docs) {
+        await _notifications.createNotification(
+          userId: adminDoc.id,
+          title: title,
+          body: body,
+          type: type,
+          data: reportId.isNotEmpty
+              ? {'reportId': reportId, 'type': type}
+              : null,
+        );
+      }
+    } catch (e) {
+      // silent fail
+    }
+  }
+
   /// Assign a report to a department user (admin action)
   Future<void> assignToDepartment({
     required String reportId,
@@ -115,6 +143,16 @@ class DepartmentService {
       type: 'progress',
       data: {'reportId': reportId},
     );
+
+    // Notify admins of department progress update
+    await _notifyAdmins(
+      title: '🔧 Department Progress: $status',
+      body:
+          '$departmentName updated report status to "$status"'
+          '${remarks != null && remarks.isNotEmpty ? ': $remarks' : ''}.',
+      type: 'department_update',
+      reportId: reportId,
+    );
   }
 
   /// Department submits as done — awaiting admin verification
@@ -182,6 +220,16 @@ class DepartmentService {
           '$departmentName has finished work on your report. Awaiting admin review.',
       type: 'info',
       data: {'reportId': reportId},
+    );
+
+    // Notify admins that department marked report as done — needs verification
+    await _notifyAdmins(
+      title: '✅ Ready for Verification',
+      body:
+          '$departmentName marked a report as Done and needs your approval.'
+          '${remarks != null && remarks.isNotEmpty ? ' Remarks: $remarks' : ''}',
+      type: 'department_done',
+      reportId: reportId,
     );
   }
 

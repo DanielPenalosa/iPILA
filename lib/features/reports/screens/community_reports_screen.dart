@@ -23,8 +23,8 @@ class _CommunityReportsScreenState extends State<CommunityReportsScreen> {
   Widget build(BuildContext context) {
     return MobileShell(
       title: 'Community Reports',
-      currentIndex: -1,
-      showBack: true,
+      currentIndex: 3,
+      showBack: false,
       child: Column(
         children: [
           // Filters

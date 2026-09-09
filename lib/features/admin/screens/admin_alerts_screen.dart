@@ -106,12 +106,20 @@ class _NotificationsTab extends StatelessWidget {
 
   Color _typeColor(String type) {
     switch (type) {
+      case 'new_user_registration':
+        return Colors.teal;
       case 'reporter_followup':
         return Colors.orange[700]!;
       case 'citizen_feedback':
         return Colors.purple;
       case 'report_follow_up':
         return Colors.deepPurple;
+      case 'department_done':
+        return AppTheme.successGreen;
+      case 'department_update':
+        return Colors.blue[700]!;
+      case 'new_report':
+        return Colors.orange;
       case 'warning':
         return Colors.orange;
       case 'success':
@@ -125,12 +133,20 @@ class _NotificationsTab extends StatelessWidget {
 
   IconData _typeIcon(String type) {
     switch (type) {
+      case 'new_user_registration':
+        return Icons.person_add_outlined;
       case 'reporter_followup':
         return Icons.campaign_outlined;
       case 'citizen_feedback':
         return Icons.rate_review_outlined;
       case 'report_follow_up':
         return Icons.people_outline;
+      case 'department_done':
+        return Icons.check_circle_outline;
+      case 'department_update':
+        return Icons.engineering_outlined;
+      case 'new_report':
+        return Icons.fiber_new_outlined;
       case 'warning':
         return Icons.warning_amber_rounded;
       case 'success':
@@ -221,17 +237,30 @@ class _NotificationsTab extends StatelessWidget {
                   final n = notifs[i];
                   final color = _typeColor(n.type);
                   final icon = _typeIcon(n.type);
+
+                  // Determine tap action based on notification type
+                  VoidCallback? onView;
+                  String? actionLabel;
+                  if (n.type == 'new_user_registration') {
+                    onView = () {
+                      service.markAsRead(n.id);
+                      context.go('/admin/users');
+                    };
+                    actionLabel = 'View Users →';
+                  } else if (n.reportId != null && n.reportId!.isNotEmpty) {
+                    onView = () {
+                      service.markAsRead(n.id);
+                      context.push('/admin/reports/${n.reportId}');
+                    };
+                  }
+
                   return _NotifCard(
                     notif: n,
                     color: color,
                     icon: icon,
                     onRead: () => service.markAsRead(n.id),
-                    onView: n.reportId != null && n.reportId!.isNotEmpty
-                        ? () {
-                            service.markAsRead(n.id);
-                            context.push('/admin/reports/${n.reportId}');
-                          }
-                        : null,
+                    onView: onView,
+                    actionLabel: actionLabel,
                   );
                 },
               ),
@@ -249,6 +278,7 @@ class _NotifCard extends StatelessWidget {
   final IconData icon;
   final VoidCallback onRead;
   final VoidCallback? onView;
+  final String? actionLabel;
 
   const _NotifCard({
     required this.notif,
@@ -256,6 +286,7 @@ class _NotifCard extends StatelessWidget {
     required this.icon,
     required this.onRead,
     this.onView,
+    this.actionLabel,
   });
 
   @override
@@ -349,7 +380,7 @@ class _NotifCard extends StatelessWidget {
                           if (onView != null) ...[
                             const SizedBox(width: 8),
                             Text(
-                              '· Tap to view report →',
+                              actionLabel ?? 'Tap to view report →',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: color,

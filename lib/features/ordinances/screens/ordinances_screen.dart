@@ -34,7 +34,7 @@ class _OrdinancesScreenState extends State<OrdinancesScreen>
   Widget build(BuildContext context) {
     return MobileShell(
       title: 'Ordinances & FAQs',
-      currentIndex: 3,
+      currentIndex: 2,
       child: Column(
         children: [
           Container(
