@@ -11,7 +11,16 @@ import '../../../data/services/department_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class DepartmentMapScreen extends StatefulWidget {
-  const DepartmentMapScreen({super.key});
+  final double? focusLat;
+  final double? focusLng;
+  final String? focusReportId;
+
+  const DepartmentMapScreen({
+    super.key,
+    this.focusLat,
+    this.focusLng,
+    this.focusReportId,
+  });
 
   @override
   State<DepartmentMapScreen> createState() => _DepartmentMapScreenState();
@@ -22,6 +31,7 @@ class _DepartmentMapScreenState extends State<DepartmentMapScreen> {
   String _filterStatus = 'All';
   String _filterBarangay = 'All';
   String _mapStyle = 'Street';
+  ReportModel? _pendingFocusReport;
 
   static const _center = LatLng(14.1637, 121.8647);
 
@@ -38,6 +48,14 @@ class _DepartmentMapScreenState extends State<DepartmentMapScreen> {
   void initState() {
     super.initState();
     _mapController = MapController();
+    if (widget.focusLat != null && widget.focusLng != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _mapController.move(
+          LatLng(widget.focusLat!, widget.focusLng!),
+          16.0,
+        );
+      });
+    }
   }
 
   @override
@@ -68,6 +86,25 @@ class _DepartmentMapScreenState extends State<DepartmentMapScreen> {
       builder: (context, snapshot) {
         final all = snapshot.data ?? [];
         final filtered = _applyFilters(all);
+
+        // Auto-open dialog for focused report once data loads
+        if (widget.focusReportId != null && _pendingFocusReport == null) {
+          final match = all.where((r) => r.id == widget.focusReportId).firstOrNull;
+          if (match != null) {
+            _pendingFocusReport = match;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                showDialog(
+                  context: context,
+                  builder: (_) => _ReportDialog(
+                    report: match,
+                    statusColor: _statusColor(match.currentStatus),
+                  ),
+                );
+              }
+            });
+          }
+        }
 
         // Build barangay list from actual reports
         final barangays = [
@@ -206,10 +243,11 @@ class _DepartmentMapScreenState extends State<DepartmentMapScreen> {
                             MarkerLayer(
                               markers: filtered.map((r) {
                                 final color = _statusColor(r.currentStatus);
+                                final isFocus = r.id == widget.focusReportId;
                                 return Marker(
                                   point: LatLng(r.latitude, r.longitude),
-                                  width: 36,
-                                  height: 36,
+                                  width: isFocus ? 44 : 36,
+                                  height: isFocus ? 44 : 36,
                                   child: GestureDetector(
                                     onTap: () => showDialog(
                                       context: context,
@@ -224,14 +262,14 @@ class _DepartmentMapScreenState extends State<DepartmentMapScreen> {
                                         shape: BoxShape.circle,
                                         border: Border.all(
                                           color: Colors.white,
-                                          width: 2,
+                                          width: isFocus ? 3 : 2,
                                         ),
                                         boxShadow: [
                                           BoxShadow(
                                             color: color.withValues(
-                                              alpha: 0.35,
+                                              alpha: isFocus ? 0.7 : 0.35,
                                             ),
-                                            blurRadius: 6,
+                                            blurRadius: isFocus ? 12 : 6,
                                             offset: const Offset(0, 2),
                                           ),
                                         ],

@@ -9,7 +9,16 @@ import '../../../data/services/report_service.dart';
 import 'admin_shell.dart';
 
 class AdminMapScreen extends StatefulWidget {
-  const AdminMapScreen({super.key});
+  final double? focusLat;
+  final double? focusLng;
+  final String? focusReportId;
+
+  const AdminMapScreen({
+    super.key,
+    this.focusLat,
+    this.focusLng,
+    this.focusReportId,
+  });
 
   @override
   State<AdminMapScreen> createState() => _AdminMapScreenState();
@@ -22,11 +31,20 @@ class _AdminMapScreenState extends State<AdminMapScreen> {
   String _filterCategory = 'All';
   bool _clusterMarkers = true;
   String _mapStyle = 'Street';
+  ReportModel? _pendingFocusReport;
 
   @override
   void initState() {
     super.initState();
     _mapController = MapController();
+    if (widget.focusLat != null && widget.focusLng != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _mapController.move(
+          LatLng(widget.focusLat!, widget.focusLng!),
+          16.0,
+        );
+      });
+    }
   }
 
   @override
@@ -144,6 +162,22 @@ class _AdminMapScreenState extends State<AdminMapScreen> {
                 final reports = snapshot.data ?? [];
                 final filtered = _applyFilters(reports);
 
+                // Auto-open dialog for focused report once data loads
+                if (widget.focusReportId != null && _pendingFocusReport == null) {
+                  final match = reports.where((r) => r.id == widget.focusReportId).firstOrNull;
+                  if (match != null) {
+                    _pendingFocusReport = match;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        showDialog(
+                          context: context,
+                          builder: (_) => _ReportDialog(report: match),
+                        );
+                      }
+                    });
+                  }
+                }
+
                 return Row(
                   children: [
                     // Map
@@ -170,10 +204,11 @@ class _AdminMapScreenState extends State<AdminMapScreen> {
                               MarkerLayer(
                                 markers: filtered.map((r) {
                                   final color = _markerColor(r.currentStatus);
+                                  final isFocus = r.id == widget.focusReportId;
                                   return Marker(
                                     point: LatLng(r.latitude, r.longitude),
-                                    width: 36,
-                                    height: 36,
+                                    width: isFocus ? 44 : 36,
+                                    height: isFocus ? 44 : 36,
                                     child: GestureDetector(
                                       onTap: () {
                                         showDialog(
@@ -188,14 +223,14 @@ class _AdminMapScreenState extends State<AdminMapScreen> {
                                           shape: BoxShape.circle,
                                           border: Border.all(
                                             color: Colors.white,
-                                            width: 2,
+                                            width: isFocus ? 3 : 2,
                                           ),
                                           boxShadow: [
                                             BoxShadow(
                                               color: color.withValues(
-                                                alpha: 0.4,
+                                                alpha: isFocus ? 0.7 : 0.4,
                                               ),
-                                              blurRadius: 6,
+                                              blurRadius: isFocus ? 12 : 6,
                                               offset: const Offset(0, 2),
                                             ),
                                           ],

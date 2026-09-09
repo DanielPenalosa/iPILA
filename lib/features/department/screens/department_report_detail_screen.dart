@@ -341,7 +341,9 @@ class _DepartmentReportDetailScreenState
                         label: 'Go to Map',
                         icon: Icons.map_outlined,
                         color: AppTheme.primaryBlue,
-                        onTap: () => context.go('/department/map'),
+                        onTap: () => context.go(
+                          '/department/map?lat=${report.latitude}&lng=${report.longitude}&reportId=${report.id}',
+                        ),
                       ),
                       const SizedBox(width: 8),
                       // Action button — only when dept can act
