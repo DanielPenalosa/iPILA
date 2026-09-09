@@ -12,6 +12,7 @@ import '../../../core/widgets/app_ui.dart';
 import '../../../data/models/report_model.dart';
 import '../../../data/services/report_service.dart';
 import '../../../data/services/department_service.dart';
+import '../../../data/services/barangay_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../reports/screens/report_detail_screen.dart';
 
@@ -28,6 +29,7 @@ class AdminReportDetailScreen extends StatefulWidget {
 class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
   final ReportService _service = ReportService();
   final DepartmentService _deptService = DepartmentService();
+  final BarangayService _brgyService = BarangayService();
   final _noteCtrl = TextEditingController();
   File? _afterPhoto;
   XFile? _afterPhotoWeb;
@@ -214,51 +216,105 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
   void _showAssignToDepartmentDialog(ReportModel report, String adminName) {
     String? selectedDeptUserId;
     String? selectedDeptName;
+    String? selectedBrgyUserId;
+    String? selectedBrgyName;
+    int tabIndex = 0; // 0 = Department, 1 = Barangay
 
     showDialog(
       context: context,
       builder: (_) => StatefulBuilder(
-        builder: (ctx, setDialog) => StreamBuilder(
-          stream: _deptService.getDepartmentUsers(),
-          builder: (ctx, snapshot) {
-            final deptUsers = snapshot.data ?? [];
-            return AlertDialog(
-              title: const Text('Assign to Department'),
-              content: deptUsers.isEmpty
-                  ? const Text('No department accounts found.')
-                  : DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(
-                        labelText: 'Select Department',
-                      ),
-                      value: selectedDeptUserId,
-                      items: deptUsers
-                          .map(
-                            (u) => DropdownMenuItem(
-                              value: u.uid,
-                              child: Text(u.department ?? u.fullName),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) {
-                        setDialog(() {
-                          selectedDeptUserId = v;
-                          selectedDeptName = deptUsers
-                              .firstWhere((u) => u.uid == v)
-                              .department;
-                        });
+        builder: (ctx, setDialog) => DefaultTabController(
+          length: 2,
+          child: AlertDialog(
+            title: const Text('Assign Report'),
+            content: SizedBox(
+              width: 380,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TabBar(
+                    onTap: (i) => setDialog(() => tabIndex = i),
+                    tabs: const [
+                      Tab(text: 'Department'),
+                      Tab(text: 'Barangay'),
+                    ],
+                    labelColor: AppTheme.primaryBlue,
+                    unselectedLabelColor: AppTheme.textMuted,
+                    indicatorColor: AppTheme.primaryBlue,
+                  ),
+                  const SizedBox(height: 16),
+                  if (tabIndex == 0)
+                    StreamBuilder(
+                      stream: _deptService.getDepartmentUsers(),
+                      builder: (ctx, snapshot) {
+                        final users = snapshot.data ?? [];
+                        if (users.isEmpty) {
+                          return const Text('No department accounts found.',
+                              style: TextStyle(color: AppTheme.textMuted));
+                        }
+                        return DropdownButtonFormField<String>(
+                          decoration: const InputDecoration(
+                              labelText: 'Select Department'),
+                          value: selectedDeptUserId,
+                          items: users
+                              .map((u) => DropdownMenuItem(
+                                    value: u.uid,
+                                    child: Text(u.department ?? u.fullName),
+                                  ))
+                              .toList(),
+                          onChanged: (v) => setDialog(() {
+                            selectedDeptUserId = v;
+                            selectedDeptName =
+                                users.firstWhere((u) => u.uid == v).department;
+                          }),
+                        );
+                      },
+                    )
+                  else
+                    StreamBuilder(
+                      stream: _brgyService.getBarangayUsers(),
+                      builder: (ctx, snapshot) {
+                        final users = snapshot.data ?? [];
+                        if (users.isEmpty) {
+                          return const Text('No barangay accounts found.',
+                              style: TextStyle(color: AppTheme.textMuted));
+                        }
+                        return DropdownButtonFormField<String>(
+                          decoration: const InputDecoration(
+                              labelText: 'Select Barangay'),
+                          value: selectedBrgyUserId,
+                          items: users
+                              .map((u) => DropdownMenuItem(
+                                    value: u.uid,
+                                    child: Text(
+                                        u.barangay.isNotEmpty
+                                            ? 'Brgy. ${u.barangay}'
+                                            : u.fullName),
+                                  ))
+                              .toList(),
+                          onChanged: (v) => setDialog(() {
+                            selectedBrgyUserId = v;
+                            selectedBrgyName =
+                                users.firstWhere((u) => u.uid == v).barangay;
+                          }),
+                        );
                       },
                     ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: selectedDeptUserId == null
-                      ? null
-                      : () async {
-                          Navigator.pop(ctx);
-                          try {
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: (tabIndex == 0 ? selectedDeptUserId : selectedBrgyUserId) == null
+                    ? null
+                    : () async {
+                        Navigator.pop(ctx);
+                        try {
+                          if (tabIndex == 0) {
                             await _deptService.assignToDepartment(
                               reportId: report.id,
                               departmentUserId: selectedDeptUserId!,
@@ -267,29 +323,38 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                               reporterUserId: report.userId,
                             );
                             if (mounted)
-                              AppToast.show(
-                                context,
-                                'Assigned to $selectedDeptName',
-                                type: ToastType.success,
-                              );
-                          } catch (e) {
+                              AppToast.show(context,
+                                  'Assigned to $selectedDeptName',
+                                  type: ToastType.success);
+                          } else {
+                            await _brgyService.assignToBarangay(
+                              reportId: report.id,
+                              barangayUserId: selectedBrgyUserId!,
+                              barangayName: selectedBrgyName ?? '',
+                              assignedByName: adminName,
+                              reporterUserId: report.userId,
+                            );
                             if (mounted)
-                              AppToast.show(
-                                context,
-                                'Error: $e',
-                                type: ToastType.error,
-                              );
+                              AppToast.show(context,
+                                  'Assigned to Brgy. $selectedBrgyName',
+                                  type: ToastType.success);
                           }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Assign'),
+                        } catch (e) {
+                          if (mounted)
+                            AppToast.show(context, 'Error: $e',
+                                type: ToastType.error);
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: tabIndex == 0
+                      ? AppTheme.primaryBlue
+                      : const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
                 ),
-              ],
-            );
-          },
+                child: const Text('Assign'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -324,21 +389,30 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
             onPressed: () async {
               Navigator.pop(ctx);
               try {
-                await _deptService.approveResolution(
-                  reportId: report.id,
-                  adminName: adminName,
-                  reporterUserId: report.userId,
-                  departmentUserId: report.assignedDepartmentUserId,
-                  remarks: remarksCtrl.text.trim().isEmpty
-                      ? null
-                      : remarksCtrl.text.trim(),
-                );
-                if (mounted)
-                  AppToast.show(
-                    context,
-                    'Report resolved',
-                    type: ToastType.success,
+                final remarks = remarksCtrl.text.trim().isEmpty
+                    ? null
+                    : remarksCtrl.text.trim();
+                // Handle both department and barangay assignments
+                if (report.assignedBarangayUserId != null) {
+                  await _brgyService.approveResolution(
+                    reportId: report.id,
+                    adminName: adminName,
+                    reporterUserId: report.userId,
+                    barangayUserId: report.assignedBarangayUserId,
+                    remarks: remarks,
                   );
+                } else {
+                  await _deptService.approveResolution(
+                    reportId: report.id,
+                    adminName: adminName,
+                    reporterUserId: report.userId,
+                    departmentUserId: report.assignedDepartmentUserId,
+                    remarks: remarks,
+                  );
+                }
+                if (mounted)
+                  AppToast.show(context, 'Report resolved',
+                      type: ToastType.success);
               } catch (e) {
                 if (mounted)
                   AppToast.show(context, 'Error: $e', type: ToastType.error);
@@ -408,7 +482,9 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Specify what the department needs to fix.'),
+            Text(report.assignedBarangayUserId != null
+                ? 'Specify what the barangay needs to fix.'
+                : 'Specify what the department needs to fix.'),
             const SizedBox(height: 12),
             TextField(
               controller: remarksCtrl,
@@ -429,19 +505,26 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
               if (remarksCtrl.text.trim().isEmpty) return;
               Navigator.pop(ctx);
               try {
-                await _deptService.returnForRevision(
-                  reportId: report.id,
-                  adminName: adminName,
-                  departmentUserId: report.assignedDepartmentUserId,
-                  reporterUserId: report.userId,
-                  remarks: remarksCtrl.text.trim(),
-                );
-                if (mounted)
-                  AppToast.show(
-                    context,
-                    'Returned for revision',
-                    type: ToastType.success,
+                if (report.assignedBarangayUserId != null) {
+                  await _brgyService.returnForRevision(
+                    reportId: report.id,
+                    adminName: adminName,
+                    barangayUserId: report.assignedBarangayUserId,
+                    reporterUserId: report.userId,
+                    remarks: remarksCtrl.text.trim(),
                   );
+                } else {
+                  await _deptService.returnForRevision(
+                    reportId: report.id,
+                    adminName: adminName,
+                    departmentUserId: report.assignedDepartmentUserId,
+                    reporterUserId: report.userId,
+                    remarks: remarksCtrl.text.trim(),
+                  );
+                }
+                if (mounted)
+                  AppToast.show(context, 'Returned for revision',
+                      type: ToastType.success);
               } catch (e) {
                 if (mounted)
                   AppToast.show(context, 'Error: $e', type: ToastType.error);
@@ -627,6 +710,12 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                             label: report.assignedDepartment!,
                             color: Colors.purple,
                           )
+                        else if (report.assignedBarangay != null)
+                          _InfoChip(
+                            icon: Icons.location_city_outlined,
+                            label: 'Brgy. ${report.assignedBarangay!}',
+                            color: const Color(0xFF10B981),
+                          )
                         else
                           _InfoChip(
                             icon: Icons.person_outline,
@@ -645,6 +734,7 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                         const Spacer(),
                         // Action buttons
                         if (report.assignedDepartment == null &&
+                            report.assignedBarangay == null &&
                             report.currentStatus != AppConstants.statusResolved)
                           _ActionBtn(
                             label: 'Assign',
@@ -657,6 +747,7 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                           ),
                         // Reject — only before assignment
                         if (report.assignedDepartment == null &&
+                            report.assignedBarangay == null &&
                             report.currentStatus !=
                                 AppConstants.statusResolved) ...[
                           const SizedBox(width: 8),
@@ -734,6 +825,19 @@ class _AdminReportDetailScreenState extends State<AdminReportDetailScreen> {
                                   color: Colors.orange,
                                   message:
                                       'Assigned to ${report.assignedDepartment}. Status locked until department marks it Done.',
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                              if (report.assignedBarangay != null &&
+                                  report.currentStatus !=
+                                      AppConstants.statusDone &&
+                                  report.currentStatus !=
+                                      AppConstants.statusResolved) ...[
+                                _Banner(
+                                  icon: Icons.lock_clock_outlined,
+                                  color: const Color(0xFF10B981),
+                                  message:
+                                      'Assigned to Brgy. ${report.assignedBarangay}. Status locked until barangay marks it Done.',
                                 ),
                                 const SizedBox(height: 16),
                               ],

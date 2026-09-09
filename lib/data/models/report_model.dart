@@ -137,6 +137,8 @@ class ReportModel {
   final String? assignedTo;
   final String? assignedDepartment; // department name
   final String? assignedDepartmentUserId; // dept user uid
+  final String? assignedBarangay; // barangay name
+  final String? assignedBarangayUserId; // barangay user uid
   final String? adminVerificationRemarks; // when returning for revision
   final List<ProgressUpdate> progressUpdates;
   final DateTime createdAt;
@@ -168,6 +170,8 @@ class ReportModel {
     this.assignedTo,
     this.assignedDepartment,
     this.assignedDepartmentUserId,
+    this.assignedBarangay,
+    this.assignedBarangayUserId,
     this.adminVerificationRemarks,
     this.progressUpdates = const [],
     required this.createdAt,
@@ -205,6 +209,8 @@ class ReportModel {
       assignedTo: data['assignedTo'],
       assignedDepartment: data['assignedDepartment'],
       assignedDepartmentUserId: data['assignedDepartmentUserId'],
+      assignedBarangay: data['assignedBarangay'],
+      assignedBarangayUserId: data['assignedBarangayUserId'],
       adminVerificationRemarks: data['adminVerificationRemarks'],
       progressUpdates: (data['progressUpdates'] as List<dynamic>? ?? [])
           .map((e) => ProgressUpdate.fromMap(e as Map<String, dynamic>))
@@ -241,6 +247,8 @@ class ReportModel {
     'assignedTo': assignedTo,
     'assignedDepartment': assignedDepartment,
     'assignedDepartmentUserId': assignedDepartmentUserId,
+    'assignedBarangay': assignedBarangay,
+    'assignedBarangayUserId': assignedBarangayUserId,
     'adminVerificationRemarks': adminVerificationRemarks,
     'progressUpdates': progressUpdates.map((p) => p.toMap()).toList(),
     'createdAt': Timestamp.fromDate(createdAt),
@@ -260,6 +268,8 @@ class ReportModel {
     String? assignedTo,
     String? assignedDepartment,
     String? assignedDepartmentUserId,
+    String? assignedBarangay,
+    String? assignedBarangayUserId,
     String? adminVerificationRemarks,
     List<ProgressUpdate>? progressUpdates,
     DateTime? updatedAt,
@@ -284,6 +294,8 @@ class ReportModel {
     assignedDepartment: assignedDepartment ?? this.assignedDepartment,
     assignedDepartmentUserId:
         assignedDepartmentUserId ?? this.assignedDepartmentUserId,
+    assignedBarangay: assignedBarangay ?? this.assignedBarangay,
+    assignedBarangayUserId: assignedBarangayUserId ?? this.assignedBarangayUserId,
     adminVerificationRemarks:
         adminVerificationRemarks ?? this.adminVerificationRemarks,
     progressUpdates: progressUpdates ?? this.progressUpdates,

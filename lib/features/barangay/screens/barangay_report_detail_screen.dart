@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
@@ -27,6 +28,7 @@ class _BarangayReportDetailScreenState
     final auth = context.read<AuthProvider>();
     String? selectedStatus;
     final remarksCtrl = TextEditingController();
+    final List<XFile> photos = [];
 
     showModalBottomSheet(
       context: context,
@@ -100,6 +102,24 @@ class _BarangayReportDetailScreenState
                   contentPadding: const EdgeInsets.all(14),
                 ),
               ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final picked = await ImagePicker().pickMultiImage();
+                  set(() => photos.addAll(picked));
+                },
+                icon: const Icon(Icons.add_photo_alternate_outlined, size: 16),
+                label: Text(
+                  photos.isEmpty ? 'Attach photos' : '${photos.length} photo(s) attached',
+                  style: const TextStyle(fontSize: 13),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF6366F1),
+                  side: const BorderSide(color: Color(0xFFE5E7EB)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+              ),
               if (selectedStatus == AppConstants.statusDone) ...[
                 const SizedBox(height: 12),
                 Container(
@@ -121,41 +141,37 @@ class _BarangayReportDetailScreenState
                     : () async {
                         Navigator.pop(ctx);
                         setState(() => _submitting = true);
+                        final brgyName = auth.user?.barangay != null
+                            ? 'Brgy. ${auth.user!.barangay}'
+                            : '';
                         try {
                           if (selectedStatus == AppConstants.statusDone) {
                             await _service.submitForVerification(
                               reportId: report.id,
-                              barangayName:
-                                  auth.user?.barangay != null
-                                      ? 'Brgy. ${auth.user!.barangay}'
-                                      : '',
+                              barangayName: brgyName,
                               updatedByName: auth.user?.fullName ?? '',
                               reporterUserId: report.userId,
                               remarks: remarksCtrl.text.trim().isEmpty
-                                  ? null
-                                  : remarksCtrl.text.trim(),
+                                  ? null : remarksCtrl.text.trim(),
+                              completionPhotosWeb: photos.isEmpty ? null : photos,
                             );
                           } else {
                             await _service.addProgressUpdate(
                               reportId: report.id,
                               barangayUserId: auth.user!.uid,
-                              barangayName: auth.user?.barangay != null
-                                  ? 'Brgy. ${auth.user!.barangay}'
-                                  : '',
+                              barangayName: brgyName,
                               updatedByName: auth.user?.fullName ?? '',
                               status: selectedStatus!,
                               remarks: remarksCtrl.text.trim().isEmpty
-                                  ? null
-                                  : remarksCtrl.text.trim(),
+                                  ? null : remarksCtrl.text.trim(),
+                              photosWeb: photos.isEmpty ? null : photos,
                               reporterUserId: report.userId,
                             );
                           }
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Update saved'),
-                                backgroundColor: Color(0xFF10B981),
-                              ),
+                              const SnackBar(content: Text('Update saved'),
+                                  backgroundColor: Color(0xFF10B981)),
                             );
                           }
                         } catch (e) {
@@ -171,18 +187,14 @@ class _BarangayReportDetailScreenState
                       },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: selectedStatus == AppConstants.statusDone
-                      ? const Color(0xFF7C3AED)
-                      : const Color(0xFF111111),
+                      ? const Color(0xFF7C3AED) : const Color(0xFF111111),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   elevation: 0,
                 ),
                 child: Text(
-                  selectedStatus == AppConstants.statusDone
-                      ? 'Mark as Done'
-                      : 'Save Update',
+                  selectedStatus == AppConstants.statusDone ? 'Mark as Done' : 'Save Update',
                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
               ),
