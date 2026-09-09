@@ -38,13 +38,29 @@ class _AdminMapScreenState extends State<AdminMapScreen> {
     super.initState();
     _mapController = MapController();
     if (widget.focusLat != null && widget.focusLng != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _mapController.move(
-          LatLng(widget.focusLat!, widget.focusLng!),
-          16.0,
-        );
-      });
+      _scheduleFocus(widget.focusLat!, widget.focusLng!);
     }
+  }
+
+  @override
+  void didUpdateWidget(AdminMapScreen old) {
+    super.didUpdateWidget(old);
+    if (widget.focusLat != null &&
+        widget.focusLng != null &&
+        (widget.focusLat != old.focusLat ||
+            widget.focusLng != old.focusLng ||
+            widget.focusReportId != old.focusReportId)) {
+      _pendingFocusReport = null; // reset so dialog fires again
+      _scheduleFocus(widget.focusLat!, widget.focusLng!);
+    }
+  }
+
+  void _scheduleFocus(double lat, double lng) {
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        _mapController.move(LatLng(lat, lng), 16.0);
+      }
+    });
   }
 
   @override
@@ -188,9 +204,11 @@ class _AdminMapScreenState extends State<AdminMapScreen> {
                           FlutterMap(
                             key: const ValueKey('admin_map'),
                             mapController: _mapController,
-                            options: const MapOptions(
-                              initialCenter: _center,
-                              initialZoom: 13,
+                            options: MapOptions(
+                              initialCenter: widget.focusLat != null
+                                  ? LatLng(widget.focusLat!, widget.focusLng!)
+                                  : _center,
+                              initialZoom: widget.focusLat != null ? 16.0 : 13,
                             ),
                             children: [
                               TileLayer(
