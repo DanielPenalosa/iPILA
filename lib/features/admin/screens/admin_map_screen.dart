@@ -782,10 +782,14 @@ class _ReportDialog extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.82,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // ── Coloured header banner ──────────────────────────────────────
             Container(
               padding: const EdgeInsets.fromLTRB(20, 20, 16, 20),
@@ -872,9 +876,10 @@ class _ReportDialog extends StatelessWidget {
             ),
 
             // ── Body ────────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
-              child: Column(
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Info grid
@@ -968,6 +973,7 @@ class _ReportDialog extends StatelessWidget {
                   const SizedBox(height: 20),
                 ],
               ),
+              ),
             ),
 
             // ── Footer ──────────────────────────────────────────────────────
@@ -1012,6 +1018,7 @@ class _ReportDialog extends StatelessWidget {
               ),
             ),
           ],
+          ),
         ),
       ),
     );
