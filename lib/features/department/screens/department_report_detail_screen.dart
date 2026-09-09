@@ -241,6 +241,125 @@ class _DepartmentReportDetailScreenState
     );
   }
 
+  void _showImageViewer(
+    BuildContext context,
+    List<String> urls,
+    int initialIndex,
+  ) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.9),
+      builder: (ctx) {
+        int current = initialIndex;
+        return StatefulBuilder(
+          builder: (ctx, setDialog) => Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.all(12),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 5.0,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      urls[current],
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, e, s) => const Padding(
+                        padding: EdgeInsets.all(40),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.broken_image,
+                              size: 56,
+                              color: Colors.white54,
+                            ),
+                            SizedBox(height: 12),
+                            Text(
+                              'Failed to load image',
+                              style: TextStyle(color: Colors.white54),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Close button
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ),
+                // Counter badge
+                Positioned(
+                  top: 4,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${current + 1} / ${urls.length}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Prev button
+                if (urls.length > 1 && current > 0)
+                  Positioned(
+                    left: 0,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.chevron_left,
+                        color: Colors.white,
+                        size: 36,
+                      ),
+                      onPressed: () => setDialog(() => current = current - 1),
+                    ),
+                  ),
+                // Next button
+                if (urls.length > 1 && current < urls.length - 1)
+                  Positioned(
+                    right: 0,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.chevron_right,
+                        color: Colors.white,
+                        size: 36,
+                      ),
+                      onPressed: () => setDialog(() => current = current + 1),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -434,15 +553,55 @@ class _DepartmentReportDetailScreenState
                                   child: ListView.builder(
                                     scrollDirection: Axis.horizontal,
                                     itemCount: report.photoUrls.length,
-                                    itemBuilder: (_, i) => Container(
-                                      margin: const EdgeInsets.only(right: 10),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(10),
-                                        child: Image.network(
-                                          report.photoUrls[i],
-                                          width: 140,
-                                          height: 140,
-                                          fit: BoxFit.cover,
+                                    itemBuilder: (_, i) => GestureDetector(
+                                      onTap: () => _showImageViewer(
+                                        context,
+                                        report.photoUrls,
+                                        i,
+                                      ),
+                                      child: Container(
+                                        margin: const EdgeInsets.only(
+                                          right: 10,
+                                        ),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          child: Stack(
+                                            alignment: Alignment.center,
+                                            children: [
+                                              Image.network(
+                                                report.photoUrls[i],
+                                                width: 140,
+                                                height: 140,
+                                                fit: BoxFit.cover,
+                                              ),
+                                              Positioned(
+                                                bottom: 6,
+                                                right: 6,
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(
+                                                    4,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.black
+                                                        .withValues(
+                                                          alpha: 0.45,
+                                                        ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          6,
+                                                        ),
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.zoom_in_rounded,
+                                                    size: 14,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
