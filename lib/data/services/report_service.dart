@@ -550,11 +550,13 @@ class ReportService {
         followers.add(userId);
         final newCount = followers.length;
         final newPriority = _calculatePriority(newCount);
+        final autoUrgency = _autoUrgency(newCount);
 
         transaction.update(reportRef, {
           'followers': followers,
           'followerCount': newCount,
           'priority': newPriority,
+          if (autoUrgency != null) 'urgencyLevel': autoUrgency,
           'updatedAt': Timestamp.fromDate(DateTime.now()),
         });
       }
@@ -581,13 +583,22 @@ class ReportService {
         followers.remove(userId);
         final newCount = followers.length;
         final newPriority = _calculatePriority(newCount);
+        final autoUrgency = _autoUrgency(newCount);
 
-        transaction.update(reportRef, {
+        final updateData = <String, dynamic>{
           'followers': followers,
           'followerCount': newCount,
           'priority': newPriority,
           'updatedAt': Timestamp.fromDate(DateTime.now()),
-        });
+        };
+        // Set or clear urgencyLevel based on remaining followers
+        if (autoUrgency != null) {
+          updateData['urgencyLevel'] = autoUrgency;
+        } else {
+          updateData['urgencyLevel'] = FieldValue.delete();
+        }
+
+        transaction.update(reportRef, updateData);
       }
     });
   }
@@ -599,6 +610,15 @@ class ReportService {
     if (followerCount >= 5) return 3; // Medium
     if (followerCount >= 2) return 2; // Low
     return 1; // Normal
+  }
+
+  /// Auto-derive urgencyLevel from follower count.
+  /// Returns null when there are no followers (clears urgency).
+  String? _autoUrgency(int followerCount) {
+    if (followerCount >= 10) return 'High';
+    if (followerCount >= 5) return 'Medium';
+    if (followerCount >= 1) return 'Low';
+    return null;
   }
 
   /// Shared helper — notify all admins/superadmins with a single notification

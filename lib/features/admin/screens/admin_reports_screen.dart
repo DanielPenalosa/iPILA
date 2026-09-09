@@ -947,11 +947,11 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
                         ),
                       ],
                       const Spacer(),
-                      // Priority sort toggle
+                      // Urgency sort toggle
                       Tooltip(
                         message: _sortByPriority
-                            ? 'Sorting by priority'
-                            : 'Sort by priority',
+                            ? 'Sorting by urgency'
+                            : 'Sort by urgency',
                         child: InkWell(
                           onTap: () => setState(
                             () => _sortByPriority = !_sortByPriority,
@@ -984,7 +984,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  'Priority',
+                                  'Urgency',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: _sortByPriority
