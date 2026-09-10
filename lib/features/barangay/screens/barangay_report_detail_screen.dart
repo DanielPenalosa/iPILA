@@ -33,174 +33,364 @@ class _BarangayReportDetailScreenState
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, set) => Padding(
-          padding: EdgeInsets.only(
-            left: 24, right: 24, top: 24,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 36, height: 4,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE5E7EB),
-                    borderRadius: BorderRadius.circular(2),
+        builder: (ctx, set) {
+          final isDone = selectedStatus == AppConstants.statusDone;
+          final brgyName = auth.user?.barangay != null
+              ? 'Brgy. ${auth.user!.barangay}'
+              : '';
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // drag handle
+                  Center(
+                    child: Container(
+                      width: 36, height: 4,
+                      margin: const EdgeInsets.only(bottom: 18),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE5E7EB),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
-                ),
+
+                  // header
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.edit_note_rounded,
+                            size: 18, color: Color(0xFF374151)),
+                      ),
+                      const SizedBox(width: 12),
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Progress Update',
+                              style: TextStyle(fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF111111))),
+                          Text('Update the status of this report',
+                              style: TextStyle(fontSize: 12,
+                                  color: Color(0xFF9CA3AF))),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // status picker
+                  const Text('Status',
+                      style: TextStyle(fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF374151))),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: AppConstants.departmentStatuses.map((s) {
+                      final selected = selectedStatus == s;
+                      final color = AppTheme.statusColor(s);
+                      return GestureDetector(
+                        onTap: () => set(() => selectedStatus = s),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? color.withValues(alpha: 0.12)
+                                : const Color(0xFFF9FAFB),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: selected
+                                  ? color
+                                  : const Color(0xFFE5E7EB),
+                              width: selected ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Text(s,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: selected
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: selected
+                                    ? color
+                                    : const Color(0xFF6B7280),
+                              )),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // remarks
+                  const Text('Notes / Remarks',
+                      style: TextStyle(fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF374151))),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: remarksCtrl,
+                    maxLines: 3,
+                    style: const TextStyle(fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: selectedStatus == null
+                          ? 'Select a status first...'
+                          : isDone
+                              ? 'Describe the completed work...'
+                              : 'What actions have been taken? (optional)',
+                      hintStyle: const TextStyle(
+                          fontSize: 13, color: Color(0xFFD1D5DB)),
+                      filled: true,
+                      fillColor: const Color(0xFFF9FAFB),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide:
+                            const BorderSide(color: Color(0xFFE5E7EB)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide:
+                            const BorderSide(color: Color(0xFFE5E7EB)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                            color: Color(0xFF6366F1), width: 1.5),
+                      ),
+                      contentPadding: const EdgeInsets.all(14),
+                    ),
+                  ),
+
+                  // photo attach — only required/shown for Done
+                  if (isDone) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F3FF),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFDDD6FE)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.camera_alt_outlined,
+                                  size: 15, color: Color(0xFF7C3AED)),
+                              SizedBox(width: 6),
+                              Text('Completion Photo',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF7C3AED))),
+                              SizedBox(width: 4),
+                              Text('(required)',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: Color(0xFFDC2626))),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Attach a photo showing the completed work.',
+                            style: TextStyle(
+                                fontSize: 11, color: Color(0xFF7C3AED)),
+                          ),
+                          const SizedBox(height: 10),
+                          GestureDetector(
+                            onTap: () async {
+                              final picked =
+                                  await ImagePicker().pickMultiImage();
+                              set(() => photos
+                                ..clear()
+                                ..addAll(picked));
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 10, horizontal: 14),
+                              decoration: BoxDecoration(
+                                color: photos.isEmpty
+                                    ? Colors.white
+                                    : const Color(0xFFEDE9FE),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: photos.isEmpty
+                                      ? const Color(0xFFDDD6FE)
+                                      : const Color(0xFF7C3AED),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    photos.isEmpty
+                                        ? Icons.add_photo_alternate_outlined
+                                        : Icons.check_circle_outline,
+                                    size: 16,
+                                    color: const Color(0xFF7C3AED),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    photos.isEmpty
+                                        ? 'Attach photos'
+                                        : '${photos.length} photo(s) attached',
+                                    style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Color(0xFF7C3AED),
+                                        fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFFBEB),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFDE68A)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info_outline_rounded,
+                              size: 14, color: Color(0xFFD97706)),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Marking as Done will notify admin for final verification.',
+                              style: TextStyle(
+                                  fontSize: 12, color: Color(0xFFD97706)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 20),
+
+                  // save button
+                  ElevatedButton(
+                    onPressed: (selectedStatus == null ||
+                            (isDone && photos.isEmpty))
+                        ? null
+                        : () async {
+                            Navigator.pop(ctx);
+                            setState(() => _submitting = true);
+                            try {
+                              if (isDone) {
+                                await _service.submitForVerification(
+                                  reportId: report.id,
+                                  barangayName: brgyName,
+                                  updatedByName:
+                                      auth.user?.fullName ?? '',
+                                  reporterUserId: report.userId,
+                                  remarks: remarksCtrl.text
+                                          .trim()
+                                          .isEmpty
+                                      ? null
+                                      : remarksCtrl.text.trim(),
+                                  completionPhotosWeb: photos,
+                                );
+                              } else {
+                                await _service.addProgressUpdate(
+                                  reportId: report.id,
+                                  barangayUserId: auth.user!.uid,
+                                  barangayName: brgyName,
+                                  updatedByName:
+                                      auth.user?.fullName ?? '',
+                                  status: selectedStatus!,
+                                  remarks: remarksCtrl.text
+                                          .trim()
+                                          .isEmpty
+                                      ? null
+                                      : remarksCtrl.text.trim(),
+                                  photosWeb: null,
+                                  reporterUserId: report.userId,
+                                );
+                              }
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Update saved'),
+                                    backgroundColor: Color(0xFF10B981),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: $e'),
+                                    backgroundColor: AppTheme.primaryRed,
+                                  ),
+                                );
+                              }
+                            } finally {
+                              if (mounted)
+                                setState(() => _submitting = false);
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDone
+                          ? const Color(0xFF7C3AED)
+                          : const Color(0xFF111111),
+                      disabledBackgroundColor: const Color(0xFFE5E7EB),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isDone
+                              ? Icons.verified_outlined
+                              : Icons.save_outlined,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          isDone ? 'Mark as Done' : 'Save Update',
+                          style: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const Text('Add Progress Update',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700,
-                      color: Color(0xFF111111))),
-              const SizedBox(height: 20),
-              DropdownButtonFormField<String>(
-                decoration: InputDecoration(
-                  labelText: 'Status',
-                  labelStyle: const TextStyle(fontSize: 13),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                ),
-                items: AppConstants.departmentStatuses
-                    .map((s) => DropdownMenuItem(
-                          value: s,
-                          child: Text(s, style: const TextStyle(fontSize: 13)),
-                        ))
-                    .toList(),
-                onChanged: (v) => set(() => selectedStatus = v),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: remarksCtrl,
-                maxLines: 3,
-                style: const TextStyle(fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: 'Action notes or remarks (optional)',
-                  hintStyle: const TextStyle(fontSize: 13, color: Color(0xFFD1D5DB)),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                  ),
-                  contentPadding: const EdgeInsets.all(14),
-                ),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final picked = await ImagePicker().pickMultiImage();
-                  set(() => photos.addAll(picked));
-                },
-                icon: const Icon(Icons.add_photo_alternate_outlined, size: 16),
-                label: Text(
-                  photos.isEmpty ? 'Attach photos' : '${photos.length} photo(s) attached',
-                  style: const TextStyle(fontSize: 13),
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF6366F1),
-                  side: const BorderSide(color: Color(0xFFE5E7EB)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                ),
-              ),
-              if (selectedStatus == AppConstants.statusDone) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F3FF),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    'This marks the work as done and notifies admin for final review.',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF7C3AED)),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: selectedStatus == null
-                    ? null
-                    : () async {
-                        Navigator.pop(ctx);
-                        setState(() => _submitting = true);
-                        final brgyName = auth.user?.barangay != null
-                            ? 'Brgy. ${auth.user!.barangay}'
-                            : '';
-                        try {
-                          if (selectedStatus == AppConstants.statusDone) {
-                            await _service.submitForVerification(
-                              reportId: report.id,
-                              barangayName: brgyName,
-                              updatedByName: auth.user?.fullName ?? '',
-                              reporterUserId: report.userId,
-                              remarks: remarksCtrl.text.trim().isEmpty
-                                  ? null : remarksCtrl.text.trim(),
-                              completionPhotosWeb: photos.isEmpty ? null : photos,
-                            );
-                          } else {
-                            await _service.addProgressUpdate(
-                              reportId: report.id,
-                              barangayUserId: auth.user!.uid,
-                              barangayName: brgyName,
-                              updatedByName: auth.user?.fullName ?? '',
-                              status: selectedStatus!,
-                              remarks: remarksCtrl.text.trim().isEmpty
-                                  ? null : remarksCtrl.text.trim(),
-                              photosWeb: photos.isEmpty ? null : photos,
-                              reporterUserId: report.userId,
-                            );
-                          }
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Update saved'),
-                                  backgroundColor: Color(0xFF10B981)),
-                            );
-                          }
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: $e'),
-                                  backgroundColor: AppTheme.primaryRed),
-                            );
-                          }
-                        } finally {
-                          if (mounted) setState(() => _submitting = false);
-                        }
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: selectedStatus == AppConstants.statusDone
-                      ? const Color(0xFF7C3AED) : const Color(0xFF111111),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  elevation: 0,
-                ),
-                child: Text(
-                  selectedStatus == AppConstants.statusDone ? 'Mark as Done' : 'Save Update',
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
