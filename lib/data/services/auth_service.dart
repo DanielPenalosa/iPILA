@@ -149,4 +149,43 @@ class AuthService {
 
   Future<void> sendPasswordReset(String email) =>
       _auth.sendPasswordResetEmail(email: email);
+
+  Future<void> updateProfile({
+    required String uid,
+    required String fullName,
+    required String phone,
+    required String barangay,
+    File? newPhoto,
+    XFile? newPhotoWeb,
+  }) async {
+    String? photoUrl;
+    try {
+      if (kIsWeb && newPhotoWeb != null) {
+        photoUrl = await CloudinaryService.uploadImageWeb(
+          newPhotoWeb,
+          folder: 'ipila/profile_photos',
+        );
+      } else if (newPhoto != null) {
+        photoUrl = await CloudinaryService.uploadImage(
+          newPhoto,
+          folder: 'ipila/profile_photos',
+        );
+      }
+    } catch (e) {
+      debugPrint('Profile photo upload failed: $e');
+    }
+
+    final updates = <String, dynamic>{
+      'fullName': fullName,
+      'phone': phone,
+      'barangay': barangay,
+    };
+    if (photoUrl != null) updates['photoUrl'] = photoUrl;
+
+    await _db
+        .collection(AppConstants.usersCollection)
+        .doc(uid)
+        .update(updates);
+    await _auth.currentUser?.updateDisplayName(fullName);
+  }
 }

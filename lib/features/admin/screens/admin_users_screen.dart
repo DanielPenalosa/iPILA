@@ -765,6 +765,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 final admins = filteredAll
                     .where((u) => u.isAdmin)
                     .toList();
+                final barangayUsers = filteredAll
+                    .where((u) => u.isBarangay)
+                    .toList();
                 final filtered = filteredAll;
 
                 return SingleChildScrollView(
@@ -1187,6 +1190,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                         'Admin',
                                         const Color(0xFFDC2626),
                                         Icons.admin_panel_settings_outlined,
+                                      ),
+                                      buildGroup(
+                                        barangayUsers,
+                                        'Barangay',
+                                        Colors.teal,
+                                        Icons.location_city_outlined,
                                       ),
                                       const SizedBox(height: 8),
                                     ],

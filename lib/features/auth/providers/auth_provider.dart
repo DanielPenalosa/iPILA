@@ -195,6 +195,38 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> updateProfile({
+    required String fullName,
+    required String phone,
+    required String barangay,
+    File? newPhoto,
+    XFile? newPhotoWeb,
+  }) async {
+    if (_user == null) return false;
+    _errorMessage = null;
+    try {
+      await _authService.updateProfile(
+        uid: _user!.uid,
+        fullName: fullName,
+        phone: phone,
+        barangay: barangay,
+        newPhoto: newPhoto,
+        newPhotoWeb: newPhotoWeb,
+      );
+      // Refresh the local user model
+      final refreshed = await _authService.getUserModel(_user!.uid);
+      if (refreshed != null) {
+        _user = refreshed;
+        notifyListeners();
+      }
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
   String _mapFirebaseError(String code) {
     switch (code) {
       case 'user-not-found':

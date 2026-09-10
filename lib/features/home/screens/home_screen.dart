@@ -68,22 +68,27 @@ class HomeScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryYellow.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      initials,
-                      style: const TextStyle(
-                        color: AppTheme.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
+                GestureDetector(
+                  onTap: () => context.push('/profile'),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryYellow.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
                     ),
+                    child: user?.photoUrl != null && user!.photoUrl!.isNotEmpty
+                        ? ClipOval(child: Image.network(user.photoUrl!, fit: BoxFit.cover, width: 44, height: 44))
+                        : Center(
+                            child: Text(
+                              initials,
+                              style: const TextStyle(
+                                color: AppTheme.black,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
                   ),
                 ),
               ],

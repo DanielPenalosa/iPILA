@@ -151,44 +151,57 @@ class _CommunityReportsScreenState extends State<CommunityReportsScreen> {
   void _showCategoryFilter() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppTheme.borderColor,
-                borderRadius: BorderRadius.circular(2),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.6,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.borderColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'Filter by Category',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              const SizedBox(height: 12),
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Filter by Category',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ),
-            ),
-            ...AppConstants.issueCategories.map(
-              (category) => ListTile(
-                title: Text(category),
-                trailing: _categoryFilter == category
-                    ? const Icon(Icons.check, color: AppTheme.primaryBlue)
-                    : null,
-                onTap: () {
-                  setState(() => _categoryFilter = category);
-                  Navigator.pop(context);
-                },
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: AppConstants.issueCategories
+                      .map(
+                        (category) => ListTile(
+                          title: Text(category),
+                          trailing: _categoryFilter == category
+                              ? const Icon(Icons.check, color: AppTheme.primaryBlue)
+                              : null,
+                          onTap: () {
+                            setState(() => _categoryFilter = category);
+                            Navigator.pop(context);
+                          },
+                        ),
+                      )
+                      .toList(),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-          ],
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );
@@ -197,44 +210,57 @@ class _CommunityReportsScreenState extends State<CommunityReportsScreen> {
   void _showStatusFilter() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppTheme.borderColor,
-                borderRadius: BorderRadius.circular(2),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.6,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.borderColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'Filter by Status',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              const SizedBox(height: 12),
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Filter by Status',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ),
-            ),
-            ...AppConstants.reportStatuses.map(
-              (status) => ListTile(
-                title: Text(status),
-                trailing: _statusFilter == status
-                    ? const Icon(Icons.check, color: AppTheme.primaryBlue)
-                    : null,
-                onTap: () {
-                  setState(() => _statusFilter = status);
-                  Navigator.pop(context);
-                },
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: AppConstants.reportStatuses
+                      .map(
+                        (status) => ListTile(
+                          title: Text(status),
+                          trailing: _statusFilter == status
+                              ? const Icon(Icons.check, color: AppTheme.primaryBlue)
+                              : null,
+                          onTap: () {
+                            setState(() => _statusFilter = status);
+                            Navigator.pop(context);
+                          },
+                        ),
+                      )
+                      .toList(),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-          ],
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );

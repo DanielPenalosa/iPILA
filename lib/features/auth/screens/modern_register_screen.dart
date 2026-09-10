@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -100,7 +101,7 @@ class _ModernRegisterScreenState extends State<ModernRegisterScreen> {
       email: _emailCtrl.text.trim(),
       password: _passwordCtrl.text,
       fullName: fullName,
-      phone: _phoneCtrl.text.trim(),
+      phone: '+63${_phoneCtrl.text.trim()}',
       barangay: _selectedBarangay ?? '',
       idPhoto: kIsWeb ? null : _idPhoto,
       idPhotoWeb: kIsWeb ? _idPhotoWeb : null,
@@ -222,7 +223,7 @@ class _ModernRegisterScreenState extends State<ModernRegisterScreen> {
                                         Icons.person_outline,
                                       ),
                                       validator: (v) => v == null || v.isEmpty
-                                          ? 'Required'
+                                          ? 'First name is required'
                                           : null,
                                     ),
                                   ),
@@ -235,15 +236,13 @@ class _ModernRegisterScreenState extends State<ModernRegisterScreen> {
                                         Icons.person_outline,
                                       ),
                                       validator: (v) => v == null || v.isEmpty
-                                          ? 'Required'
+                                          ? 'Last name is required'
                                           : null,
                                     ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 12),
-
-                              // Email
                               TextFormField(
                                 controller: _emailCtrl,
                                 keyboardType: TextInputType.emailAddress,
@@ -251,23 +250,60 @@ class _ModernRegisterScreenState extends State<ModernRegisterScreen> {
                                   'Email address',
                                   Icons.email_outlined,
                                 ),
-                                validator: (v) => v?.contains('@') == true
-                                    ? null
-                                    : 'Invalid email',
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) {
+                                    return 'Email address is required';
+                                  }
+                                  if (!v.trim().toLowerCase().endsWith('@gmail.com')) {
+                                    return 'Email must be a valid @gmail.com address';
+                                  }
+                                  return null;
+                                },
                               ),
                               const SizedBox(height: 12),
 
                               // Phone
                               TextFormField(
                                 controller: _phoneCtrl,
-                                keyboardType: TextInputType.phone,
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(10),
+                                ],
                                 decoration: _webField(
-                                  'Phone number',
+                                  '9XXXXXXXXX',
                                   Icons.phone_outlined,
+                                ).copyWith(
+                                  prefixIcon: const Padding(
+                                    padding: EdgeInsets.only(left: 12, right: 4),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.phone_outlined),
+                                        SizedBox(width: 6),
+                                        Text(
+                                          '+63',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                                validator: (v) => v != null && v.length >= 10
-                                    ? null
-                                    : 'Invalid phone',
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) {
+                                    return 'Phone number is required';
+                                  }
+                                  if (v.trim().length != 10) {
+                                    return 'Phone number must be 10 digits after +63 (11 digits total)';
+                                  }
+                                  if (!v.startsWith('9')) {
+                                    return 'Philippine mobile numbers start with 9';
+                                  }
+                                  return null;
+                                },
                               ),
                               const SizedBox(height: 12),
 
@@ -733,24 +769,59 @@ class _ModernRegisterScreenState extends State<ModernRegisterScreen> {
                                 filled: true,
                                 fillColor: Colors.grey[50],
                               ),
-                              validator: (v) => v?.contains('@') == true
-                                  ? null
-                                  : 'Invalid email',
+                              validator: (v) {
+                                if (v == null || v.trim().isEmpty) {
+                                  return 'Email address is required';
+                                }
+                                if (!v.trim().toLowerCase().endsWith('@gmail.com')) {
+                                  return 'Email must be a valid @gmail.com address';
+                                }
+                                return null;
+                              },
                             ),
                             const SizedBox(height: 10),
 
                             TextFormField(
                               controller: _phoneCtrl,
-                              keyboardType: TextInputType.phone,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(10),
+                              ],
                               decoration: InputDecoration(
-                                hintText: 'Phone number',
-                                prefixIcon: const Icon(Icons.phone_outlined),
+                                hintText: '9XXXXXXXXX',
                                 filled: true,
                                 fillColor: Colors.grey[50],
+                                prefixIcon: const Padding(
+                                  padding: EdgeInsets.only(left: 12, right: 4),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.phone_outlined),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        '+63',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                              validator: (v) => v != null && v.length >= 10
-                                  ? null
-                                  : 'Invalid phone',
+                              validator: (v) {
+                                if (v == null || v.trim().isEmpty) {
+                                  return 'Phone number is required';
+                                }
+                                if (v.trim().length != 10) {
+                                  return 'Phone number must be 10 digits after +63 (11 digits total)';
+                                }
+                                if (!v.startsWith('9')) {
+                                  return 'Philippine mobile numbers start with 9';
+                                }
+                                return null;
+                              },
                             ),
                             const SizedBox(height: 10),
 
@@ -800,7 +871,7 @@ class _ModernRegisterScreenState extends State<ModernRegisterScreen> {
                               ),
                               validator: (v) => v != null && v.length >= 6
                                   ? null
-                                  : 'Min 6 chars',
+                                  : 'Min 6 characters',
                             ),
                             const SizedBox(height: 10),
 

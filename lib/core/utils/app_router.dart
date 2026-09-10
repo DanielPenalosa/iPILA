@@ -23,6 +23,7 @@ import '../../features/admin/screens/admin_settings_screen.dart';
 import '../../features/analytics/screens/analytics_screen.dart';
 import '../../features/alerts/screens/alerts_screen.dart';
 import '../../features/help/screens/faq_screen.dart';
+import '../../features/profile/screens/profile_screen.dart';
 import '../../features/department/screens/department_scaffold_widget.dart';
 import '../../features/department/screens/department_dashboard_screen.dart';
 import '../../features/department/screens/department_reports_screen.dart';
@@ -30,12 +31,14 @@ import '../../features/department/screens/department_report_detail_screen.dart';
 import '../../features/department/screens/department_map_screen.dart';
 import '../../features/department/screens/department_notifications_screen.dart';
 import '../../features/department/screens/department_settings_screen.dart';
+import '../../features/department/screens/department_analytics_screen.dart';
 import '../../features/barangay/screens/barangay_scaffold_widget.dart';
 import '../../features/barangay/screens/barangay_dashboard_screen.dart';
 import '../../features/barangay/screens/barangay_reports_screen.dart';
 import '../../features/barangay/screens/barangay_report_detail_screen.dart';
 import '../../features/barangay/screens/barangay_map_screen.dart';
 import '../../features/barangay/screens/barangay_notifications_screen.dart';
+import '../../features/barangay/screens/barangay_analytics_screen.dart';
 import '../../features/barangay/screens/barangay_settings_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -69,11 +72,13 @@ final _adminAlertsKey = GlobalKey<NavigatorState>();
 final _adminSettingsKey = GlobalKey<NavigatorState>();
 final _deptDashKey = GlobalKey<NavigatorState>();
 final _deptReportsKey = GlobalKey<NavigatorState>();
+final _deptAnalyticsKey = GlobalKey<NavigatorState>();
 final _deptMapKey = GlobalKey<NavigatorState>();
 final _deptNotificationsKey = GlobalKey<NavigatorState>();
 final _deptSettingsKey = GlobalKey<NavigatorState>();
 final _brgyDashKey = GlobalKey<NavigatorState>();
 final _brgyReportsKey = GlobalKey<NavigatorState>();
+final _brgyAnalyticsKey = GlobalKey<NavigatorState>();
 final _brgyMapKey = GlobalKey<NavigatorState>();
 final _brgyNotificationsKey = GlobalKey<NavigatorState>();
 final _brgySettingsKey = GlobalKey<NavigatorState>();
@@ -342,6 +347,15 @@ GoRouter createRouter(AuthProvider authProvider) {
             ],
           ),
           StatefulShellBranch(
+            navigatorKey: _deptAnalyticsKey,
+            routes: [
+              GoRoute(
+                path: '/department/analytics',
+                builder: (_, s) => const DepartmentAnalyticsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
             navigatorKey: _deptMapKey,
             routes: [
               GoRoute(
@@ -400,6 +414,15 @@ GoRouter createRouter(AuthProvider authProvider) {
                     ),
                   ),
                 ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _brgyAnalyticsKey,
+            routes: [
+              GoRoute(
+                path: '/barangay/analytics',
+                builder: (_, s) => const BarangayAnalyticsScreen(),
               ),
             ],
           ),
@@ -482,83 +505,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-    final user = auth.user;
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('My Profile')),
-      body: user == null
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                const SizedBox(height: 20),
-                const CircleAvatar(
-                  radius: 40,
-                  backgroundColor: Color(0xFF0038A8),
-                  child: Icon(Icons.person, size: 40, color: Colors.white),
-                ),
-                const SizedBox(height: 12),
-                Center(
-                  child: Text(
-                    user.fullName,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Center(
-                  child: Text(
-                    'Brgy. ${user.barangay}',
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Card(
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.email_outlined),
-                        title: const Text('Email'),
-                        subtitle: Text(user.email),
-                      ),
-                      ListTile(
-                        leading: const Icon(Icons.phone_outlined),
-                        title: const Text('Phone'),
-                        subtitle: Text(user.phone),
-                      ),
-                      ListTile(
-                        leading: const Icon(Icons.badge_outlined),
-                        title: const Text('Role'),
-                        subtitle: Text(user.role.toUpperCase()),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: () => auth.signOut(),
-                  icon: const Icon(Icons.logout, color: Colors.red),
-                  label: const Text(
-                    'Sign Out',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red),
-                  ),
-                ),
-              ],
-            ),
     );
   }
 }

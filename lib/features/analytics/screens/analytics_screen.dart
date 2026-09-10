@@ -858,13 +858,18 @@ class _StatusChart extends StatelessWidget {
               sideTitles: SideTitles(
                 showTitles: true,
                 getTitlesWidget: (v, _) {
-                  final labels = ['Sub', 'Seen', 'Val', 'Que', 'WIP', 'Done'];
                   final i = v.toInt();
-                  if (i < 0 || i >= labels.length) return const SizedBox();
+                  if (i < 0 || i >= statuses.length) return const SizedBox();
+                  // Shorten long labels to fit
+                  final label = statuses[i]
+                      .replaceAll('Under Review', 'Review')
+                      .replaceAll('In Progress', 'WIP')
+                      .replaceAll('Needs Revision', 'Revision')
+                      .replaceAll('Resolved', 'Resolved');
                   return Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      labels[i],
+                      label,
                       style: const TextStyle(
                         fontSize: 10,
                         color: AppTheme.textMuted,
