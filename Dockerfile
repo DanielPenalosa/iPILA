@@ -1,6 +1,5 @@
 # iPILA - Municipal Waste Management System
-# Build: 2026-09-10-v16 - Fix map modal clipping with insetPadding and safe area height
-# Force rebuild: 2026-09-10-c
+# Build: 2026-09-10-v17 - Merge mobile validators, profile screen, barangay accounts, analytics, bottom sheet fixes
 FROM ghcr.io/cirruslabs/flutter:stable AS build
 
 WORKDIR /app
