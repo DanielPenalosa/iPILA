@@ -161,108 +161,263 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     final nameCtrl = TextEditingController();
     final emailCtrl = TextEditingController();
     final passCtrl = TextEditingController();
+    final confirmPassCtrl = TextEditingController();
     bool creating = false;
+    bool showPass = false;
+    bool showConfirmPass = false;
 
     showDialog(
       context: context,
+      barrierColor: Colors.black54,
       builder: (_) => StatefulBuilder(
-        builder: (ctx, setDialog) => AlertDialog(
-          title: const Text('Create Department Account'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Department'),
-                  value: selectedDept,
-                  items: AppConstants.departments
-                      .map((d) => DropdownMenuItem(value: d, child: Text(d)))
-                      .toList(),
-                  onChanged: (v) => setDialog(() => selectedDept = v),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Account Name'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: emailCtrl,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: passCtrl,
-                  decoration: const InputDecoration(labelText: 'Password'),
-                  obscureText: true,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: creating || selectedDept == null
-                  ? null
-                  : () async {
-                      setDialog(() => creating = true);
-                      // Capture messenger before async gap so context is safe.
-                      final messenger = ScaffoldMessenger.of(context);
-                      try {
-                        final uid = await _createAuthUserSecondary(
-                          emailCtrl.text.trim(),
-                          passCtrl.text.trim(),
-                        );
-                        await _deptService.createDepartmentUser(
-                          uid: uid,
-                          fullName: nameCtrl.text.trim().isEmpty
-                              ? selectedDept!
-                              : nameCtrl.text.trim(),
-                          email: emailCtrl.text.trim(),
-                          department: selectedDept!,
-                        );
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Department account created for $selectedDept',
+        builder: (ctx, setDialog) {
+          final passMatch = passCtrl.text == confirmPassCtrl.text;
+          final canCreate = !creating &&
+              selectedDept != null &&
+              emailCtrl.text.trim().isNotEmpty &&
+              passCtrl.text.length >= 6 &&
+              passMatch;
+
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // header
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            backgroundColor: AppTheme.successGreen,
+                            child: Icon(Icons.business_outlined,
+                                color: AppTheme.primaryBlue, size: 20),
                           ),
-                        );
-                      } catch (e) {
-                        setDialog(() => creating = false);
-                        if (ctx.mounted) {
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text('Error: $e'),
-                              backgroundColor: AppTheme.primaryRed,
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('New Department Account',
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF111111))),
+                                SizedBox(height: 2),
+                                Text('Fill in the details to create an account',
+                                    style: TextStyle(
+                                        fontSize: 12, color: Color(0xFF9CA3AF))),
+                              ],
                             ),
-                          );
-                        }
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryBlue,
-                foregroundColor: Colors.white,
-              ),
-              child: creating
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            icon: const Icon(Icons.close, size: 18,
+                                color: Color(0xFF9CA3AF)),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
                       ),
-                    )
-                  : const Text('Create'),
+                      const SizedBox(height: 24),
+                      const Divider(height: 1, color: Color(0xFFF3F4F6)),
+                      const SizedBox(height: 24),
+
+                      // Department dropdown
+                      _FormLabel(label: 'Department', required: true),
+                      const SizedBox(height: 6),
+                      DropdownButtonFormField<String>(
+                        decoration: _inputDecoration(
+                            hint: 'Select department',
+                            icon: Icons.apartment_outlined),
+                        value: selectedDept,
+                        items: AppConstants.departments
+                            .map((d) => DropdownMenuItem(
+                                value: d,
+                                child: Text(d,
+                                    style: const TextStyle(fontSize: 13))))
+                            .toList(),
+                        onChanged: (v) => setDialog(() => selectedDept = v),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Account name
+                      _FormLabel(label: 'Account Name'),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: nameCtrl,
+                        onChanged: (_) => setDialog(() {}),
+                        style: const TextStyle(fontSize: 13),
+                        decoration: _inputDecoration(
+                            hint: 'e.g. Engineering Office',
+                            icon: Icons.badge_outlined),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Email
+                      _FormLabel(label: 'Email Address', required: true),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: emailCtrl,
+                        onChanged: (_) => setDialog(() {}),
+                        keyboardType: TextInputType.emailAddress,
+                        style: const TextStyle(fontSize: 13),
+                        decoration: _inputDecoration(
+                            hint: 'office@pila.gov.ph',
+                            icon: Icons.email_outlined),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Password
+                      _FormLabel(label: 'Password', required: true),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: passCtrl,
+                        onChanged: (_) => setDialog(() {}),
+                        obscureText: !showPass,
+                        style: const TextStyle(fontSize: 13),
+                        decoration: _inputDecoration(
+                          hint: 'Minimum 6 characters',
+                          icon: Icons.lock_outline,
+                          suffix: IconButton(
+                            icon: Icon(
+                              showPass ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              size: 18, color: const Color(0xFF9CA3AF),
+                            ),
+                            onPressed: () => setDialog(() => showPass = !showPass),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Confirm password
+                      _FormLabel(label: 'Confirm Password', required: true),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: confirmPassCtrl,
+                        onChanged: (_) => setDialog(() {}),
+                        obscureText: !showConfirmPass,
+                        style: const TextStyle(fontSize: 13),
+                        decoration: _inputDecoration(
+                          hint: 'Re-enter password',
+                          icon: Icons.lock_outline,
+                          error: confirmPassCtrl.text.isNotEmpty && !passMatch
+                              ? 'Passwords do not match'
+                              : null,
+                          suffix: IconButton(
+                            icon: Icon(
+                              showConfirmPass ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              size: 18, color: const Color(0xFF9CA3AF),
+                            ),
+                            onPressed: () => setDialog(() => showConfirmPass = !showConfirmPass),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+
+                      // actions
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 13),
+                                side: const BorderSide(color: Color(0xFFE5E7EB)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: const Text('Cancel',
+                                  style: TextStyle(
+                                      fontSize: 13, color: Color(0xFF6B7280))),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: ElevatedButton(
+                              onPressed: canCreate
+                                  ? () async {
+                                      setDialog(() => creating = true);
+                                      final messenger =
+                                          ScaffoldMessenger.of(context);
+                                      try {
+                                        final uid =
+                                            await _createAuthUserSecondary(
+                                          emailCtrl.text.trim(),
+                                          passCtrl.text.trim(),
+                                        );
+                                        await _deptService.createDepartmentUser(
+                                          uid: uid,
+                                          fullName: nameCtrl.text.trim().isEmpty
+                                              ? selectedDept!
+                                              : nameCtrl.text.trim(),
+                                          email: emailCtrl.text.trim(),
+                                          department: selectedDept!,
+                                        );
+                                        if (ctx.mounted) Navigator.pop(ctx);
+                                        messenger.showSnackBar(SnackBar(
+                                          content: Text(
+                                              'Department account created for $selectedDept'),
+                                          backgroundColor: AppTheme.successGreen,
+                                        ));
+                                      } catch (e) {
+                                        setDialog(() => creating = false);
+                                        if (ctx.mounted) {
+                                          messenger.showSnackBar(SnackBar(
+                                            content: Text('Error: $e'),
+                                            backgroundColor: AppTheme.primaryRed,
+                                          ));
+                                        }
+                                      }
+                                    }
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryBlue,
+                                disabledBackgroundColor: const Color(0xFFE5E7EB),
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 13),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: creating
+                                  ? const SizedBox(
+                                      width: 16, height: 16,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: Colors.white))
+                                  : const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.person_add_outlined, size: 16),
+                                        SizedBox(width: 8),
+                                        Text('Create Account',
+                                            style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600)),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -272,103 +427,263 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     final nameCtrl = TextEditingController();
     final emailCtrl = TextEditingController();
     final passCtrl = TextEditingController();
+    final confirmPassCtrl = TextEditingController();
     bool creating = false;
+    bool showPass = false;
+    bool showConfirmPass = false;
 
     showDialog(
       context: context,
+      barrierColor: Colors.black54,
       builder: (_) => StatefulBuilder(
-        builder: (ctx, setDialog) => AlertDialog(
-          title: const Text('Create Barangay Account'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Barangay'),
-                  value: selectedBarangay,
-                  items: AppConstants.barangays
-                      .map((b) => DropdownMenuItem(value: b, child: Text(b)))
-                      .toList(),
-                  onChanged: (v) => setDialog(() => selectedBarangay = v),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Account Name'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: emailCtrl,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: passCtrl,
-                  decoration: const InputDecoration(labelText: 'Password'),
-                  obscureText: true,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: creating || selectedBarangay == null
-                  ? null
-                  : () async {
-                      setDialog(() => creating = true);
-                      // Capture messenger before async gap so context is safe.
-                      final messenger = ScaffoldMessenger.of(context);
-                      try {
-                        final uid = await _createAuthUserSecondary(
-                          emailCtrl.text.trim(),
-                          passCtrl.text.trim(),
-                        );
-                        await _brgyService.createBarangayUser(
-                          uid: uid,
-                          fullName: nameCtrl.text.trim().isEmpty
-                              ? 'Brgy. $selectedBarangay'
-                              : nameCtrl.text.trim(),
-                          email: emailCtrl.text.trim(),
-                          barangay: selectedBarangay!,
-                        );
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(
-                                'Barangay account created for $selectedBarangay'),
-                            backgroundColor: AppTheme.successGreen,
-                          ),
-                        );
-                      } catch (e) {
-                        setDialog(() => creating = false);
-                        if (ctx.mounted) {
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text('Error: $e'),
-                              backgroundColor: AppTheme.primaryRed,
+        builder: (ctx, setDialog) {
+          final passMatch = passCtrl.text == confirmPassCtrl.text;
+          final canCreate = !creating &&
+              selectedBarangay != null &&
+              emailCtrl.text.trim().isNotEmpty &&
+              passCtrl.text.length >= 6 &&
+              passMatch;
+
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // header
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                          );
-                        }
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF10B981),
-                foregroundColor: Colors.white,
+                            child: const Icon(Icons.location_city_outlined,
+                                color: Color(0xFF10B981), size: 20),
+                          ),
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('New Barangay Account',
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF111111))),
+                                SizedBox(height: 2),
+                                Text('Fill in the details to create an account',
+                                    style: TextStyle(
+                                        fontSize: 12, color: Color(0xFF9CA3AF))),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            icon: const Icon(Icons.close, size: 18,
+                                color: Color(0xFF9CA3AF)),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      const Divider(height: 1, color: Color(0xFFF3F4F6)),
+                      const SizedBox(height: 24),
+
+                      // Barangay dropdown
+                      _FormLabel(label: 'Barangay', required: true),
+                      const SizedBox(height: 6),
+                      DropdownButtonFormField<String>(
+                        decoration: _inputDecoration(
+                            hint: 'Select barangay',
+                            icon: Icons.map_outlined),
+                        value: selectedBarangay,
+                        items: AppConstants.barangays
+                            .map((b) => DropdownMenuItem(
+                                value: b,
+                                child: Text(b,
+                                    style: const TextStyle(fontSize: 13))))
+                            .toList(),
+                        onChanged: (v) => setDialog(() => selectedBarangay = v),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Account name
+                      _FormLabel(label: 'Account Name'),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: nameCtrl,
+                        onChanged: (_) => setDialog(() {}),
+                        style: const TextStyle(fontSize: 13),
+                        decoration: _inputDecoration(
+                            hint: 'e.g. Brgy. Labuin',
+                            icon: Icons.badge_outlined),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Email
+                      _FormLabel(label: 'Email Address', required: true),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: emailCtrl,
+                        onChanged: (_) => setDialog(() {}),
+                        keyboardType: TextInputType.emailAddress,
+                        style: const TextStyle(fontSize: 13),
+                        decoration: _inputDecoration(
+                            hint: 'barangay@pila.gov.ph',
+                            icon: Icons.email_outlined),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Password
+                      _FormLabel(label: 'Password', required: true),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: passCtrl,
+                        onChanged: (_) => setDialog(() {}),
+                        obscureText: !showPass,
+                        style: const TextStyle(fontSize: 13),
+                        decoration: _inputDecoration(
+                          hint: 'Minimum 6 characters',
+                          icon: Icons.lock_outline,
+                          suffix: IconButton(
+                            icon: Icon(
+                              showPass ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              size: 18, color: const Color(0xFF9CA3AF),
+                            ),
+                            onPressed: () => setDialog(() => showPass = !showPass),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Confirm password
+                      _FormLabel(label: 'Confirm Password', required: true),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: confirmPassCtrl,
+                        onChanged: (_) => setDialog(() {}),
+                        obscureText: !showConfirmPass,
+                        style: const TextStyle(fontSize: 13),
+                        decoration: _inputDecoration(
+                          hint: 'Re-enter password',
+                          icon: Icons.lock_outline,
+                          error: confirmPassCtrl.text.isNotEmpty && !passMatch
+                              ? 'Passwords do not match'
+                              : null,
+                          suffix: IconButton(
+                            icon: Icon(
+                              showConfirmPass ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              size: 18, color: const Color(0xFF9CA3AF),
+                            ),
+                            onPressed: () => setDialog(() => showConfirmPass = !showConfirmPass),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+
+                      // actions
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 13),
+                                side: const BorderSide(color: Color(0xFFE5E7EB)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: const Text('Cancel',
+                                  style: TextStyle(
+                                      fontSize: 13, color: Color(0xFF6B7280))),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: ElevatedButton(
+                              onPressed: canCreate
+                                  ? () async {
+                                      setDialog(() => creating = true);
+                                      final messenger =
+                                          ScaffoldMessenger.of(context);
+                                      try {
+                                        final uid =
+                                            await _createAuthUserSecondary(
+                                          emailCtrl.text.trim(),
+                                          passCtrl.text.trim(),
+                                        );
+                                        await _brgyService.createBarangayUser(
+                                          uid: uid,
+                                          fullName: nameCtrl.text.trim().isEmpty
+                                              ? 'Brgy. $selectedBarangay'
+                                              : nameCtrl.text.trim(),
+                                          email: emailCtrl.text.trim(),
+                                          barangay: selectedBarangay!,
+                                        );
+                                        if (ctx.mounted) Navigator.pop(ctx);
+                                        messenger.showSnackBar(SnackBar(
+                                          content: Text(
+                                              'Barangay account created for $selectedBarangay'),
+                                          backgroundColor: AppTheme.successGreen,
+                                        ));
+                                      } catch (e) {
+                                        setDialog(() => creating = false);
+                                        if (ctx.mounted) {
+                                          messenger.showSnackBar(SnackBar(
+                                            content: Text('Error: $e'),
+                                            backgroundColor: AppTheme.primaryRed,
+                                          ));
+                                        }
+                                      }
+                                    }
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF10B981),
+                                disabledBackgroundColor: const Color(0xFFE5E7EB),
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 13),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: creating
+                                  ? const SizedBox(
+                                      width: 16, height: 16,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: Colors.white))
+                                  : const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.person_add_outlined, size: 16),
+                                        SizedBox(width: 8),
+                                        Text('Create Account',
+                                            style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600)),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              child: creating
-                  ? const SizedBox(
-                      width: 16, height: 16,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                  : const Text('Create'),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -1979,4 +2294,69 @@ class _ActionBtn extends StatelessWidget {
       small: true,
     );
   }
+}
+
+// ── Dialog helpers ────────────────────────────────────────────────────────────
+
+class _FormLabel extends StatelessWidget {
+  final String label;
+  final bool required;
+  const _FormLabel({required this.label, this.required = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(label,
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF374151))),
+        if (required) ...[
+          const SizedBox(width: 3),
+          const Text('*',
+              style: TextStyle(fontSize: 12, color: Color(0xFFDC2626))),
+        ],
+      ],
+    );
+  }
+}
+
+InputDecoration _inputDecoration({
+  required String hint,
+  required IconData icon,
+  Widget? suffix,
+  String? error,
+}) {
+  return InputDecoration(
+    hintText: hint,
+    hintStyle: const TextStyle(fontSize: 13, color: Color(0xFFD1D5DB)),
+    prefixIcon: Icon(icon, size: 16, color: const Color(0xFF9CA3AF)),
+    suffixIcon: suffix,
+    errorText: error,
+    errorStyle: const TextStyle(fontSize: 11),
+    filled: true,
+    fillColor: const Color(0xFFF9FAFB),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: Color(0xFF6366F1), width: 1.5),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: Color(0xFFDC2626)),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
+    ),
+  );
 }
