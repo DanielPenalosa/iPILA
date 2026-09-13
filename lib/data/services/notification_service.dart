@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/constants/app_constants.dart';
+import 'email_service.dart';
 
 class NotificationService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final _uuid = const Uuid();
+  final _email = EmailService();
 
   /// Create a notification for a specific user about their report update
   Future<void> createReportNotification({
@@ -112,6 +114,14 @@ class NotificationService {
         .collection(AppConstants.notificationsCollection)
         .doc(notificationId)
         .set(notificationData);
+
+    // Also send an email — fire and forget, never block the main flow
+    _email.sendNotificationEmail(
+      userId:   userId,
+      title:    title,
+      body:     body,
+      reportId: data?['reportId'] as String?,
+    ).catchError((_) {}); // silent fail
   }
 
   /// Delete a single notification
