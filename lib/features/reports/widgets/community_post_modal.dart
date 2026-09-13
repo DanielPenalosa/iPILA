@@ -1214,10 +1214,23 @@ class _ReportTimeline extends StatelessWidget {
         .where((h) => h.status == 'Resolved')
         .firstOrNull;
 
-    // auto message based on category — never uses admin remarks
-    final resolveMsg = resolvedEntry != null
-        ? 'The ${report.category.toLowerCase()} issue in Brgy. ${report.barangay} has been successfully resolved.'
-        : null;
+    // Build a summary message with dates and days taken
+    String? resolveMsg;
+    if (resolvedEntry != null) {
+      final reported = DateFormat('MMM d, yyyy').format(report.createdAt);
+      final resolved = DateFormat('MMM d, yyyy').format(resolvedEntry.timestamp);
+      final diff = resolvedEntry.timestamp.difference(report.createdAt);
+      final days = diff.inDays;
+      final hours = diff.inHours;
+
+      final duration = days >= 1
+          ? '$days ${days == 1 ? 'day' : 'days'}'
+          : '$hours ${hours == 1 ? 'hour' : 'hours'}';
+
+      resolveMsg =
+          'Reported on $reported and resolved on $resolved — '
+          'addressed within $duration.';
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
