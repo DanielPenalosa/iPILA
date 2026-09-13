@@ -190,6 +190,12 @@ class AuthProvider extends ChangeNotifier {
     try {
       await _authService.sendPasswordReset(email);
       return true;
+    } on FirebaseAuthException catch (e) {
+      // user-not-found → still return true to avoid email enumeration, but
+      // for invalid-email let it surface so the UI can show it
+      if (e.code == 'invalid-email') return false;
+      // For user-not-found, Firebase returns false silently
+      return false;
     } catch (_) {
       return false;
     }

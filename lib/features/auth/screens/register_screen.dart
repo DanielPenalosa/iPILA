@@ -307,8 +307,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       filled: true,
                       fillColor: Colors.grey[50],
                     ),
-                    validator: (v) =>
-                        v != null && v.length >= 6 ? null : 'Min 6 characters',
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Enter a password';
+                      if (v.length < 8) return 'At least 8 characters required';
+                      if (!RegExp(r'[A-Z]').hasMatch(v)) return 'Must contain an uppercase letter';
+                      if (!RegExp(r'[0-9]').hasMatch(v)) return 'Must contain a number';
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 10),
 
