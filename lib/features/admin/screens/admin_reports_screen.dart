@@ -1216,18 +1216,23 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+          padding: const EdgeInsets.symmetric(vertical: 32),
           itemCount: reports.length,
           itemBuilder: (context, index) {
             final report = reports[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 24),
-              child: _CommunityReportCard(
-                report: report,
-                onTap: () => showCommunityPostModal(
-                  context,
-                  report,
-                  isAdmin: true,
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 28),
+                  child: _CommunityReportCard(
+                    report: report,
+                    onTap: () => showCommunityPostModal(
+                      context,
+                      report,
+                      isAdmin: true,
+                    ),
+                  ),
                 ),
               ),
             );
@@ -1659,7 +1664,6 @@ class _CommunityReportCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 680),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
@@ -1747,27 +1751,29 @@ class _CommunityReportCard extends StatelessWidget {
               ),
             ),
 
-            // ── photo (full width) ─────────────────────────────────────
+            // ── photo (full width, 4:3) ────────────────────────────────
             if (report.photoUrls.isNotEmpty)
-              Image.network(
-                report.photoUrls.first,
-                width: double.infinity,
-                height: 340,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  height: 340,
-                  color: const Color(0xFFF3F4F6),
-                  child: const Icon(Icons.broken_image_outlined,
-                      size: 48, color: Color(0xFFD1D5DB)),
+              AspectRatio(
+                aspectRatio: 4 / 3,
+                child: Image.network(
+                  report.photoUrls.first,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: const Color(0xFFF3F4F6),
+                    child: const Icon(Icons.broken_image_outlined,
+                        size: 48, color: Color(0xFFD1D5DB)),
+                  ),
                 ),
               )
             else
-              Container(
-                width: double.infinity,
-                height: 200,
-                color: const Color(0xFFF3F4F6),
-                child: const Icon(Icons.image_not_supported_outlined,
-                    size: 48, color: Color(0xFFD1D5DB)),
+              AspectRatio(
+                aspectRatio: 4 / 3,
+                child: Container(
+                  color: const Color(0xFFF3F4F6),
+                  child: const Icon(Icons.image_not_supported_outlined,
+                      size: 48, color: Color(0xFFD1D5DB)),
+                ),
               ),
 
             // ── engagement row ─────────────────────────────────────────
