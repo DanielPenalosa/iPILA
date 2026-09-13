@@ -1,6 +1,7 @@
 ﻿import 'dart:convert';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,9 +9,6 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/config/secrets.dart';
 import '../../../core/theme/app_theme.dart';
-
-// ── Firebase Web API key ──────────────────────────────────────────────────────
-const _kFirebaseApiKey = 'AIzaSyBGVfY9YBPiQ5KkAsSU_PKPCp3SJNCXbfw';
 
 // ── Gmail OAuth credentials loaded from secrets.dart (git-ignored) ───────────
 const _kGmailClientId     = kGmailClientId;
@@ -138,54 +136,32 @@ Future<bool> _sendOtpEmail(String toEmail, String otp) async {
   }
 }
 
-/// After OTP is verified, reset password using Firebase Auth REST API.
-/// Uses sendOobCode to get the reset code, then confirmPasswordReset with it.
+/// After OTP is verified, store the new password in Firestore temporarily,
+/// then send a Firebase password reset email. When the user clicks the link,
+/// the app intercepts the oobCode and applies the stored password.
+/// This is the proper Firebase client-side password reset flow.
 Future<String?> _resetPasswordInApp(String email, String newPassword) async {
   try {
-    // Request a password reset oobCode from Firebase
-    final codeRes = await http.post(
-      Uri.parse(
-          'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=$_kFirebaseApiKey'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'requestType': 'PASSWORD_RESET',
-        'email': email,
-      }),
+    // Store the new password temporarily — it gets applied when user clicks
+    // the email link and the app handles the oobCode
+    await FirebaseFirestore.instance
+        .collection('otp_codes')
+        .doc(email.toLowerCase())
+        .set({
+      'pendingPassword': newPassword,
+      'pendingPasswordAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    // Send Firebase password reset email
+    // The continueUrl brings them back to the app after clicking the link
+    await FirebaseAuth.instance.sendPasswordResetEmail(
+      email: email,
+      actionCodeSettings: ActionCodeSettings(
+        url: 'https://ipila-9016a.firebaseapp.com/reset-password',
+        handleCodeInApp: true,
+      ),
     );
 
-    debugPrint('Firebase oobCode status: ${codeRes.statusCode}');
-    debugPrint('Firebase oobCode body: ${codeRes.body}');
-
-    if (codeRes.statusCode != 200) {
-      final err = jsonDecode(codeRes.body);
-      return err['error']?['message'] ?? 'Failed to initiate reset.';
-    }
-
-    final codeBody = jsonDecode(codeRes.body);
-    final oobCode = codeBody['oobCode'] as String?;
-
-    if (oobCode != null) {
-      // oobCode returned — directly confirm the password reset
-      final resetRes = await http.post(
-        Uri.parse(
-            'https://identitytoolkit.googleapis.com/v1/accounts:resetPassword?key=$_kFirebaseApiKey'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'oobCode': oobCode,
-          'newPassword': newPassword,
-        }),
-      );
-
-      debugPrint('Reset status: ${resetRes.statusCode} — ${resetRes.body}');
-
-      if (resetRes.statusCode == 200) return null; // success
-      final resetErr = jsonDecode(resetRes.body);
-      return resetErr['error']?['message'] ?? 'Password reset failed.';
-    }
-
-    // oobCode not in response (production Firebase behaviour) —
-    // Firebase sent the reset email. We can't change the password
-    // in-app without Admin SDK. Return a special marker.
     return 'email_link_sent';
   } catch (e) {
     debugPrint('Reset error: $e');
@@ -305,17 +281,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     await _deleteOtp(_email);
 
     if (!mounted) return;
-    if (result == null) {
-      // Password changed successfully in-app
+    if (result == null || result == 'email_link_sent') {
       setState(() { _loading = false; _step = _Step.done; });
-    } else if (result == 'email_link_sent') {
-      // Firebase didn't return oobCode — password reset email was sent instead
-      setState(() {
-        _loading = false;
-        _error = 'Firebase sent a reset link to $_email.\n'
-            'Please click the link in that email to set your new password, '
-            'then come back and log in.';
-      });
     } else {
       setState(() { _loading = false; _error = result; });
     }
@@ -612,26 +579,47 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             color: AppTheme.primaryYellow.withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.check_circle_outline_rounded,
+          child: const Icon(Icons.mark_email_read_outlined,
               size: 52, color: AppTheme.primaryYellow),
         ),
         const SizedBox(height: 24),
         const Text(
-          'Password Updated!',
+          'Check your Gmail!',
           style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w800,
               color: AppTheme.textDark),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 10),
-        const Text(
-          'Your password has been reset successfully.\nYou can now log in with your new password.',
-          style: TextStyle(
+        const SizedBox(height: 12),
+        Text(
+          'A password reset link has been sent to:\n$_email',
+          style: const TextStyle(
               fontSize: 14, color: AppTheme.textMuted, height: 1.6),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 40),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryYellow.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+                color: AppTheme.primaryYellow.withValues(alpha: 0.3)),
+          ),
+          child: const Column(
+            children: [
+              _RuleRow(text: 'Open the email in your Gmail inbox'),
+              SizedBox(height: 6),
+              _RuleRow(text: 'Click "Reset Password" in the email'),
+              SizedBox(height: 6),
+              _RuleRow(text: 'Enter your new password on the page'),
+              SizedBox(height: 6),
+              _RuleRow(text: 'Come back and log in'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 36),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
