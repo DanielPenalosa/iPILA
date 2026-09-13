@@ -148,6 +148,9 @@ class ReportModel {
   final int followerCount; // Number of followers/supporters
   final int priority; // Auto-calculated priority based on followers
   final String? urgencyLevel; // Auto/manual urgency: 'Critical', 'Moderate', 'Minor'
+  final List<String> hearts; // Users who hearted this report
+  final int heartCount;
+  final int commentCount;
 
   ReportModel({
     required this.id,
@@ -181,6 +184,9 @@ class ReportModel {
     this.followerCount = 0,
     this.priority = 0,
     this.urgencyLevel,
+    this.hearts = const [],
+    this.heartCount = 0,
+    this.commentCount = 0,
   });
 
   factory ReportModel.fromFirestore(DocumentSnapshot doc) {
@@ -222,6 +228,9 @@ class ReportModel {
       followerCount: data['followerCount'] ?? followers.length,
       priority: data['priority'] ?? 0,
       urgencyLevel: data['urgencyLevel'],
+      hearts: List<String>.from(data['hearts'] ?? []),
+      heartCount: data['heartCount'] ?? 0,
+      commentCount: data['commentCount'] ?? 0,
     );
   }
 
@@ -258,6 +267,9 @@ class ReportModel {
     'followerCount': followerCount,
     'priority': priority,
     'urgencyLevel': urgencyLevel,
+    'hearts': hearts,
+    'heartCount': heartCount,
+    'commentCount': commentCount,
   };
 
   ReportModel copyWith({

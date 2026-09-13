@@ -1059,9 +1059,8 @@ class _Banner extends StatelessWidget {
 
 class _SectionCard extends StatelessWidget {
   final String title;
-  final String? subtitle;
   final Widget child;
-  const _SectionCard({required this.title, required this.child, this.subtitle});
+  const _SectionCard({required this.title, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -1089,16 +1088,6 @@ class _SectionCard extends StatelessWidget {
                     letterSpacing: 0.1,
                   ),
                 ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle!,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.textMuted,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),

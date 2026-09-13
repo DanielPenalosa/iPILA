@@ -1,5 +1,4 @@
 import 'dart:html' as html;
-import 'dart:convert';
 
 void downloadFile(String filename, List<int> bytes) {
   final blob = html.Blob([bytes]);

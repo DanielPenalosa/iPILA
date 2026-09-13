@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../data/services/department_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
 /// Full sidebar scaffold for department users — mirrors admin layout.

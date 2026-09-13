@@ -841,6 +841,79 @@ class ReportService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // HEARTS (likes on community reports)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Toggle heart on a report for a citizen user.
+  Future<bool> toggleHeart(String reportId, String userId) async {
+    final reportRef = _db
+        .collection(AppConstants.reportsCollection)
+        .doc(reportId);
+    bool nowHearted = false;
+    await _db.runTransaction((transaction) async {
+      final snap = await transaction.get(reportRef);
+      if (!snap.exists) return;
+      final hearts = List<String>.from(snap.data()?['hearts'] ?? []);
+      if (hearts.contains(userId)) {
+        hearts.remove(userId);
+        nowHearted = false;
+      } else {
+        hearts.add(userId);
+        nowHearted = true;
+      }
+      transaction.update(reportRef, {
+        'hearts': hearts,
+        'heartCount': hearts.length,
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      });
+    });
+    return nowHearted;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // COMMENTS on community reports
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Add a comment to a report.
+  Future<void> addComment({
+    required String reportId,
+    required String userId,
+    required String userFullName,
+    required String text,
+  }) async {
+    await _db
+        .collection(AppConstants.reportsCollection)
+        .doc(reportId)
+        .collection('comments')
+        .add({
+          'userId': userId,
+          'userFullName': userFullName,
+          'text': text,
+          'createdAt': Timestamp.fromDate(DateTime.now()),
+        });
+    // increment comment count
+    await _db
+        .collection(AppConstants.reportsCollection)
+        .doc(reportId)
+        .update({'commentCount': FieldValue.increment(1)});
+  }
+
+  /// Stream comments for a report.
+  Stream<List<Map<String, dynamic>>> getComments(String reportId) {
+    return _db
+        .collection(AppConstants.reportsCollection)
+        .doc(reportId)
+        .collection('comments')
+        .orderBy('createdAt', descending: false)
+        .snapshots()
+        .map((s) => s.docs.map((d) {
+              final data = d.data();
+              data['id'] = d.id;
+              return data;
+            }).toList());
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // FEEDBACK (comment & rating on resolved reports)
   // ═══════════════════════════════════════════════════════════════════════════
 

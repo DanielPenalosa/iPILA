@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/report_model.dart';
 import '../../../data/services/report_service.dart';
 import '../../home/widgets/mobile_shell.dart';
+import '../widgets/community_post_modal.dart';
 
 class CommunityReportsScreen extends StatefulWidget {
   const CommunityReportsScreen({super.key});
@@ -136,7 +136,11 @@ class _CommunityReportsScreenState extends State<CommunityReportsScreen> {
                     final report = reports[index];
                     return _CommunityReportCard(
                       report: report,
-                      onTap: () => context.push('/report/${report.id}'),
+                      onTap: () => showCommunityPostModal(
+                        context,
+                        report,
+                        isAdmin: false,
+                      ),
                     );
                   },
                 );
@@ -381,6 +385,17 @@ class _CommunityReportCard extends StatelessWidget {
 
   const _CommunityReportCard({required this.report, required this.onTap});
 
+  Color _urgencyColor(String? urgency) {
+    switch (urgency) {
+      case 'Critical':
+        return const Color(0xFFDC2626);
+      case 'Moderate':
+        return const Color(0xFFF59E0B);
+      default:
+        return const Color(0xFF10B981);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final color = AppTheme.statusColor(report.currentStatus);
@@ -388,229 +403,202 @@ class _CommunityReportCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.borderColor),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFF0F0F0)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image preview (if available)
-            if (report.photoUrls.isNotEmpty)
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(12),
-                ),
-                child: Image.network(
-                  report.photoUrls.first,
-                  width: double.infinity,
-                  height: 180,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    width: double.infinity,
-                    height: 180,
-                    color: Colors.grey[200],
-                    child: const Icon(
-                      Icons.broken_image_outlined,
-                      size: 48,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      width: double.infinity,
-                      height: 180,
-                      color: Colors.grey[100],
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
-                              : null,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-            // Content
+            // ── top bar: avatar + name + category ──────────────────────
             Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          report.category,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textDark,
-                          ),
-                        ),
-                      ),
-                      if (report.urgencyLevel != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _urgencyColor(report.urgencyLevel)
-                                .withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                report.urgencyLevel == 'Critical'
-                                    ? Icons.arrow_upward_rounded
-                                    : report.urgencyLevel == 'Moderate'
-                                        ? Icons.remove_rounded
-                                        : Icons.arrow_downward_rounded,
-                                size: 10,
-                                color: _urgencyColor(report.urgencyLevel),
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                report.urgencyLevel!,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: _urgencyColor(report.urgencyLevel),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    report.description.length > 100
-                        ? '${report.description.substring(0, 100)}...'
-                        : report.description,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppTheme.textDark,
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundColor:
+                        AppTheme.primaryBlue.withValues(alpha: 0.12),
+                    child: Text(
+                      report.isAnonymous
+                          ? '?'
+                          : report.userFullName[0].toUpperCase(),
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.primaryBlue),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  // Reporter name
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.person_outline,
-                        size: 14,
-                        color: Colors.grey[500],
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        report.isAnonymous
-                            ? 'Anonymous'
-                            : report.userFullName,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                          fontStyle: report.isAnonymous
-                              ? FontStyle.italic
-                              : FontStyle.normal,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        size: 14,
-                        color: Colors.grey[600],
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Brgy. ${report.barangay}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                      const SizedBox(width: 12),
-                      Icon(
-                        Icons.access_time,
-                        size: 14,
-                        color: Colors.grey[600],
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        timeago.format(report.createdAt),
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          report.currentStatus,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: color,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      if (report.followerCount > 0) ...[
-                        Icon(
-                          Icons.people_outline,
-                          size: 14,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 4),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          '${report.followerCount} ${report.followerCount == 1 ? 'follow-up' : 'follow-ups'}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[700],
-                          ),
+                          report.isAnonymous
+                              ? 'Anonymous'
+                              : report.userFullName,
+                          style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF111111)),
+                        ),
+                        Text(
+                          'Brgy. ${report.barangay} · ${timeago.format(report.createdAt)}',
+                          style: const TextStyle(
+                              fontSize: 11, color: Color(0xFF9CA3AF)),
                         ),
                       ],
-                    ],
+                    ),
+                  ),
+                  // status badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border:
+                          Border.all(color: color.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                            width: 5,
+                            height: 5,
+                            decoration: BoxDecoration(
+                                color: color, shape: BoxShape.circle)),
+                        const SizedBox(width: 4),
+                        Text(report.currentStatus,
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: color)),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
+
+            // ── photo ───────────────────────────────────────────────────
+            if (report.photoUrls.isNotEmpty)
+              Image.network(
+                report.photoUrls.first,
+                width: double.infinity,
+                height: 200,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  height: 200,
+                  color: const Color(0xFFF3F4F6),
+                  child: const Icon(Icons.broken_image_outlined,
+                      size: 40, color: Color(0xFFD1D5DB)),
+                ),
+              ),
+
+            // ── action row ──────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
+              child: Row(
+                children: [
+                  Icon(Icons.favorite_border,
+                      size: 22, color: Colors.grey[500]),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${report.heartCount}',
+                    style: TextStyle(
+                        fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(width: 14),
+                  Icon(Icons.chat_bubble_outline_rounded,
+                      size: 20, color: Colors.grey[500]),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${report.commentCount}',
+                    style: TextStyle(
+                        fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(width: 14),
+                  Icon(Icons.notifications_none_outlined,
+                      size: 20, color: Colors.grey[500]),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${report.followerCount}',
+                    style: TextStyle(
+                        fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  const Spacer(),
+                  if (report.urgencyLevel != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: _urgencyColor(report.urgencyLevel)
+                            .withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        report.urgencyLevel!,
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: _urgencyColor(report.urgencyLevel)),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            // ── description ─────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
+              child: RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: '${report.category}  ',
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF111111)),
+                    ),
+                    TextSpan(
+                      text: report.description.length > 90
+                          ? '${report.description.substring(0, 90)}...'
+                          : report.description,
+                      style: const TextStyle(
+                          fontSize: 13, color: Color(0xFF374151)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // ── "view all comments" hint ────────────────────────────────
+            if (report.commentCount > 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
+                child: Text(
+                  'View all ${report.commentCount} comments',
+                  style: const TextStyle(
+                      fontSize: 12, color: Color(0xFF9CA3AF)),
+                ),
+              )
+            else
+              const SizedBox(height: 10),
           ],
         ),
       ),
     );
-  }
-
-  Color _urgencyColor(String? urgency) {
-    switch (urgency) {
-      case 'Critical':
-        return const Color(0xFFDC2626);
-      case 'Moderate':
-        return const Color(0xFFF59E0B);
-      case 'Minor':
-        return const Color(0xFF10B981);
-      default:
-        return const Color(0xFF9CA3AF);
-    }
   }
 }

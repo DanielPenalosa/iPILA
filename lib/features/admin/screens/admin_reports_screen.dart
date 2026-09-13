@@ -12,6 +12,7 @@ import '../../../core/utils/report_export_service.dart';
 import '../../../data/models/report_model.dart';
 import '../../../data/services/report_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../reports/widgets/community_post_modal.dart';
 import 'admin_shell.dart';
 
 class AdminReportsScreen extends StatefulWidget {
@@ -176,46 +177,6 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
     _calendarOverlay = null;
   }
 
-  void _applyQuickRange(String range) {
-    final now = DateTime.now();
-    DateTimeRange dateRange;
-
-    switch (range) {
-      case 'Today':
-        dateRange = DateTimeRange(
-          start: DateTime(now.year, now.month, now.day),
-          end: now,
-        );
-        break;
-      case 'This Week':
-        final weekStart = now.subtract(Duration(days: now.weekday - 1));
-        dateRange = DateTimeRange(
-          start: DateTime(weekStart.year, weekStart.month, weekStart.day),
-          end: now,
-        );
-        break;
-      case 'This Month':
-        dateRange = DateTimeRange(
-          start: DateTime(now.year, now.month, 1),
-          end: now,
-        );
-        break;
-      case 'Last 30 Days':
-        dateRange = DateTimeRange(
-          start: now.subtract(const Duration(days: 30)),
-          end: now,
-        );
-        break;
-      default:
-        return;
-    }
-
-    setState(() {
-      _dateRange = dateRange;
-      _dateRangeLabel = range;
-    });
-    _hideDateRangePicker();
-  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // BULK SELECTION METHODS
@@ -1267,7 +1228,11 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
             final report = reports[index];
             return _CommunityReportCard(
               report: report,
-              onTap: () => context.push('/admin/reports/${report.id}'),
+              onTap: () => showCommunityPostModal(
+                context,
+                report,
+                isAdmin: true,
+              ),
             );
           },
         );
@@ -1836,23 +1801,32 @@ class _CommunityReportCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (report.followerCount > 0) ...[
-                        const SizedBox(width: 6),
-                        Icon(
-                          Icons.people_outline,
-                          size: 12,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          '${report.followerCount}',
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // engagement row
+                  Row(
+                    children: [
+                      Icon(Icons.favorite_border,
+                          size: 13, color: Colors.grey[500]),
+                      const SizedBox(width: 3),
+                      Text('${report.heartCount}',
                           style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                      ],
+                              fontSize: 10, color: Colors.grey[600])),
+                      const SizedBox(width: 10),
+                      Icon(Icons.chat_bubble_outline_rounded,
+                          size: 12, color: Colors.grey[500]),
+                      const SizedBox(width: 3),
+                      Text('${report.commentCount}',
+                          style: TextStyle(
+                              fontSize: 10, color: Colors.grey[600])),
+                      const SizedBox(width: 10),
+                      Icon(Icons.notifications_none_outlined,
+                          size: 13, color: Colors.grey[500]),
+                      const SizedBox(width: 3),
+                      Text('${report.followerCount}',
+                          style: TextStyle(
+                              fontSize: 10, color: Colors.grey[600])),
                     ],
                   ),
                 ],
