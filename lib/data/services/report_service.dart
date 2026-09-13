@@ -388,16 +388,15 @@ class ReportService {
   // Get all community reports (for homepage visibility)
   Stream<List<ReportModel>> getCommunityReports({
     String? categoryFilter,
-    String? statusFilter,
     String? barangayFilter,
   }) {
-    Query query = _db.collection(AppConstants.reportsCollection);
+    // Community view only shows resolved reports
+    Query query = _db
+        .collection(AppConstants.reportsCollection)
+        .where('currentStatus', isEqualTo: AppConstants.statusResolved);
 
     if (categoryFilter != null && categoryFilter.isNotEmpty) {
       query = query.where('category', isEqualTo: categoryFilter);
-    }
-    if (statusFilter != null && statusFilter.isNotEmpty) {
-      query = query.where('currentStatus', isEqualTo: statusFilter);
     }
     if (barangayFilter != null && barangayFilter.isNotEmpty) {
       query = query.where('barangay', isEqualTo: barangayFilter);
@@ -405,12 +404,7 @@ class ReportService {
 
     return query.snapshots().map((snap) {
       final list = snap.docs.map(ReportModel.fromFirestore).toList();
-      // Sort by priority (descending) then by date (descending)
-      list.sort((a, b) {
-        final priorityCompare = b.priority.compareTo(a.priority);
-        if (priorityCompare != 0) return priorityCompare;
-        return b.createdAt.compareTo(a.createdAt);
-      });
+      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return list;
     });
   }

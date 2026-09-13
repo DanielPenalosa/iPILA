@@ -1195,7 +1195,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
 
   Widget _buildCommunityViewTab() {
     return StreamBuilder<List<ReportModel>>(
-      stream: _service.getAllReports(),
+      stream: _service.getCommunityReports(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -1751,8 +1751,85 @@ class _CommunityReportCard extends StatelessWidget {
               ),
             ),
 
-            // ── photo (full width, 4:3) ────────────────────────────────
-            if (report.photoUrls.isNotEmpty)
+            // ── before / after photos (4:3 each side) ─────────────────
+            if (report.afterPhotoUrl != null && report.photoUrls.isNotEmpty)
+              Row(
+                children: [
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        AspectRatio(
+                          aspectRatio: 4 / 3,
+                          child: Image.network(
+                            report.photoUrls.first,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: const Color(0xFFF3F4F6),
+                              child: const Icon(Icons.broken_image_outlined,
+                                  color: Color(0xFFD1D5DB)),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 8,
+                          left: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.55),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text('BEFORE',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        AspectRatio(
+                          aspectRatio: 4 / 3,
+                          child: Image.network(
+                            report.afterPhotoUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: const Color(0xFFF3F4F6),
+                              child: const Icon(Icons.broken_image_outlined,
+                                  color: Color(0xFFD1D5DB)),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 8,
+                          left: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981)
+                                  .withValues(alpha: 0.85),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text('AFTER',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            else if (report.photoUrls.isNotEmpty)
               AspectRatio(
                 aspectRatio: 4 / 3,
                 child: Image.network(

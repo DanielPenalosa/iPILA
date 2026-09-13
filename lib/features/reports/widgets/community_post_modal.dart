@@ -307,6 +307,16 @@ class _CommunityPostModalState extends State<CommunityPostModal> {
                               const SizedBox(height: 16),
                             ],
 
+                            // ── rating ───────────────────────────────────────
+                            _RatingSection(
+                              reportId: live.id,
+                              uid: uid,
+                              isAdmin: widget.isAdmin,
+                              service: _service,
+                              auth: auth,
+                            ),
+                            const SizedBox(height: 16),
+
                             // ── comments ────────────────────────────────────
                             _SectionHeader(label: 'Comments'),
                             const SizedBox(height: 10),
@@ -984,6 +994,257 @@ class _CommentInput extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Rating section
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _RatingSection extends StatefulWidget {
+  final String reportId;
+  final String uid;
+  final bool isAdmin;
+  final ReportService service;
+  final AuthProvider auth;
+
+  const _RatingSection({
+    required this.reportId,
+    required this.uid,
+    required this.isAdmin,
+    required this.service,
+    required this.auth,
+  });
+
+  @override
+  State<_RatingSection> createState() => _RatingSectionState();
+}
+
+class _RatingSectionState extends State<_RatingSection> {
+  int _selected = 0;   // citizen's pending pick (0 = none yet)
+  bool _submitting = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<ReportFeedback>>(
+      stream: widget.service.getFeedback(widget.reportId),
+      builder: (context, snap) {
+        final feedbacks = snap.data ?? [];
+        final total = feedbacks.length;
+        final avg = total == 0
+            ? 0.0
+            : feedbacks.map((f) => f.rating).reduce((a, b) => a + b) / total;
+
+        // find logged-in citizen's existing rating
+        final mine = feedbacks.where((f) => f.userId == widget.uid).firstOrNull;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── header + average ─────────────────────────────────────────
+            Row(
+              children: [
+                const _SectionHeader(label: 'Ratings'),
+                const Spacer(),
+                if (total > 0) ...[
+                  Icon(Icons.star_rounded, size: 15, color: Colors.amber[600]),
+                  const SizedBox(width: 3),
+                  Text(
+                    avg.toStringAsFixed(1),
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF111111)),
+                  ),
+                  Text(
+                    '  ($total)',
+                    style: const TextStyle(
+                        fontSize: 12, color: Color(0xFF9CA3AF)),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // ── citizen rate widget ──────────────────────────────────────
+            if (!widget.isAdmin && widget.uid.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF9FAFB),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                ),
+                child: mine != null
+                    // already rated — show it
+                    ? Row(
+                        children: [
+                          ...List.generate(5, (i) => Icon(
+                            i < mine.rating
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
+                            size: 22,
+                            color: Colors.amber[600],
+                          )),
+                          const SizedBox(width: 10),
+                          const Text('Your rating',
+                              style: TextStyle(
+                                  fontSize: 12, color: Color(0xFF6B7280))),
+                        ],
+                      )
+                    // not yet rated — show interactive stars
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Rate the resolution',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF111111)),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: List.generate(5, (i) {
+                              final star = i + 1;
+                              return GestureDetector(
+                                onTap: () =>
+                                    setState(() => _selected = star),
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: 4),
+                                  child: Icon(
+                                    star <= _selected
+                                        ? Icons.star_rounded
+                                        : Icons.star_outline_rounded,
+                                    size: 32,
+                                    color: Colors.amber[600],
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                          if (_selected > 0) ...[
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: _submitting
+                                    ? null
+                                    : () async {
+                                        setState(() => _submitting = true);
+                                        await widget.service.submitFeedback(
+                                          reportId: widget.reportId,
+                                          userId: widget.uid,
+                                          userFullName:
+                                              widget.auth.user?.fullName ??
+                                                  'Citizen',
+                                          rating: _selected,
+                                          comment: '',
+                                        );
+                                        if (mounted) {
+                                          setState(() {
+                                            _submitting = false;
+                                            _selected = 0;
+                                          });
+                                        }
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryBlue,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 10),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(10)),
+                                ),
+                                child: _submitting
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white))
+                                    : const Text('Submit Rating',
+                                        style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600)),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // ── list of ratings ──────────────────────────────────────────
+            if (feedbacks.isEmpty)
+              const Text('No ratings yet.',
+                  style:
+                      TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)))
+            else
+              ...feedbacks.map((f) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CircleAvatar(
+                          radius: 14,
+                          backgroundColor:
+                              AppTheme.primaryBlue.withValues(alpha: 0.12),
+                          child: Text(
+                            f.userFullName.isNotEmpty
+                                ? f.userFullName[0].toUpperCase()
+                                : '?',
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.primaryBlue),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(f.userFullName,
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF111111))),
+                                  const SizedBox(width: 8),
+                                  ...List.generate(
+                                    5,
+                                    (i) => Icon(
+                                      i < f.rating
+                                          ? Icons.star_rounded
+                                          : Icons.star_outline_rounded,
+                                      size: 13,
+                                      color: Colors.amber[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (f.comment.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(f.comment,
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF374151))),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
+          ],
+        );
+      },
     );
   }
 }

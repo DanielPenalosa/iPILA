@@ -18,13 +18,12 @@ class CommunityReportsScreen extends StatefulWidget {
 
 class _CommunityReportsScreenState extends State<CommunityReportsScreen> {
   String? _categoryFilter;
-  String? _statusFilter;
   String? _barangayFilter;
 
   @override
   Widget build(BuildContext context) {
     return MobileShell(
-      title: 'Community Reports',
+      title: 'Resolved Reports',
       currentIndex: 3,
       showBack: false,
       child: Column(
@@ -61,14 +60,6 @@ class _CommunityReportsScreenState extends State<CommunityReportsScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: _FilterChip(
-                        label: _statusFilter ?? 'Status',
-                        onTap: () => _showStatusFilter(),
-                        isActive: _statusFilter != null,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _FilterChip(
                         label: _barangayFilter ?? 'Barangay',
                         onTap: () => _showBarangayFilter(),
                         isActive: _barangayFilter != null,
@@ -76,15 +67,12 @@ class _CommunityReportsScreenState extends State<CommunityReportsScreen> {
                     ),
                   ],
                 ),
-                if (_categoryFilter != null ||
-                    _statusFilter != null ||
-                    _barangayFilter != null)
+                if (_categoryFilter != null || _barangayFilter != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: TextButton.icon(
                       onPressed: () => setState(() {
                         _categoryFilter = null;
-                        _statusFilter = null;
                         _barangayFilter = null;
                       }),
                       icon: const Icon(Icons.clear, size: 16),
@@ -105,7 +93,6 @@ class _CommunityReportsScreenState extends State<CommunityReportsScreen> {
             child: StreamBuilder<List<ReportModel>>(
               stream: ReportService().getCommunityReports(
                 categoryFilter: _categoryFilter,
-                statusFilter: _statusFilter,
                 barangayFilter: _barangayFilter,
               ),
               builder: (context, snapshot) {
@@ -119,13 +106,20 @@ class _CommunityReportsScreenState extends State<CommunityReportsScreen> {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(24),
-                      child: Text(
-                        _categoryFilter != null ||
-                                _statusFilter != null ||
-                                _barangayFilter != null
-                            ? 'No reports match your filters'
-                            : 'No community reports yet',
-                        style: const TextStyle(color: AppTheme.textMuted),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle_outline_rounded,
+                              size: 48, color: Colors.grey[300]),
+                          const SizedBox(height: 12),
+                          Text(
+                            _categoryFilter != null || _barangayFilter != null
+                                ? 'No resolved reports match your filters'
+                                : 'No resolved reports yet',
+                            style: const TextStyle(color: AppTheme.textMuted),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
                     ),
                   );
@@ -198,65 +192,6 @@ class _CommunityReportsScreenState extends State<CommunityReportsScreen> {
                               : null,
                           onTap: () {
                             setState(() => _categoryFilter = category);
-                            Navigator.pop(context);
-                          },
-                        ),
-                      )
-                      .toList(),
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showStatusFilter() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => SafeArea(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.6,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 8),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppTheme.borderColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: Text(
-                  'Filter by Status',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-              Flexible(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: AppConstants.reportStatuses
-                      .map(
-                        (status) => ListTile(
-                          title: Text(status),
-                          trailing: _statusFilter == status
-                              ? const Icon(Icons.check, color: AppTheme.primaryBlue)
-                              : null,
-                          onTap: () {
-                            setState(() => _statusFilter = status);
                             Navigator.pop(context);
                           },
                         ),
@@ -482,15 +417,92 @@ class _CommunityReportCard extends StatelessWidget {
               ),
             ),
 
-            // ── photo ───────────────────────────────────────────────────
-            if (report.photoUrls.isNotEmpty)
+            // ── before / after photos ──────────────────────────────
+            if (report.afterPhotoUrl != null && report.photoUrls.isNotEmpty)
+              Row(
+                children: [
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        Image.network(
+                          report.photoUrls.first,
+                          height: 160,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            height: 160,
+                            color: const Color(0xFFF3F4F6),
+                            child: const Icon(Icons.broken_image_outlined,
+                                color: Color(0xFFD1D5DB)),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 6,
+                          left: 6,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.55),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text('BEFORE',
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        Image.network(
+                          report.afterPhotoUrl!,
+                          height: 160,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            height: 160,
+                            color: const Color(0xFFF3F4F6),
+                            child: const Icon(Icons.broken_image_outlined,
+                                color: Color(0xFFD1D5DB)),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 6,
+                          left: 6,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981)
+                                  .withValues(alpha: 0.85),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text('AFTER',
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            else if (report.photoUrls.isNotEmpty)
               Image.network(
                 report.photoUrls.first,
                 width: double.infinity,
-                height: 200,
+                height: 160,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(
-                  height: 200,
+                  height: 160,
                   color: const Color(0xFFF3F4F6),
                   child: const Icon(Icons.broken_image_outlined,
                       size: 40, color: Color(0xFFD1D5DB)),
