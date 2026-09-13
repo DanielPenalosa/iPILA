@@ -76,17 +76,6 @@ Future<bool> _sendOtpEmail(String email, String otp) async {
   }
 }
 
-Future<bool> _emailExistsInFirestore(String email) async {
-  try {
-    // Use Firebase Auth to check if email exists — no Firestore read needed
-    final methods = await FirebaseAuth.instance
-        .fetchSignInMethodsForEmail(email);
-    return methods.isNotEmpty;
-  } catch (_) {
-    return false;
-  }
-}
-
 String? _validatePassword(String? v) {
   if (v == null || v.isEmpty) return 'Enter a password';
   if (v.length < 8) return 'At least 8 characters required';
@@ -146,12 +135,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> _sendOtp() async {
     if (!_emailFormKey.currentState!.validate()) return;
     setState(() { _loading = true; _error = null; });
-
-    final exists = await _emailExistsInFirestore(_email);
-    if (!exists) {
-      if (mounted) setState(() { _loading = false; _error = 'No account found for this email.'; });
-      return;
-    }
 
     final otp = _generateOtp();
     await _saveOtp(_email, otp);
