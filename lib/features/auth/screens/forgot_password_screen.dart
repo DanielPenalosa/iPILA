@@ -10,10 +10,12 @@ import '../../../core/theme/app_theme.dart';
 // ── Firebase Web API key ──────────────────────────────────────────────────────
 const _kFirebaseApiKey = 'AIzaSyBGVfY9YBPiQ5KkAsSU_PKPCp3SJNCXbfw';
 
-// ── EmailJS credentials (set yours from emailjs.com) ─────────────────────────
-const _kEmailJsServiceId  = 'YOUR_SERVICE_ID';
-const _kEmailJsTemplateId = 'YOUR_TEMPLATE_ID';
-const _kEmailJsPublicKey  = 'YOUR_PUBLIC_KEY';
+// ── Email via Resend (free — get API key at resend.com) ───────────────────────
+// 1. Go to https://resend.com → Sign Up free (use your Gmail)
+// 2. Dashboard → API Keys → Create API Key → paste below
+// 3. Free tier: use onboarding@resend.dev as sender immediately (no domain setup)
+const _kResendApiKey    = 'YOUR_RESEND_API_KEY';
+const _kResendFromEmail = 'onboarding@resend.dev';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -55,23 +57,39 @@ Future<void> _deleteOtp(String email) async {
       .delete();
 }
 
-Future<bool> _sendOtpEmail(String email, String otp) async {
+Future<bool> _sendOtpEmail(String toEmail, String otp) async {
   try {
     final res = await http.post(
-      Uri.parse('https://api.emailjs.com/api/v1.0/email/send'),
-      headers: {'Content-Type': 'application/json'},
+      Uri.parse('https://api.resend.com/emails'),
+      headers: {
+        'Authorization': 'Bearer $_kResendApiKey',
+        'Content-Type': 'application/json',
+      },
       body: jsonEncode({
-        'service_id': _kEmailJsServiceId,
-        'template_id': _kEmailJsTemplateId,
-        'user_id': _kEmailJsPublicKey,
-        'template_params': {
-          'to_email': email,
-          'otp_code': otp,
-          'app_name': 'iPILA',
-        },
+        'from': 'iPILA <$_kResendFromEmail>',
+        'to': [toEmail],
+        'subject': 'Your iPILA Password Reset Code',
+        'html': '''
+<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+  <h2 style="color:#111;font-size:20px;margin-bottom:4px;">iPILA Password Reset</h2>
+  <p style="color:#888;font-size:13px;margin-top:0;">Municipality of Pila, Laguna</p>
+  <p style="color:#444;font-size:15px;">Your one-time verification code is:</p>
+  <div style="background:#FFF7E0;border:2px solid #F2B705;border-radius:12px;
+              padding:28px;text-align:center;margin:20px 0;">
+    <span style="font-size:42px;font-weight:900;letter-spacing:14px;color:#111;">$otp</span>
+  </div>
+  <p style="color:#888;font-size:13px;">
+    This code expires in <b>10 minutes</b>.<br>
+    Do not share this code with anyone.
+  </p>
+  <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
+  <p style="color:#bbb;font-size:11px;text-align:center;">
+    iPILA — Integrated Public Information &amp; Local Access
+  </p>
+</div>''',
       }),
     );
-    return res.statusCode == 200;
+    return res.statusCode == 200 || res.statusCode == 201;
   } catch (_) {
     return false;
   }
