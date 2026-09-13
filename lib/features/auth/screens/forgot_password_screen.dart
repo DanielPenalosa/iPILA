@@ -76,19 +76,11 @@ Future<bool> _sendOtpEmail(String email, String otp) async {
   }
 }
 
-String? _validatePassword(String? v) {
-  if (v == null || v.isEmpty) return 'Enter a password';
-  if (v.length < 8) return 'At least 8 characters required';
-  if (!RegExp(r'[A-Z]').hasMatch(v)) return 'Must contain an uppercase letter';
-  if (!RegExp(r'[0-9]').hasMatch(v)) return 'Must contain a number';
-  return null;
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
 // ─────────────────────────────────────────────────────────────────────────────
 
-enum _Step { email, otp, newPassword, done }
+enum _Step { email, otp, done }
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -111,13 +103,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _otpFoci  = List.generate(6, (_) => FocusNode());
   int _resendCountdown = 0;
 
-  // Step 3
-  final _pwFormKey     = GlobalKey<FormState>();
-  final _pwCtrl        = TextEditingController();
-  final _pwConfirmCtrl = TextEditingController();
-  bool _obscurePw      = true;
-  bool _obscureConfirm = true;
-
   String get _email => _emailCtrl.text.trim().toLowerCase();
 
   @override
@@ -125,8 +110,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     _emailCtrl.dispose();
     for (final c in _otpCtrls) c.dispose();
     for (final f in _otpFoci) f.dispose();
-    _pwCtrl.dispose();
-    _pwConfirmCtrl.dispose();
     super.dispose();
   }
 
@@ -170,24 +153,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final valid = await _verifyOtp(_email, _otpValue);
     if (!mounted) return;
     if (valid) {
-      setState(() { _loading = false; _step = _Step.newPassword; });
+      // OTP confirmed — send Firebase password reset email and go to done
+      try {
+        await _deleteOtp(_email);
+        await FirebaseAuth.instance.sendPasswordResetEmail(email: _email);
+        setState(() { _loading = false; _step = _Step.done; });
+      } catch (_) {
+        setState(() { _loading = false; _step = _Step.done; });
+      }
     } else {
       setState(() { _loading = false; _error = 'Invalid or expired OTP. Try again.'; });
-    }
-  }
-
-  // ── Step 3: set new password ────────────────────────────────────────────────
-
-  Future<void> _setPassword() async {
-    if (!_pwFormKey.currentState!.validate()) return;
-    setState(() { _loading = true; _error = null; });
-
-    try {
-      await _deleteOtp(_email);
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: _email);
-      if (mounted) setState(() { _loading = false; _step = _Step.done; });
-    } catch (e) {
-      if (mounted) setState(() { _loading = false; _error = 'Failed to send reset email. Try again.'; });
     }
   }
 
@@ -209,8 +184,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     context.pop();
                   } else if (_step == _Step.otp) {
                     setState(() { _step = _Step.email; _error = null; });
-                  } else if (_step == _Step.newPassword) {
-                    setState(() { _step = _Step.otp; _error = null; });
                   }
                 },
               ),
@@ -219,9 +192,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ? 'Forgot Password'
               : _step == _Step.otp
                   ? 'Verify OTP'
-                  : _step == _Step.newPassword
-                      ? 'New Password'
-                      : 'Done',
+                  : 'Done',
           style: const TextStyle(
               color: Colors.black87, fontWeight: FontWeight.w600),
         ),
@@ -258,18 +229,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       _startCountdown();
                     }
                   },
-                ),
-              _Step.newPassword => _NewPasswordStep(
-                  formKey:        _pwFormKey,
-                  pwCtrl:         _pwCtrl,
-                  confirmCtrl:    _pwConfirmCtrl,
-                  obscurePw:      _obscurePw,
-                  obscureConfirm: _obscureConfirm,
-                  loading:        _loading,
-                  error:          _error,
-                  onTogglePw:      () => setState(() => _obscurePw = !_obscurePw),
-                  onToggleConfirm: () => setState(() => _obscureConfirm = !_obscureConfirm),
-                  onSubmit:       _setPassword,
                 ),
               _Step.done       => _DoneStep(email: _email),
             },
@@ -435,103 +394,6 @@ class _OtpStep extends StatelessWidget {
   }
 }
 
-class _NewPasswordStep extends StatelessWidget {
-  final GlobalKey<FormState> formKey;
-  final TextEditingController pwCtrl;
-  final TextEditingController confirmCtrl;
-  final bool obscurePw;
-  final bool obscureConfirm;
-  final bool loading;
-  final String? error;
-  final VoidCallback onTogglePw;
-  final VoidCallback onToggleConfirm;
-  final VoidCallback onSubmit;
-
-  const _NewPasswordStep({
-    required this.formKey,
-    required this.pwCtrl,
-    required this.confirmCtrl,
-    required this.obscurePw,
-    required this.obscureConfirm,
-    required this.loading,
-    required this.error,
-    required this.onTogglePw,
-    required this.onToggleConfirm,
-    required this.onSubmit,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Form(
-      key: formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.lock_outline_rounded, size: 56, color: Color(0xFF6366F1)),
-          const SizedBox(height: 20),
-          const Text('Set New Password',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF111111))),
-          const SizedBox(height: 10),
-          const Text(
-            'Choose a strong password for your account.',
-            style: TextStyle(fontSize: 14, color: Color(0xFF6B7280), height: 1.5),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0F9FF),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFBAE6FD)),
-            ),
-            child: const Text(
-              '• At least 8 characters\n• At least one uppercase letter\n• At least one number',
-              style: TextStyle(fontSize: 12, color: Color(0xFF0369A1), height: 1.6),
-            ),
-          ),
-          const SizedBox(height: 24),
-          TextFormField(
-            controller: pwCtrl,
-            obscureText: obscurePw,
-            decoration: InputDecoration(
-              labelText: 'New Password',
-              prefixIcon: const Icon(Icons.lock_outline),
-              suffixIcon: IconButton(
-                icon: Icon(obscurePw ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                onPressed: onTogglePw,
-              ),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              filled: true,
-              fillColor: Colors.grey[50],
-            ),
-            validator: _validatePassword,
-          ),
-          const SizedBox(height: 14),
-          TextFormField(
-            controller: confirmCtrl,
-            obscureText: obscureConfirm,
-            decoration: InputDecoration(
-              labelText: 'Confirm Password',
-              prefixIcon: const Icon(Icons.lock_outline),
-              suffixIcon: IconButton(
-                icon: Icon(obscureConfirm ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                onPressed: onToggleConfirm,
-              ),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              filled: true,
-              fillColor: Colors.grey[50],
-            ),
-            validator: (v) => v == pwCtrl.text ? null : 'Passwords do not match',
-          ),
-          if (error != null) _ErrorRow(error!),
-          const SizedBox(height: 28),
-          _PrimaryButton(label: 'Reset Password', loading: loading, onPressed: onSubmit),
-        ],
-      ),
-    );
-  }
-}
-
 class _DoneStep extends StatelessWidget {
   final String email;
   const _DoneStep({required this.email});
@@ -542,17 +404,57 @@ class _DoneStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const SizedBox(height: 40),
-        const Icon(Icons.check_circle_outline_rounded, size: 80, color: Color(0xFF10B981)),
+        const Icon(Icons.mark_email_read_outlined, size: 80, color: Color(0xFF10B981)),
         const SizedBox(height: 24),
-        const Text('Password Reset Sent',
+        const Text('Check your email',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF111111)),
             textAlign: TextAlign.center),
         const SizedBox(height: 12),
         Text(
-          'A password reset link has also been sent to $email.\n\n'
-          'Click the link in the email to confirm your new password.',
+          'Identity verified! A password reset link has been sent to:\n\n$email',
           style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280), height: 1.7),
           textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0FDF4),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFBBF7D0)),
+          ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Icon(Icons.looks_one_outlined, size: 18, color: Color(0xFF16A34A)),
+                SizedBox(width: 8),
+                Expanded(child: Text('Open the email in your Gmail inbox.',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF15803D)))),
+              ]),
+              SizedBox(height: 8),
+              Row(children: [
+                Icon(Icons.looks_two_outlined, size: 18, color: Color(0xFF16A34A)),
+                SizedBox(width: 8),
+                Expanded(child: Text('Click the "Reset Password" link in the email.',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF15803D)))),
+              ]),
+              SizedBox(height: 8),
+              Row(children: [
+                Icon(Icons.looks_3_outlined, size: 18, color: Color(0xFF16A34A)),
+                SizedBox(width: 8),
+                Expanded(child: Text('Enter your new password on the page that opens.',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF15803D)))),
+              ]),
+              SizedBox(height: 8),
+              Row(children: [
+                Icon(Icons.looks_4_outlined, size: 18, color: Color(0xFF16A34A)),
+                SizedBox(width: 8),
+                Expanded(child: Text('Come back here and log in with your new password.',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF15803D)))),
+              ]),
+            ],
+          ),
         ),
         const SizedBox(height: 36),
         SizedBox(
