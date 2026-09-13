@@ -50,6 +50,21 @@ class _CommunityPostModalState extends State<CommunityPostModal> {
   bool _submittingComment = false;
   bool _togglingHeart = false;
 
+  // keys for scroll-to
+  final _ratingKey = GlobalKey();
+  final _commentsKey = GlobalKey();
+
+  void _scrollTo(GlobalKey key) {
+    final ctx = key.currentContext;
+    if (ctx == null) return;
+    Scrollable.ensureVisible(
+      ctx,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOut,
+      alignment: 0.0,
+    );
+  }
+
   @override
   void dispose() {
     _commentCtrl.dispose();
@@ -94,9 +109,10 @@ class _CommunityPostModalState extends State<CommunityPostModal> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ── photo carousel ─────────────────────────────────
-                      _PhotoCarousel(
-                        urls: live.photoUrls,
+                      // ── before / after carousel ────────────────────────
+                      _BeforeAfterCarousel(
+                        beforeUrls: live.photoUrls,
+                        afterUrl: live.afterPhotoUrl,
                         index: _photoIndex,
                         onPageChanged: (i) => setState(() => _photoIndex = i),
                       ),
@@ -137,21 +153,18 @@ class _CommunityPostModalState extends State<CommunityPostModal> {
                                   _ActionIcon(
                                     icon: Icons.chat_bubble_outline_rounded,
                                     color: const Color(0xFF374151),
-                                    onTap: () {
-                                      _scrollCtrl.animateTo(
-                                        _scrollCtrl.position.maxScrollExtent,
-                                        duration: const Duration(milliseconds: 300),
-                                        curve: Curves.easeOut,
-                                      );
-                                    },
+                                    onTap: () => _scrollTo(_commentsKey),
                                   ),
                                 const Spacer(),
                                 if (!widget.isAdmin && uid.isNotEmpty)
-                                  _StarRatingButton(
-                                    reportId: live.id,
-                                    uid: uid,
-                                    service: _service,
-                                    auth: auth,
+                                  GestureDetector(
+                                    onTap: () => _scrollTo(_ratingKey),
+                                    child: _StarRatingButton(
+                                      reportId: live.id,
+                                      uid: uid,
+                                      service: _service,
+                                      auth: auth,
+                                    ),
                                   ),
                               ],
                             ),
@@ -282,20 +295,31 @@ class _CommunityPostModalState extends State<CommunityPostModal> {
                             ],
 
                             // ── rating ───────────────────────────────────────
-                            _RatingSection(
-                              reportId: live.id,
-                              uid: uid,
-                              isAdmin: widget.isAdmin,
-                              service: _service,
-                              auth: auth,
+                            SizedBox(
+                              key: _ratingKey,
+                              child: _RatingSection(
+                                reportId: live.id,
+                                uid: uid,
+                                isAdmin: widget.isAdmin,
+                                service: _service,
+                                auth: auth,
+                              ),
                             ),
                             const SizedBox(height: 16),
 
                             // ── comments ────────────────────────────────────
-                            _SectionHeader(label: 'Comments'),
-                            const SizedBox(height: 10),
-                            _CommentsSection(
-                                reportId: live.id, service: _service),
+                            SizedBox(
+                              key: _commentsKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const _SectionHeader(label: 'Comments'),
+                                  const SizedBox(height: 10),
+                                  _CommentsSection(
+                                      reportId: live.id, service: _service),
+                                ],
+                              ),
+                            ),
                             const SizedBox(height: 12),
                           ],
                         ),
@@ -368,48 +392,60 @@ class _DragHandle extends StatelessWidget {
   }
 }
 
-class _PhotoCarousel extends StatelessWidget {
-  final List<String> urls;
+// Shows before photo, after photo, or both side by side as a PageView
+class _BeforeAfterCarousel extends StatelessWidget {
+  final List<String> beforeUrls;
+  final String? afterUrl;
   final int index;
   final ValueChanged<int> onPageChanged;
 
-  const _PhotoCarousel({
-    required this.urls,
+  const _BeforeAfterCarousel({
+    required this.beforeUrls,
+    required this.afterUrl,
     required this.index,
     required this.onPageChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (urls.isEmpty) {
+    // Build page list: if afterUrl exists show [before, after], else original photos
+    final pages = <Widget>[];
+
+    if (afterUrl != null && beforeUrls.isNotEmpty) {
+      pages.add(_LabeledPhoto(url: beforeUrls.first, label: 'BEFORE', isAfter: false));
+      pages.add(_LabeledPhoto(url: afterUrl!, label: 'AFTER', isAfter: true));
+    } else if (beforeUrls.isNotEmpty) {
+      for (final url in beforeUrls) {
+        pages.add(Image.network(
+          url,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            color: const Color(0xFFF3F4F6),
+            child: const Icon(Icons.broken_image_outlined,
+                size: 48, color: Color(0xFFD1D5DB)),
+          ),
+        ));
+      }
+    } else {
       return Container(
-        width: double.infinity,
-        height: 260,
+        height: 280,
         color: const Color(0xFFF3F4F6),
         child: const Icon(Icons.image_not_supported_outlined,
             size: 48, color: Color(0xFFD1D5DB)),
       );
     }
+
     return Stack(
       children: [
         SizedBox(
-          height: 320,
-          child: PageView.builder(
+          height: 280,
+          child: PageView(
             onPageChanged: onPageChanged,
-            itemCount: urls.length,
-            itemBuilder: (_, i) => Image.network(
-              urls[i],
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                color: const Color(0xFFF3F4F6),
-                child: const Icon(Icons.broken_image_outlined,
-                    size: 48, color: Color(0xFFD1D5DB)),
-              ),
-            ),
+            children: pages,
           ),
         ),
-        if (urls.length > 1)
+        if (pages.length > 1)
           Positioned(
             bottom: 10,
             left: 0,
@@ -417,7 +453,7 @@ class _PhotoCarousel extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
-                urls.length,
+                pages.length,
                 (i) => AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -433,6 +469,56 @@ class _PhotoCarousel extends StatelessWidget {
               ),
             ),
           ),
+      ],
+    );
+  }
+}
+
+class _LabeledPhoto extends StatelessWidget {
+  final String url;
+  final String label;
+  final bool isAfter;
+
+  const _LabeledPhoto({
+    required this.url,
+    required this.label,
+    required this.isAfter,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.network(
+          url,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            color: const Color(0xFFF3F4F6),
+            child: const Icon(Icons.broken_image_outlined,
+                size: 48, color: Color(0xFFD1D5DB)),
+          ),
+        ),
+        Positioned(
+          bottom: 10,
+          left: 10,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: isAfter
+                  ? const Color(0xFF10B981).withValues(alpha: 0.88)
+                  : Colors.black.withValues(alpha: 0.55),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              label,
+              style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -1109,6 +1195,15 @@ class _ReportTimeline extends StatelessWidget {
         .where((h) => h.status == 'Resolved')
         .firstOrNull;
 
+    // resolution message: use completionRemarks, or the resolved status note, or a default
+    final resolveMsg = report.completionRemarks?.isNotEmpty == true
+        ? report.completionRemarks!
+        : resolvedEntry?.note?.isNotEmpty == true
+            ? resolvedEntry!.note!
+            : resolvedEntry != null
+                ? 'Issue successfully resolved.'
+                : null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1117,12 +1212,14 @@ class _ReportTimeline extends StatelessWidget {
         _TimelineDot(
           label: 'Reported',
           date: report.createdAt,
+          message: null,
           color: const Color(0xFF6366F1),
           isFirst: true,
         ),
         _TimelineDot(
           label: 'Resolved',
           date: resolvedEntry?.timestamp,
+          message: resolveMsg,
           color: const Color(0xFF10B981),
           isFirst: false,
         ),
@@ -1134,12 +1231,14 @@ class _ReportTimeline extends StatelessWidget {
 class _TimelineDot extends StatelessWidget {
   final String label;
   final DateTime? date;
+  final String? message;
   final Color color;
   final bool isFirst;
 
   const _TimelineDot({
     required this.label,
     required this.date,
+    required this.message,
     required this.color,
     required this.isFirst,
   });
@@ -1186,6 +1285,16 @@ class _TimelineDot extends StatelessWidget {
                   style: const TextStyle(
                       fontSize: 11, color: Color(0xFF9CA3AF)),
                 ),
+              if (message != null) ...[
+                const SizedBox(height: 3),
+                Text(
+                  message!,
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: color.withValues(alpha: 0.85),
+                      fontStyle: FontStyle.italic),
+                ),
+              ],
             ],
           ),
         ),
