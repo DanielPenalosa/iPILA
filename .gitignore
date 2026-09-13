@@ -54,3 +54,6 @@ Desktop.ini
 
 # Temp files
 cd
+
+# App secrets — never commit real credentials
+lib/core/config/secrets.dart

@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
@@ -11,11 +11,13 @@ import '../../../core/theme/app_theme.dart';
 // ── Firebase Web API key ──────────────────────────────────────────────────────
 const _kFirebaseApiKey = 'AIzaSyBGVfY9YBPiQ5KkAsSU_PKPCp3SJNCXbfw';
 
-// ── Email via Resend ──────────────────────────────────────────────────────────
-// Get your API key from resend.com → Dashboard → API Keys
-// Paste it below (this file should NOT be committed with a real key)
-const _kResendApiKey    = 'PASTE_YOUR_RESEND_API_KEY_HERE';
-const _kResendFromEmail = 'onboarding@resend.dev';
+import '../../../core/config/secrets.dart';
+
+// ── Gmail OAuth credentials loaded from secrets.dart (git-ignored) ───────────
+const _kGmailClientId     = kGmailClientId;
+const _kGmailClientSecret = kGmailClientSecret;
+const _kGmailRefreshToken = kGmailRefreshToken;
+const _kGmailSenderEmail  = kGmailSenderEmail;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -59,17 +61,32 @@ Future<void> _deleteOtp(String email) async {
 
 Future<bool> _sendOtpEmail(String toEmail, String otp) async {
   try {
-    final res = await http.post(
-      Uri.parse('https://api.resend.com/emails'),
-      headers: {
-        'Authorization': 'Bearer $_kResendApiKey',
-        'Content-Type': 'application/json',
+    // Step 1 — exchange refresh token for access token
+    final tokenRes = await http.post(
+      Uri.parse('https://oauth2.googleapis.com/token'),
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: {
+        'client_id':     _kGmailClientId,
+        'client_secret': _kGmailClientSecret,
+        'refresh_token': _kGmailRefreshToken,
+        'grant_type':    'refresh_token',
       },
-      body: jsonEncode({
-        'from': 'iPILA <$_kResendFromEmail>',
-        'to': [toEmail],
-        'subject': 'Your iPILA Password Reset Code',
-        'html': '''
+    );
+
+    if (tokenRes.statusCode != 200) {
+      debugPrint('Gmail token error: ${tokenRes.body}');
+      return false;
+    }
+
+    final accessToken =
+        (jsonDecode(tokenRes.body) as Map<String, dynamic>)['access_token'] as String?;
+    if (accessToken == null) {
+      debugPrint('Gmail: access_token missing in response');
+      return false;
+    }
+
+    // Step 2 — build RFC 2822 email and base64url-encode it
+    final emailBody = '''
 <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
   <h2 style="color:#111;font-size:20px;margin-bottom:4px;">iPILA Password Reset</h2>
   <p style="color:#888;font-size:13px;margin-top:0;">Municipality of Pila, Laguna</p>
@@ -86,25 +103,47 @@ Future<bool> _sendOtpEmail(String toEmail, String otp) async {
   <p style="color:#bbb;font-size:11px;text-align:center;">
     iPILA — Integrated Public Information &amp; Local Access
   </p>
-</div>''',
-      }),
+</div>''';
+
+    final rawMessage = [
+      'From: iPILA <$_kGmailSenderEmail>',
+      'To: $toEmail',
+      'Subject: Your iPILA Password Reset Code',
+      'MIME-Version: 1.0',
+      'Content-Type: text/html; charset=UTF-8',
+      '',
+      emailBody,
+    ].join('\r\n');
+
+    // base64url encoding (no padding) as required by Gmail API
+    final encoded = base64Url.encode(utf8.encode(rawMessage))
+        .replaceAll('=', '');
+
+    // Step 3 — send via Gmail API
+    final sendRes = await http.post(
+      Uri.parse(
+          'https://gmail.googleapis.com/gmail/v1/users/me/messages/send'),
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'raw': encoded}),
     );
-    // Debug: print status and body
-    debugPrint('Resend status: ${res.statusCode}');
-    debugPrint('Resend body: ${res.body}');
-    return res.statusCode == 200 || res.statusCode == 201;
+
+    debugPrint('Gmail send status: ${sendRes.statusCode}');
+    debugPrint('Gmail send body: ${sendRes.body}');
+    return sendRes.statusCode == 200 || sendRes.statusCode == 200;
   } catch (e) {
-    debugPrint('Resend error: $e');
+    debugPrint('Gmail send error: $e');
     return false;
   }
 }
 
-/// Uses Firebase Identity Toolkit REST API to reset password in-app.
-/// Step 1: get an oobCode for the email
-/// Step 2: confirm the reset with oobCode + new password
+/// After OTP is verified, reset password using Firebase Auth REST API.
+/// Uses sendOobCode to get the reset code, then confirmPasswordReset with it.
 Future<String?> _resetPasswordInApp(String email, String newPassword) async {
   try {
-    // Step 1 — request oobCode
+    // Request a password reset oobCode from Firebase
     final codeRes = await http.post(
       Uri.parse(
           'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=$_kFirebaseApiKey'),
@@ -115,48 +154,42 @@ Future<String?> _resetPasswordInApp(String email, String newPassword) async {
       }),
     );
 
+    debugPrint('Firebase oobCode status: ${codeRes.statusCode}');
+    debugPrint('Firebase oobCode body: ${codeRes.body}');
+
     if (codeRes.statusCode != 200) {
       final err = jsonDecode(codeRes.body);
-      return err['error']?['message'] ?? 'Failed to request reset code.';
+      return err['error']?['message'] ?? 'Failed to initiate reset.';
     }
-
-    // The oobCode is emailed to the user by Firebase — we can't intercept it
-    // via REST directly. Instead we use the Admin SDK pattern via REST:
-    // Use getOobCode to get the code without emailing (requires Admin access).
-    // Since we don't have that, we use the verified OTP as proof and
-    // directly update via signInWithCustomToken approach.
-    //
-    // ACTUAL WORKING approach: use Firebase Auth REST update endpoint
-    // after obtaining idToken via signInWithEmailAndPassword — but we don't
-    // have old password. So we use the oobCode from the email silently:
-    // Firebase sends the reset email but we also extract the oobCode from
-    // the response (it's included in the response body for PASSWORD_RESET).
 
     final codeBody = jsonDecode(codeRes.body);
-    // Firebase REST returns the oobCode in the response
     final oobCode = codeBody['oobCode'] as String?;
 
-    if (oobCode == null) {
-      // oobCode not returned (happens on some Firebase plans) — fallback:
-      // send reset email normally as the only option
-      return 'reset_email_sent';
+    if (oobCode != null) {
+      // oobCode returned — directly confirm the password reset
+      final resetRes = await http.post(
+        Uri.parse(
+            'https://identitytoolkit.googleapis.com/v1/accounts:resetPassword?key=$_kFirebaseApiKey'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'oobCode': oobCode,
+          'newPassword': newPassword,
+        }),
+      );
+
+      debugPrint('Reset status: ${resetRes.statusCode} — ${resetRes.body}');
+
+      if (resetRes.statusCode == 200) return null; // success
+      final resetErr = jsonDecode(resetRes.body);
+      return resetErr['error']?['message'] ?? 'Password reset failed.';
     }
 
-    // Step 2 — confirm password reset with oobCode
-    final resetRes = await http.post(
-      Uri.parse(
-          'https://identitytoolkit.googleapis.com/v1/accounts:resetPassword?key=$_kFirebaseApiKey'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'oobCode': oobCode,
-        'newPassword': newPassword,
-      }),
-    );
-
-    if (resetRes.statusCode == 200) return null; // success
-    final resetErr = jsonDecode(resetRes.body);
-    return resetErr['error']?['message'] ?? 'Password reset failed.';
+    // oobCode not in response (production Firebase behaviour) —
+    // Firebase sent the reset email. We can't change the password
+    // in-app without Admin SDK. Return a special marker.
+    return 'email_link_sent';
   } catch (e) {
+    debugPrint('Reset error: $e');
     return 'Network error. Please try again.';
   }
 }
@@ -274,11 +307,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     if (!mounted) return;
     if (result == null) {
-      // Success — password changed in-app
+      // Password changed successfully in-app
       setState(() { _loading = false; _step = _Step.done; });
-    } else if (result == 'reset_email_sent') {
-      // oobCode not available — send email as fallback
-      setState(() { _loading = false; _step = _Step.done; });
+    } else if (result == 'email_link_sent') {
+      // Firebase didn't return oobCode — password reset email was sent instead
+      setState(() {
+        _loading = false;
+        _error = 'Firebase sent a reset link to $_email.\n'
+            'Please click the link in that email to set your new password, '
+            'then come back and log in.';
+      });
     } else {
       setState(() { _loading = false; _error = result; });
     }
