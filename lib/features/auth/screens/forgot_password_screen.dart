@@ -77,12 +77,14 @@ Future<bool> _sendOtpEmail(String email, String otp) async {
 }
 
 Future<bool> _emailExistsInFirestore(String email) async {
-  final snap = await FirebaseFirestore.instance
-      .collection('users')
-      .where('email', isEqualTo: email.toLowerCase())
-      .limit(1)
-      .get();
-  return snap.docs.isNotEmpty;
+  try {
+    // Use Firebase Auth to check if email exists — no Firestore read needed
+    final methods = await FirebaseAuth.instance
+        .fetchSignInMethodsForEmail(email);
+    return methods.isNotEmpty;
+  } catch (_) {
+    return false;
+  }
 }
 
 String? _validatePassword(String? v) {
