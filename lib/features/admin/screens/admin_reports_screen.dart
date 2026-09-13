@@ -1215,23 +1215,20 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
           );
         }
 
-        return GridView.builder(
-          padding: const EdgeInsets.all(40),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            childAspectRatio: 0.85,
-            crossAxisSpacing: 32,
-            mainAxisSpacing: 32,
-          ),
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
           itemCount: reports.length,
           itemBuilder: (context, index) {
             final report = reports[index];
-            return _CommunityReportCard(
-              report: report,
-              onTap: () => showCommunityPostModal(
-                context,
-                report,
-                isAdmin: true,
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: _CommunityReportCard(
+                report: report,
+                onTap: () => showCommunityPostModal(
+                  context,
+                  report,
+                  isAdmin: true,
+                ),
               ),
             );
           },
@@ -1649,223 +1646,203 @@ class _CommunityReportCard extends StatelessWidget {
 
   const _CommunityReportCard({required this.report, required this.onTap});
 
+  Color _urgencyColor(String? u) {
+    if (u == 'Critical') return const Color(0xFFDC2626);
+    if (u == 'Moderate') return const Color(0xFFF59E0B);
+    return const Color(0xFF10B981);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final color = AppTheme.statusColor(report.currentStatus);
-    final priorityLabel = _getPriorityLabel(report.priority);
-    final priorityColor = _getPriorityColor(report.priority);
+    final statusColor = AppTheme.statusColor(report.currentStatus);
 
-    return AdminHoverCard(
+    return GestureDetector(
       onTap: onTap,
-      padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image preview (if available)
-          if (report.photoUrls.isNotEmpty)
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(12),
-              ),
-              child: Image.network(
-                report.photoUrls.first,
-                width: double.infinity,
-                height: 220,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  width: double.infinity,
-                  height: 220,
-                  color: Colors.grey[200],
-                  child: const Icon(
-                    Icons.broken_image_outlined,
-                    size: 40,
-                    color: Colors.grey,
-                  ),
-                ),
-              ),
-            )
-          else
-            Container(
-              width: double.infinity,
-              height: 220,
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(12),
-                ),
-              ),
-              child: Icon(
-                Icons.report_outlined,
-                size: 56,
-                color: Colors.grey[400],
-              ),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 680),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFF0F0F0)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-
-          // Content
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── header: avatar + name + barangay + status ──────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          report.category,
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.12),
+                    child: Text(
+                      report.isAnonymous ? '?' : report.userFullName[0].toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.primaryBlue,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          report.isAnonymous ? 'Anonymous' : report.userFullName,
                           style: const TextStyle(
                             fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textDark,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (report.priority > 1)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: priorityColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            priorityLabel,
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                              color: priorityColor,
-                            ),
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF111111),
                           ),
                         ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    report.description.length > 60
-                        ? '${report.description.substring(0, 60)}...'
-                        : report.description,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.textMuted,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const Spacer(),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        size: 12,
-                        color: Colors.grey[600],
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
+                        Text(
                           'Brgy. ${report.barangay}',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey[600],
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            report.currentStatus,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: color,
-                            ),
-                            textAlign: TextAlign.center,
-                            overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF9CA3AF),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  // engagement row
-                  Row(
-                    children: [
-                      Icon(Icons.favorite_border,
-                          size: 13, color: Colors.grey[500]),
-                      const SizedBox(width: 3),
-                      Text('${report.heartCount}',
+                  // status badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          report.currentStatus,
                           style: TextStyle(
-                              fontSize: 10, color: Colors.grey[600])),
-                      const SizedBox(width: 10),
-                      Icon(Icons.chat_bubble_outline_rounded,
-                          size: 12, color: Colors.grey[500]),
-                      const SizedBox(width: 3),
-                      Text('${report.commentCount}',
-                          style: TextStyle(
-                              fontSize: 10, color: Colors.grey[600])),
-                      const SizedBox(width: 10),
-                      Icon(Icons.notifications_none_outlined,
-                          size: 13, color: Colors.grey[500]),
-                      const SizedBox(width: 3),
-                      Text('${report.followerCount}',
-                          style: TextStyle(
-                              fontSize: 10, color: Colors.grey[600])),
-                    ],
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: statusColor,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+
+            // ── photo (full width) ─────────────────────────────────────
+            if (report.photoUrls.isNotEmpty)
+              Image.network(
+                report.photoUrls.first,
+                width: double.infinity,
+                height: 340,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  height: 340,
+                  color: const Color(0xFFF3F4F6),
+                  child: const Icon(Icons.broken_image_outlined,
+                      size: 48, color: Color(0xFFD1D5DB)),
+                ),
+              )
+            else
+              Container(
+                width: double.infinity,
+                height: 200,
+                color: const Color(0xFFF3F4F6),
+                child: const Icon(Icons.image_not_supported_outlined,
+                    size: 48, color: Color(0xFFD1D5DB)),
+              ),
+
+            // ── engagement row ─────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+              child: Row(
+                children: [
+                  Icon(Icons.favorite_border, size: 22, color: Colors.grey[500]),
+                  const SizedBox(width: 4),
+                  Text('${report.heartCount}',
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+                  const SizedBox(width: 16),
+                  Icon(Icons.chat_bubble_outline_rounded,
+                      size: 20, color: Colors.grey[500]),
+                  const SizedBox(width: 4),
+                  Text('${report.commentCount}',
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+                  const SizedBox(width: 16),
+                  Icon(Icons.notifications_none_outlined,
+                      size: 20, color: Colors.grey[500]),
+                  const SizedBox(width: 4),
+                  Text('${report.followerCount}',
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+                  const Spacer(),
+                  if (report.urgencyLevel != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: _urgencyColor(report.urgencyLevel).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        report.urgencyLevel!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _urgencyColor(report.urgencyLevel),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            // ── category + description ─────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+              child: RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: '${report.category}  ',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF111111),
+                      ),
+                    ),
+                    TextSpan(
+                      text: report.description.length > 120
+                          ? '${report.description.substring(0, 120)}...'
+                          : report.description,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF374151),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
-  }
-
-  String _getPriorityLabel(int priority) {
-    switch (priority) {
-      case 5:
-        return 'CRITICAL';
-      case 4:
-        return 'HIGH';
-      case 3:
-        return 'MEDIUM';
-      case 2:
-        return 'LOW';
-      default:
-        return 'NORMAL';
-    }
-  }
-
-  Color _getPriorityColor(int priority) {
-    switch (priority) {
-      case 5:
-        return Colors.red;
-      case 4:
-        return Colors.orange;
-      case 3:
-        return Colors.amber;
-      case 2:
-        return Colors.blue;
-      default:
-        return Colors.grey;
-    }
   }
 }
 
