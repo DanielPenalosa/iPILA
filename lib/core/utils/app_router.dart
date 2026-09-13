@@ -91,7 +91,8 @@ GoRouter createRouter(AuthProvider authProvider) {
       final status = authProvider.status;
       final loc = state.matchedLocation;
       final isAuthRoute =
-          loc == '/login' || loc == '/register' || loc == '/pending-approval';
+          loc == '/login' || loc == '/register' ||
+          loc == '/pending-approval' || loc == '/forgot-password';
 
       if (status == AuthStatus.initial || status == AuthStatus.loading) {
         return null;

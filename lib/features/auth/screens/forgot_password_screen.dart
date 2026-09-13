@@ -10,9 +10,9 @@ import 'package:http/http.dart' as http;
 // ─────────────────────────────────────────────────────────────────────────────
 // EmailJS credentials — replace with your own from emailjs.com
 // ─────────────────────────────────────────────────────────────────────────────
-const _kEmailJsServiceId  = 'YOUR_SERVICE_ID';
-const _kEmailJsTemplateId = 'YOUR_TEMPLATE_ID';
-const _kEmailJsPublicKey  = 'YOUR_PUBLIC_KEY';
+const _kEmailJsServiceId  = 'service_jcf1jap';
+const _kEmailJsTemplateId = 'template_saju0rt';
+const _kEmailJsPublicKey  = '8Velmzzgu6De8a243';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
