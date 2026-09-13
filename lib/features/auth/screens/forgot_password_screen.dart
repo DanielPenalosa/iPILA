@@ -183,23 +183,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     setState(() { _loading = true; _error = null; });
 
     try {
-      // Sign in silently to update password
-      final methods = await FirebaseAuth.instance
-          .fetchSignInMethodsForEmail(_email);
-
-      if (methods.isEmpty) throw Exception('No account found.');
-
-      // Use Firebase password reset (email link approach)
-      // Since we verified OTP we know they own this email.
-      // We'll use Admin-style: re-auth isn't possible without current password,
-      // so we use sendPasswordResetEmail as the actual password change mechanism
-      // AND delete the OTP so it can't be reused.
       await _deleteOtp(_email);
       await FirebaseAuth.instance.sendPasswordResetEmail(email: _email);
-
       if (mounted) setState(() { _loading = false; _step = _Step.done; });
     } catch (e) {
-      if (mounted) setState(() { _loading = false; _error = e.toString(); });
+      if (mounted) setState(() { _loading = false; _error = 'Failed to send reset email. Try again.'; });
     }
   }
 
