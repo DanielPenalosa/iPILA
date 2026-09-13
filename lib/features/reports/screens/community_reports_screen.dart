@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/report_model.dart';
 import '../../../data/services/report_service.dart';
-import '../../auth/providers/auth_provider.dart';
 import '../../home/widgets/mobile_shell.dart';
 import '../widgets/community_post_modal.dart';
 
@@ -532,17 +530,15 @@ class _CommunityReportCard extends StatelessWidget {
                         fontSize: 12, color: Colors.grey[600]),
                   ),
                   const SizedBox(width: 14),
-                  Icon(Icons.notifications_none_outlined,
+                  Icon(Icons.star_outline_rounded,
                       size: 20, color: Colors.grey[500]),
                   const SizedBox(width: 4),
                   Text(
-                    '${report.followerCount}',
+                    '${report.heartCount}',
                     style: TextStyle(
                         fontSize: 12, color: Colors.grey[600]),
                   ),
                   const Spacer(),
-                  // ── Follow Up button ─────────────────────────────────
-                  _FollowUpButton(report: report),
                 ],
               ),
             ),
@@ -586,92 +582,6 @@ class _CommunityReportCard extends StatelessWidget {
               const SizedBox(height: 10),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ── Follow Up button — live state from auth + service ────────────────────────
-class _FollowUpButton extends StatefulWidget {
-  final ReportModel report;
-  const _FollowUpButton({required this.report});
-
-  @override
-  State<_FollowUpButton> createState() => _FollowUpButtonState();
-}
-
-class _FollowUpButtonState extends State<_FollowUpButton> {
-  final _service = ReportService();
-  bool _loading = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final uid = context.watch<AuthProvider>().user?.uid ?? '';
-    final isOwner = widget.report.userId == uid;
-    if (uid.isEmpty || isOwner) return const SizedBox.shrink();
-
-    final isFollowing = widget.report.followers.contains(uid);
-
-    return GestureDetector(
-      onTap: _loading
-          ? null
-          : () async {
-              setState(() => _loading = true);
-              if (isFollowing) {
-                await _service.unfollowReport(widget.report.id, uid);
-              } else {
-                await _service.followReport(widget.report.id, uid);
-              }
-              if (mounted) setState(() => _loading = false);
-            },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: isFollowing
-              ? const Color(0xFFF3F4F6)
-              : AppTheme.primaryBlue,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isFollowing
-                ? const Color(0xFFE5E7EB)
-                : AppTheme.primaryBlue,
-          ),
-        ),
-        child: _loading
-            ? SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: isFollowing ? AppTheme.primaryBlue : Colors.white,
-                ),
-              )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isFollowing
-                        ? Icons.notifications_active_outlined
-                        : Icons.notifications_none_outlined,
-                    size: 14,
-                    color: isFollowing
-                        ? const Color(0xFF374151)
-                        : Colors.white,
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    isFollowing ? 'Following Up' : 'Follow Up',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isFollowing
-                          ? const Color(0xFF374151)
-                          : Colors.white,
-                    ),
-                  ),
-                ],
-              ),
       ),
     );
   }

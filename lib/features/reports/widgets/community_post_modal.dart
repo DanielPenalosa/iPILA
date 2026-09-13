@@ -49,7 +49,6 @@ class _CommunityPostModalState extends State<CommunityPostModal> {
   int _photoIndex = 0;
   bool _submittingComment = false;
   bool _togglingHeart = false;
-  bool _togglingFollow = false;
 
   @override
   void dispose() {
@@ -69,7 +68,6 @@ class _CommunityPostModalState extends State<CommunityPostModal> {
     final auth = context.watch<AuthProvider>();
     final uid = auth.user?.uid ?? '';
     final report = widget.report;
-    final isOwner = report.userId == uid;
     final screenH = MediaQuery.of(context).size.height;
 
     return StreamBuilder<ReportModel?>(
@@ -77,7 +75,6 @@ class _CommunityPostModalState extends State<CommunityPostModal> {
       builder: (context, snap) {
         final live = snap.data ?? report;
         final liveHearted = live.hearts.contains(uid);
-        final liveFollowing = live.followers.contains(uid);
 
         return Container(
           height: screenH * 0.92,
@@ -141,37 +138,20 @@ class _CommunityPostModalState extends State<CommunityPostModal> {
                                     icon: Icons.chat_bubble_outline_rounded,
                                     color: const Color(0xFF374151),
                                     onTap: () {
-                                      // scroll to comment field
                                       _scrollCtrl.animateTo(
                                         _scrollCtrl.position.maxScrollExtent,
-                                        duration:
-                                            const Duration(milliseconds: 300),
+                                        duration: const Duration(milliseconds: 300),
                                         curve: Curves.easeOut,
                                       );
                                     },
                                   ),
                                 const Spacer(),
-                                // follow-up / follow button (citizen only, not owner)
-                                if (!widget.isAdmin && !isOwner)
-                                  _FollowButton(
-                                    isFollowing: liveFollowing,
-                                    loading: _togglingFollow,
-                                    onTap: () async {
-                                      if (uid.isEmpty) return;
-                                      setState(
-                                          () => _togglingFollow = true);
-                                      if (liveFollowing) {
-                                        await _service.unfollowReport(
-                                            live.id, uid);
-                                      } else {
-                                        await _service.followReport(
-                                            live.id, uid);
-                                      }
-                                      if (mounted) {
-                                        setState(
-                                            () => _togglingFollow = false);
-                                      }
-                                    },
+                                if (!widget.isAdmin && uid.isNotEmpty)
+                                  _StarRatingButton(
+                                    reportId: live.id,
+                                    uid: uid,
+                                    service: _service,
+                                    auth: auth,
                                   ),
                               ],
                             ),
@@ -285,15 +265,9 @@ class _CommunityPostModalState extends State<CommunityPostModal> {
                             ),
                             const SizedBox(height: 16),
 
-                            // ── progress updates (if any) ───────────────────
-                            if (live.progressUpdates.isNotEmpty) ...[
-                              _SectionHeader(label: 'Progress Updates'),
-                              const SizedBox(height: 10),
-                              ...live.progressUpdates.map(
-                                (u) => _ProgressUpdateTile(update: u),
-                              ),
-                              const SizedBox(height: 16),
-                            ],
+                            // ── timeline: reported → resolved ───────────────
+                            _ReportTimeline(report: live),
+                            const SizedBox(height: 16),
 
                             // ── before/after ────────────────────────────────
                             if (live.afterPhotoUrl != null &&
@@ -491,70 +465,6 @@ class _ActionIcon extends StatelessWidget {
   }
 }
 
-class _FollowButton extends StatelessWidget {
-  final bool isFollowing;
-  final bool loading;
-  final VoidCallback onTap;
-
-  const _FollowButton({
-    required this.isFollowing,
-    required this.loading,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: loading ? null : onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-        decoration: BoxDecoration(
-          color: isFollowing
-              ? const Color(0xFFF3F4F6)
-              : AppTheme.primaryBlue,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isFollowing
-                ? const Color(0xFFE5E7EB)
-                : AppTheme.primaryBlue,
-          ),
-        ),
-        child: loading
-            ? const SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(strokeWidth: 2))
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isFollowing
-                        ? Icons.notifications_active_outlined
-                        : Icons.notifications_none_outlined,
-                    size: 14,
-                    color: isFollowing
-                        ? const Color(0xFF374151)
-                        : Colors.white,
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    isFollowing ? 'Following Up' : 'Follow Up',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isFollowing
-                          ? const Color(0xFF374151)
-                          : Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-      ),
-    );
-  }
-}
-
 class _Avatar extends StatelessWidget {
   final String name;
 
@@ -683,68 +593,6 @@ class _SectionHeader extends StatelessWidget {
           fontWeight: FontWeight.w700,
           color: Color(0xFF111111),
           letterSpacing: 0.1),
-    );
-  }
-}
-
-class _ProgressUpdateTile extends StatelessWidget {
-  final ProgressUpdate update;
-
-  const _ProgressUpdateTile({required this.update});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color:
-                      AppTheme.statusColor(update.status).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(update.status,
-                    style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.statusColor(update.status))),
-              ),
-              const Spacer(),
-              Text(
-                DateFormat('MMM d · h:mm a').format(update.timestamp),
-                style: const TextStyle(
-                    fontSize: 10, color: Color(0xFF9CA3AF)),
-              ),
-            ],
-          ),
-          if (update.remarks != null && update.remarks!.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Text(update.remarks!,
-                style: const TextStyle(
-                    fontSize: 12, color: Color(0xFF374151))),
-          ],
-          if (update.department.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text('by ${update.department}',
-                style: const TextStyle(
-                    fontSize: 10,
-                    color: Color(0xFF9CA3AF),
-                    fontStyle: FontStyle.italic)),
-          ],
-        ],
-      ),
     );
   }
 }
@@ -1245,6 +1093,421 @@ class _RatingSectionState extends State<_RatingSection> {
           ],
         );
       },
+    );
+  }
+}
+
+// ── Timeline: reported → resolved ────────────────────────────────────────────
+
+class _ReportTimeline extends StatelessWidget {
+  final ReportModel report;
+  const _ReportTimeline({required this.report});
+
+  @override
+  Widget build(BuildContext context) {
+    final resolvedEntry = report.statusHistory
+        .where((h) => h.status == 'Resolved')
+        .firstOrNull;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(label: 'Timeline'),
+        const SizedBox(height: 10),
+        _TimelineDot(
+          label: 'Reported',
+          date: report.createdAt,
+          color: const Color(0xFF6366F1),
+          isFirst: true,
+        ),
+        _TimelineDot(
+          label: 'Resolved',
+          date: resolvedEntry?.timestamp,
+          color: const Color(0xFF10B981),
+          isFirst: false,
+        ),
+      ],
+    );
+  }
+}
+
+class _TimelineDot extends StatelessWidget {
+  final String label;
+  final DateTime? date;
+  final Color color;
+  final bool isFirst;
+
+  const _TimelineDot({
+    required this.label,
+    required this.date,
+    required this.color,
+    required this.isFirst,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 22,
+          child: Column(
+            children: [
+              if (!isFirst)
+                Container(width: 2, height: 20, color: const Color(0xFFE5E7EB)),
+              Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: date != null ? color : Colors.grey[300],
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: date != null ? color : Colors.grey[400]!,
+                ),
+              ),
+              if (date != null)
+                Text(
+                  DateFormat('MMM d, yyyy · h:mm a').format(date!),
+                  style: const TextStyle(
+                      fontSize: 11, color: Color(0xFF9CA3AF)),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Star rating icon button → opens rating bottom sheet ──────────────────────
+
+class _StarRatingButton extends StatelessWidget {
+  final String reportId;
+  final String uid;
+  final ReportService service;
+  final AuthProvider auth;
+
+  const _StarRatingButton({
+    required this.reportId,
+    required this.uid,
+    required this.service,
+    required this.auth,
+  });
+
+  void _open(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _RatingSheet(
+        reportId: reportId,
+        uid: uid,
+        service: service,
+        auth: auth,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<ReportFeedback>>(
+      stream: service.getFeedback(reportId),
+      builder: (context, snap) {
+        final feedbacks = snap.data ?? [];
+        final mine = feedbacks.where((f) => f.userId == uid).firstOrNull;
+        final total = feedbacks.length;
+        final avg = total == 0
+            ? 0.0
+            : feedbacks.map((f) => f.rating).reduce((a, b) => a + b) / total;
+
+        return GestureDetector(
+          onTap: () => _open(context),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                mine != null ? Icons.star_rounded : Icons.star_outline_rounded,
+                size: 26,
+                color: mine != null
+                    ? Colors.amber[600]!
+                    : const Color(0xFF374151),
+              ),
+              if (total > 0) ...[
+                const SizedBox(width: 4),
+                Text(
+                  avg.toStringAsFixed(1),
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF374151)),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Rating bottom sheet ───────────────────────────────────────────────────────
+
+class _RatingSheet extends StatefulWidget {
+  final String reportId;
+  final String uid;
+  final ReportService service;
+  final AuthProvider auth;
+
+  const _RatingSheet({
+    required this.reportId,
+    required this.uid,
+    required this.service,
+    required this.auth,
+  });
+
+  @override
+  State<_RatingSheet> createState() => _RatingSheetState();
+}
+
+class _RatingSheetState extends State<_RatingSheet> {
+  int _selected = 0;
+  bool _submitting = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: StreamBuilder<List<ReportFeedback>>(
+        stream: widget.service.getFeedback(widget.reportId),
+        builder: (context, snap) {
+          final feedbacks = snap.data ?? [];
+          final mine =
+              feedbacks.where((f) => f.userId == widget.uid).firstOrNull;
+          final total = feedbacks.length;
+          final avg = total == 0
+              ? 0.0
+              : feedbacks.map((f) => f.rating).reduce((a, b) => a + b) /
+                  total;
+
+          return SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE5E7EB),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    const Text('Ratings',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w700)),
+                    const Spacer(),
+                    if (total > 0) ...[
+                      Icon(Icons.star_rounded,
+                          size: 16, color: Colors.amber[600]),
+                      const SizedBox(width: 3),
+                      Text(avg.toStringAsFixed(1),
+                          style: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w700)),
+                      Text('  ($total)',
+                          style: const TextStyle(
+                              fontSize: 12, color: Color(0xFF9CA3AF))),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (mine != null)
+                  Row(
+                    children: [
+                      ...List.generate(
+                        5,
+                        (i) => Icon(
+                          i < mine.rating
+                              ? Icons.star_rounded
+                              : Icons.star_outline_rounded,
+                          size: 28,
+                          color: Colors.amber[600],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text('Your rating',
+                          style: TextStyle(
+                              fontSize: 13, color: Color(0xFF6B7280))),
+                    ],
+                  )
+                else
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Rate the resolution',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF111111))),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: List.generate(5, (i) {
+                          final star = i + 1;
+                          return GestureDetector(
+                            onTap: () => setState(() => _selected = star),
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: Icon(
+                                star <= _selected
+                                    ? Icons.star_rounded
+                                    : Icons.star_outline_rounded,
+                                size: 36,
+                                color: Colors.amber[600],
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                      if (_selected > 0) ...[
+                        const SizedBox(height: 14),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _submitting
+                                ? null
+                                : () async {
+                                    setState(() => _submitting = true);
+                                    await widget.service.submitFeedback(
+                                      reportId: widget.reportId,
+                                      userId: widget.uid,
+                                      userFullName:
+                                          widget.auth.user?.fullName ??
+                                              'Citizen',
+                                      rating: _selected,
+                                      comment: '',
+                                    );
+                                    if (mounted) {
+                                      setState(() {
+                                        _submitting = false;
+                                        _selected = 0;
+                                      });
+                                    }
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryBlue,
+                              foregroundColor: Colors.white,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: _submitting
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white))
+                                : const Text('Submit Rating',
+                                    style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600)),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                if (feedbacks.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  ...feedbacks.map((f) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CircleAvatar(
+                              radius: 14,
+                              backgroundColor:
+                                  AppTheme.primaryBlue.withValues(alpha: 0.12),
+                              child: Text(
+                                f.userFullName.isNotEmpty
+                                    ? f.userFullName[0].toUpperCase()
+                                    : '?',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.primaryBlue),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(children: [
+                                    Text(f.userFullName,
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFF111111))),
+                                    const SizedBox(width: 8),
+                                    ...List.generate(
+                                      5,
+                                      (i) => Icon(
+                                        i < f.rating
+                                            ? Icons.star_rounded
+                                            : Icons.star_outline_rounded,
+                                        size: 13,
+                                        color: Colors.amber[600],
+                                      ),
+                                    ),
+                                  ]),
+                                  if (f.comment.isNotEmpty)
+                                    Text(f.comment,
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFF374151))),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )),
+                ],
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }
