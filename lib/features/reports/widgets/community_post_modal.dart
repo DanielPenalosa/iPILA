@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/report_model.dart';
 import '../../../data/services/report_service.dart';
@@ -286,10 +285,6 @@ class _CommunityPostModalState extends State<CommunityPostModal> {
                             ),
                             const SizedBox(height: 16),
 
-                            // ── status timeline ─────────────────────────────
-                            _TimelineSection(history: live.statusHistory),
-                            const SizedBox(height: 16),
-
                             // ── progress updates (if any) ───────────────────
                             if (live.progressUpdates.isNotEmpty) ...[
                               _SectionHeader(label: 'Progress Updates'),
@@ -300,10 +295,10 @@ class _CommunityPostModalState extends State<CommunityPostModal> {
                               const SizedBox(height: 16),
                             ],
 
-                            // ── before/after if resolved ────────────────────
+                            // ── before/after ────────────────────────────────
                             if (live.afterPhotoUrl != null &&
                                 live.photoUrls.isNotEmpty) ...[
-                              _SectionHeader(label: 'Resolution Evidence'),
+                              _SectionHeader(label: 'Before & After'),
                               const SizedBox(height: 10),
                               _BeforeAfterRow(
                                 beforeUrl: live.photoUrls.first,
@@ -678,97 +673,6 @@ class _SectionHeader extends StatelessWidget {
           fontWeight: FontWeight.w700,
           color: Color(0xFF111111),
           letterSpacing: 0.1),
-    );
-  }
-}
-
-class _TimelineSection extends StatelessWidget {
-  final List<ReportStatus> history;
-
-  const _TimelineSection({required this.history});
-
-  @override
-  Widget build(BuildContext context) {
-    if (history.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionHeader(label: 'Status Timeline'),
-        const SizedBox(height: 10),
-        ...AppConstants.reportStatuses.asMap().entries.map((entry) {
-          final i = entry.key;
-          final statusName = entry.value;
-          final histEntry = history
-              .where((h) => h.status == statusName)
-              .firstOrNull;
-          final isDone = histEntry != null;
-          final isLast = i == AppConstants.reportStatuses.length - 1;
-          final color = AppTheme.statusColor(statusName);
-
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 22,
-                child: Column(
-                  children: [
-                    Container(
-                      width: 18,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        color: isDone ? color : Colors.grey[200],
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                            color: isDone ? color : Colors.grey[300]!,
-                            width: 2),
-                      ),
-                      child: isDone
-                          ? const Icon(Icons.check,
-                              size: 10, color: Colors.white)
-                          : null,
-                    ),
-                    if (!isLast)
-                      Container(
-                          width: 2,
-                          height: 30,
-                          color: isDone
-                              ? color.withValues(alpha: 0.3)
-                              : Colors.grey[200]),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(statusName,
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: isDone
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
-                              color: isDone
-                                  ? color
-                                  : Colors.grey[400])),
-                      if (histEntry != null)
-                        Text(
-                          DateFormat('MMM d, yyyy · h:mm a')
-                              .format(histEntry.timestamp),
-                          style: const TextStyle(
-                              fontSize: 10,
-                              color: Color(0xFF9CA3AF)),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        }),
-      ],
     );
   }
 }
