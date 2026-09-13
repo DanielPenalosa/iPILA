@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -10,11 +11,10 @@ import '../../../core/theme/app_theme.dart';
 // ── Firebase Web API key ──────────────────────────────────────────────────────
 const _kFirebaseApiKey = 'AIzaSyBGVfY9YBPiQ5KkAsSU_PKPCp3SJNCXbfw';
 
-// ── Email via Resend (free — get API key at resend.com) ───────────────────────
-// 1. Go to https://resend.com → Sign Up free (use your Gmail)
-// 2. Dashboard → API Keys → Create API Key → paste below
-// 3. Free tier: use onboarding@resend.dev as sender immediately (no domain setup)
-const _kResendApiKey    = 'YOUR_RESEND_API_KEY';
+// ── Email via Resend ──────────────────────────────────────────────────────────
+// Get your API key from resend.com → Dashboard → API Keys
+// Paste it below (this file should NOT be committed with a real key)
+const _kResendApiKey    = 'PASTE_YOUR_RESEND_API_KEY_HERE';
 const _kResendFromEmail = 'onboarding@resend.dev';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -89,8 +89,12 @@ Future<bool> _sendOtpEmail(String toEmail, String otp) async {
 </div>''',
       }),
     );
+    // Debug: print status and body
+    debugPrint('Resend status: ${res.statusCode}');
+    debugPrint('Resend body: ${res.body}');
     return res.statusCode == 200 || res.statusCode == 201;
-  } catch (_) {
+  } catch (e) {
+    debugPrint('Resend error: $e');
     return false;
   }
 }
