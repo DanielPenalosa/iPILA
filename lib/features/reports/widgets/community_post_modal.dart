@@ -109,7 +109,7 @@ class _CommunityPostModalState extends State<CommunityPostModal> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ── before / after carousel ────────────────────────
+                      // ── before / after side by side ────────────────────
                       _BeforeAfterCarousel(
                         beforeUrls: live.photoUrls,
                         afterUrl: live.afterPhotoUrl,
@@ -392,7 +392,7 @@ class _DragHandle extends StatelessWidget {
   }
 }
 
-// Shows before photo, after photo, or both side by side as a PageView
+// Shows before and after side by side — no swiping needed
 class _BeforeAfterCarousel extends StatelessWidget {
   final List<String> beforeUrls;
   final String? afterUrl;
@@ -408,44 +408,113 @@ class _BeforeAfterCarousel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Build page list: if afterUrl exists show [before, after], else original photos
-    final pages = <Widget>[];
-
     if (afterUrl != null && beforeUrls.isNotEmpty) {
-      pages.add(_LabeledPhoto(url: beforeUrls.first, label: 'BEFORE', isAfter: false));
-      pages.add(_LabeledPhoto(url: afterUrl!, label: 'AFTER', isAfter: true));
-    } else if (beforeUrls.isNotEmpty) {
-      for (final url in beforeUrls) {
-        pages.add(Image.network(
-          url,
-          width: double.infinity,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
-            color: const Color(0xFFF3F4F6),
-            child: const Icon(Icons.broken_image_outlined,
-                size: 48, color: Color(0xFFD1D5DB)),
-          ),
-        ));
-      }
-    } else {
+      // Side-by-side before/after
+      return SizedBox(
+        height: 260,
+        child: Row(
+          children: [
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.network(
+                    beforeUrls.first,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: const Color(0xFFF3F4F6),
+                      child: const Icon(Icons.broken_image_outlined,
+                          color: Color(0xFFD1D5DB)),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text('BEFORE',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 2),
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.network(
+                    afterUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: const Color(0xFFF3F4F6),
+                      child: const Icon(Icons.broken_image_outlined,
+                          color: Color(0xFFD1D5DB)),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.88),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text('AFTER',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // No after photo — show original photos as paged carousel
+    if (beforeUrls.isEmpty) {
       return Container(
-        height: 280,
+        height: 260,
         color: const Color(0xFFF3F4F6),
         child: const Icon(Icons.image_not_supported_outlined,
             size: 48, color: Color(0xFFD1D5DB)),
       );
     }
-
     return Stack(
       children: [
         SizedBox(
           height: 280,
-          child: PageView(
+          child: PageView.builder(
             onPageChanged: onPageChanged,
-            children: pages,
+            itemCount: beforeUrls.length,
+            itemBuilder: (_, i) => Image.network(
+              beforeUrls[i],
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                color: const Color(0xFFF3F4F6),
+                child: const Icon(Icons.broken_image_outlined,
+                    size: 48, color: Color(0xFFD1D5DB)),
+              ),
+            ),
           ),
         ),
-        if (pages.length > 1)
+        if (beforeUrls.length > 1)
           Positioned(
             bottom: 10,
             left: 0,
@@ -453,7 +522,7 @@ class _BeforeAfterCarousel extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
-                pages.length,
+                beforeUrls.length,
                 (i) => AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -469,56 +538,6 @@ class _BeforeAfterCarousel extends StatelessWidget {
               ),
             ),
           ),
-      ],
-    );
-  }
-}
-
-class _LabeledPhoto extends StatelessWidget {
-  final String url;
-  final String label;
-  final bool isAfter;
-
-  const _LabeledPhoto({
-    required this.url,
-    required this.label,
-    required this.isAfter,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Image.network(
-          url,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
-            color: const Color(0xFFF3F4F6),
-            child: const Icon(Icons.broken_image_outlined,
-                size: 48, color: Color(0xFFD1D5DB)),
-          ),
-        ),
-        Positioned(
-          bottom: 10,
-          left: 10,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: isAfter
-                  ? const Color(0xFF10B981).withValues(alpha: 0.88)
-                  : Colors.black.withValues(alpha: 0.55),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              label,
-              style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white),
-            ),
-          ),
-        ),
       ],
     );
   }
@@ -1195,14 +1214,10 @@ class _ReportTimeline extends StatelessWidget {
         .where((h) => h.status == 'Resolved')
         .firstOrNull;
 
-    // resolution message: use completionRemarks, or the resolved status note, or a default
-    final resolveMsg = report.completionRemarks?.isNotEmpty == true
-        ? report.completionRemarks!
-        : resolvedEntry?.note?.isNotEmpty == true
-            ? resolvedEntry!.note!
-            : resolvedEntry != null
-                ? 'Issue successfully resolved.'
-                : null;
+    // auto message based on category — never uses admin remarks
+    final resolveMsg = resolvedEntry != null
+        ? 'The ${report.category.toLowerCase()} issue in Brgy. ${report.barangay} has been successfully resolved.'
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
