@@ -6,12 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
+import '../../../core/config/secrets.dart';
 import '../../../core/theme/app_theme.dart';
 
 // ── Firebase Web API key ──────────────────────────────────────────────────────
 const _kFirebaseApiKey = 'AIzaSyBGVfY9YBPiQ5KkAsSU_PKPCp3SJNCXbfw';
-
-import '../../../core/config/secrets.dart';
 
 // ── Gmail OAuth credentials loaded from secrets.dart (git-ignored) ───────────
 const _kGmailClientId     = kGmailClientId;
