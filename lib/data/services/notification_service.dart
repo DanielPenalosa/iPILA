@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/constants/app_constants.dart';
 import 'email_service.dart';
+import 'sound_service.dart';
 
 class NotificationService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -31,14 +32,6 @@ class NotificationService {
           'isRead': false,
           'createdAt': Timestamp.fromDate(DateTime.now()),
         });
-
-    // Also send an email to the user's registered Gmail — fire and forget
-    _email.sendNotificationEmail(
-      userId:   userId,
-      title:    title,
-      body:     body,
-      reportId: reportId,
-    ).catchError((_) {}); // silent fail — never block the main flow
   }
 
   /// Create a broadcast notification for all users
@@ -97,6 +90,7 @@ class NotificationService {
     required String body,
     String type = 'info',
     Map<String, dynamic>? data,
+    bool playSound = false,
   }) async {
     final notificationId = _uuid.v4();
 
@@ -122,6 +116,11 @@ class NotificationService {
         .collection(AppConstants.notificationsCollection)
         .doc(notificationId)
         .set(notificationData);
+
+    // Play notification sound if requested
+    if (playSound) {
+      SoundService.playNotificationSound();
+    }
 
     // Also send an email — fire and forget, never block the main flow
     _email.sendNotificationEmail(

@@ -65,13 +65,14 @@ class DepartmentService {
       'statusHistory': FieldValue.arrayUnion([statusEntry.toMap()]),
     });
 
-    // Notify the department user
+    // Notify the department user with sound
     await _notifications.createNotification(
       userId: departmentUserId,
       title: 'New Report Assigned',
       body: 'A report has been assigned to your department: $departmentName',
       type: 'assignment',
       data: {'reportId': reportId},
+      playSound: true,
     );
 
     // Notify the reporter

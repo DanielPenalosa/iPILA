@@ -114,6 +114,7 @@ class BarangayService {
       body: 'A report has been assigned to Brgy. $barangayName.',
       type: 'assignment',
       data: {'reportId': reportId},
+      playSound: true,
     );
 
     await _notifications.createNotification(

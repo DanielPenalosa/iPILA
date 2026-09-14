@@ -83,13 +83,14 @@ class ReportService {
         .doc(reportId)
         .set(report.toMap());
 
-    // Notify all admins of the new report
+    // Notify all admins of the new report with sound
     await _notifyAdmins(
       title: 'New Report: $category',
       body:
           '${isAnonymous ? 'Anonymous' : userFullName} submitted a $category report in Brgy. $barangay.',
       type: 'new_report',
       reportId: reportId,
+      playSound: true,
     );
 
     return reportId;
@@ -621,6 +622,7 @@ class ReportService {
     required String body,
     required String type,
     String reportId = '',
+    bool playSound = false,
   }) async {
     try {
       final adminsSnap = await _db
@@ -636,6 +638,7 @@ class ReportService {
           data: reportId.isNotEmpty
               ? {'reportId': reportId, 'type': type}
               : null,
+          playSound: playSound,
         );
       }
     } catch (e) {

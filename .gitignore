@@ -57,5 +57,4 @@ cd
 
 # App secrets — never commit REAL credentials
 # Keep a placeholder version tracked for CI/CD builds
-# Real values go in secrets.local.dart (copy secrets.dart → secrets.local.dart)
-lib/core/config/secrets.local.dart
+# Real values go in this file locally but are NOT committed
