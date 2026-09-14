@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 import '../models/report_model.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/services/global_notification_manager.dart';
 import 'cloudinary_service.dart';
 import 'notification_service.dart';
 
@@ -627,7 +628,11 @@ class ReportService {
           .collection(AppConstants.usersCollection)
           .where('role', whereIn: ['admin', 'superadmin'])
           .get();
+      
+      debugPrint('📣 Notifying ${adminsSnap.docs.length} admins');
+      
       for (final adminDoc in adminsSnap.docs) {
+        // Create notification in Firestore
         await _notificationService.createNotification(
           userId: adminDoc.id,
           title: title,
@@ -636,6 +641,18 @@ class ReportService {
           data: reportId.isNotEmpty
               ? {'reportId': reportId, 'type': type}
               : null,
+        );
+      }
+      
+      // IMMEDIATELY show popup to all online admins via GlobalNotificationManager
+      // This doesn't rely on Firestore listeners
+      if (type == 'new_report' || type == 'assignment') {
+        debugPrint('📣 Triggering immediate popup via GlobalNotificationManager');
+        GlobalNotificationManager.showNotification(
+          title: title,
+          message: body,
+          type: type,
+          reportId: reportId.isNotEmpty ? reportId : null,
         );
       }
     } catch (e) {

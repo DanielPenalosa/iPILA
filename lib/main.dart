@@ -7,9 +7,10 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/app_router.dart';
+import 'core/services/global_notification_manager.dart';
+import 'core/providers/notification_provider.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/reports/providers/report_provider.dart';
-import 'data/services/notification_listener_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,6 +44,7 @@ class IpilaApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ReportProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: _AppRouter(),
     );
@@ -63,8 +65,8 @@ class _AppRouterState extends State<_AppRouter> {
     final authProvider = context.read<AuthProvider>();
     _router = createRouter(authProvider);
     
-    // Set the navigator key for notification service
-    NotificationListenerService.setNavigatorKey(rootNavigatorKey);
+    // Initialize global notification manager with root navigator key
+    GlobalNotificationManager.initialize(rootNavigatorKey);
     
     // Listen for auth changes
     authProvider.addListener(_onAuthChanged);
@@ -72,20 +74,23 @@ class _AppRouterState extends State<_AppRouter> {
 
   void _onAuthChanged() {
     final authProvider = context.read<AuthProvider>();
+    final notificationProvider = context.read<NotificationProvider>();
     final user = authProvider.user;
     
     if (user == null) {
-      // User logged out - stop listening
-      NotificationListenerService.stopListening();
+      // User logged out - stop polling
+      notificationProvider.stopPolling();
+    } else {
+      // User logged in - start polling for notifications
+      notificationProvider.startPolling(user.uid);
     }
-    // Don't start here - will start in the builder when context is available
   }
 
   @override
   void dispose() {
     final authProvider = context.read<AuthProvider>();
     authProvider.removeListener(_onAuthChanged);
-    NotificationListenerService.stopListening();
+    context.read<NotificationProvider>().stopPolling();
     super.dispose();
   }
 
@@ -97,11 +102,14 @@ class _AppRouterState extends State<_AppRouter> {
       theme: AppTheme.lightTheme,
       routerConfig: _router,
       builder: (context, child) {
-        // Start notification listener when we have a valid context
+        // Start notification polling when user is authenticated
         final user = context.watch<AuthProvider>().user;
         if (user != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            NotificationListenerService.startListening(user.uid, context);
+            final notificationProvider = context.read<NotificationProvider>();
+            notificationProvider.startPolling(user.uid);
+            // Process any pending notifications
+            GlobalNotificationManager.processPendingNotifications();
           });
         }
         return child ?? const SizedBox.shrink();
