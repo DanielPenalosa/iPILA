@@ -8,17 +8,23 @@ class NotificationListenerService {
   static StreamSubscription<QuerySnapshot>? _subscription;
   static DateTime? _lastNotificationTime;
   static bool _isInitialized = false;
-  static BuildContext? _context;
+  static String? _currentUserId;
 
   /// Start listening for new notifications for a user
   static void startListening(String userId, BuildContext context) {
-    if (_isInitialized) {
-      return; // Already listening
+    // If already listening for this user, don't restart
+    if (_isInitialized && _currentUserId == userId) {
+      return;
     }
 
+    // Stop any existing listener
+    stopListening();
+
     _isInitialized = true;
-    _context = context;
+    _currentUserId = userId;
     _lastNotificationTime = DateTime.now();
+
+    debugPrint('🔔 Starting notification listener for user: $userId');
 
     _subscription = FirebaseFirestore.instance
         .collection(AppConstants.notificationsCollection)
@@ -27,49 +33,63 @@ class NotificationListenerService {
         .limit(1)
         .snapshots()
         .listen((snapshot) {
-      if (snapshot.docs.isEmpty) return;
-      if (_context == null || !_context!.mounted) return;
+      if (snapshot.docs.isEmpty) {
+        debugPrint('🔔 No notifications found');
+        return;
+      }
 
       final latestNotif = snapshot.docs.first;
       final data = latestNotif.data();
       final createdAt = (data['createdAt'] as Timestamp).toDate();
+      final title = data['title'] as String? ?? 'New Notification';
+      final body = data['body'] as String? ?? '';
+      final type = data['type'] as String? ?? 'info';
+      final reportId = data['reportId'] as String?;
+
+      debugPrint('🔔 Latest notification: $title (type: $type) at $createdAt');
+      debugPrint('🔔 Last notification time: $_lastNotificationTime');
 
       // Only show popup for notifications created after we started listening
       if (_lastNotificationTime != null &&
           createdAt.isAfter(_lastNotificationTime!)) {
-        final title = data['title'] as String? ?? 'New Notification';
-        final body = data['body'] as String? ?? '';
-        final type = data['type'] as String? ?? 'info';
-        final reportId = data['reportId'] as String?;
+        debugPrint('🔔 NEW NOTIFICATION DETECTED! Showing popup...');
 
         // Show popup with looping sound for important notifications
         if (type == 'new_report' || type == 'assignment') {
-          NotificationPopup.show(
-            context: _context!,
-            title: title,
-            message: body,
-            type: type,
-            reportId: reportId,
-          );
+          // Use post frame callback to ensure context is valid
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final navigatorContext = Navigator.maybeOf(context)?.context;
+            if (navigatorContext != null && navigatorContext.mounted) {
+              NotificationPopup.show(
+                context: navigatorContext,
+                title: title,
+                message: body,
+                type: type,
+                reportId: reportId,
+              );
+            } else {
+              debugPrint('🔔 Context not available for popup');
+            }
+          });
         }
+      } else {
+        debugPrint('🔔 Old notification, skipping popup');
       }
 
       _lastNotificationTime = createdAt;
+    }, onError: (error) {
+      debugPrint('🔔 Error in notification listener: $error');
     });
-  }
-
-  /// Update the context (useful when navigating)
-  static void updateContext(BuildContext context) {
-    _context = context;
   }
 
   /// Stop listening for notifications
   static void stopListening() {
+    debugPrint('🔔 Stopping notification listener');
     _subscription?.cancel();
     _subscription = null;
     _isInitialized = false;
     _lastNotificationTime = null;
-    _context = null;
+    _currentUserId = null;
     NotificationPopup.dismiss();
   }
 }

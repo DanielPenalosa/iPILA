@@ -31,9 +31,13 @@ class SoundService {
 
   /// Play notification sound in loop until stopped
   static Future<void> playNotificationLoop() async {
-    if (!_isEnabled || _isLooping) return;
+    if (!_isEnabled || _isLooping) {
+      debugPrint('🔊 Sound not playing: enabled=$_isEnabled, isLooping=$_isLooping');
+      return;
+    }
     
     try {
+      debugPrint('🔊 Starting sound loop...');
       _isLooping = true;
       await _player.setReleaseMode(ReleaseMode.loop);
       if (kIsWeb) {
@@ -41,8 +45,10 @@ class SoundService {
       } else {
         await _player.play(AssetSource('sounds/notification.mp3'));
       }
+      debugPrint('🔊 Sound loop started successfully');
     } catch (e) {
       _isLooping = false;
+      debugPrint('🔊 Sound loop error: $e');
       if (kDebugMode) {
         print('Sound loop error: $e');
       }
@@ -52,10 +58,13 @@ class SoundService {
   /// Stop the looping notification sound
   static Future<void> stopNotificationLoop() async {
     try {
+      debugPrint('🔊 Stopping sound loop...');
       _isLooping = false;
       await _player.stop();
       await _player.setReleaseMode(ReleaseMode.release);
+      debugPrint('🔊 Sound loop stopped');
     } catch (e) {
+      debugPrint('🔊 Sound stop error: $e');
       if (kDebugMode) {
         print('Sound stop error: $e');
       }

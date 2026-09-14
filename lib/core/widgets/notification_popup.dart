@@ -12,10 +12,13 @@ class NotificationPopup {
     required String type,
     String? reportId,
   }) {
+    debugPrint('🎯 NotificationPopup.show called: $title');
+    
     // Remove existing popup if any
     dismiss();
 
     // Start looping sound
+    debugPrint('🎯 Starting sound loop...');
     SoundService.playNotificationLoop();
 
     _currentOverlay = OverlayEntry(
@@ -28,13 +31,18 @@ class NotificationPopup {
       ),
     );
 
-    Overlay.of(context).insert(_currentOverlay!);
+    final overlay = Overlay.of(context, rootOverlay: true);
+    debugPrint('🎯 Inserting overlay...');
+    overlay.insert(_currentOverlay!);
+    debugPrint('🎯 Popup shown successfully');
   }
 
   static void dismiss() {
+    debugPrint('🎯 NotificationPopup.dismiss called');
     SoundService.stopNotificationLoop();
     _currentOverlay?.remove();
     _currentOverlay = null;
+    debugPrint('🎯 Popup dismissed');
   }
 }
 
