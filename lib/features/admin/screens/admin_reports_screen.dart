@@ -755,46 +755,6 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
             title: 'Reports',
             subtitle: 'Municipality of Pila, Laguna',
           ),
-          // TEST BUTTON - REMOVE AFTER TESTING
-          Container(
-            color: Colors.amber[100],
-            padding: const EdgeInsets.all(8),
-            child: Row(
-              children: [
-                const Text('TEST POPUP: '),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    debugPrint('🧪 TEST BUTTON CLICKED - Direct context');
-                    NotificationPopup.show(
-                      context: context,
-                      title: 'Test New Report',
-                      message: 'Testing popup with looping sound!',
-                      type: 'new_report',
-                      reportId: 'test-123',
-                    );
-                  },
-                  icon: const Icon(Icons.notifications_active),
-                  label: const Text('Test Direct Popup'),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    debugPrint('🧪 TEST GLOBAL MANAGER CLICKED');
-                    GlobalNotificationManager.showNotification(
-                      title: 'Test Global Manager',
-                      message: 'Testing via GlobalNotificationManager!',
-                      type: 'new_report',
-                      reportId: 'test-global-456',
-                    );
-                  },
-                  icon: const Icon(Icons.rocket_launch),
-                  label: const Text('Test Global Manager'),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
-                ),
-              ],
-            ),
-          ),
           // Tabs
           Container(
             color: Colors.white,
