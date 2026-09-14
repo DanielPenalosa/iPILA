@@ -37,6 +37,8 @@ class NotificationListenerService {
     debugPrint('🔔 ===== STARTING NOTIFICATION LISTENER =====');
     debugPrint('🔔 User ID: $userId');
     debugPrint('🔔 Started at: $_lastNotificationTime');
+    debugPrint('🔔 Global navigator key available: ${_globalNavigatorKey != null}');
+    debugPrint('🔔 Global navigator context available: ${_globalNavigatorKey?.currentContext != null}');
 
     _subscription = FirebaseFirestore.instance
         .collection(AppConstants.notificationsCollection)
@@ -67,8 +69,10 @@ class NotificationListenerService {
         debugPrint('🔔   ID: $notifId');
         debugPrint('🔔   Title: $title');
         debugPrint('🔔   Type: $type');
+        debugPrint('🔔   ReportId: $reportId');
         debugPrint('🔔   Created: $createdAt');
         debugPrint('🔔   Last check: $_lastNotificationTime');
+        debugPrint('🔔   Full data keys: ${data.keys.toList()}');
 
         // Skip if already processed
         if (_processedNotificationIds.contains(notifId)) {

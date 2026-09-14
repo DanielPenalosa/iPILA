@@ -12,7 +12,11 @@ class NotificationPopup {
     required String type,
     String? reportId,
   }) {
-    debugPrint('🎯 NotificationPopup.show called: $title');
+    debugPrint('🎯 NotificationPopup.show called');
+    debugPrint('🎯   Title: $title');
+    debugPrint('🎯   Type: $type');
+    debugPrint('🎯   ReportId: $reportId');
+    debugPrint('🎯   Context mounted: ${context.mounted}');
     
     // Remove existing popup if any
     dismiss();
@@ -31,10 +35,15 @@ class NotificationPopup {
       ),
     );
 
-    final overlay = Overlay.of(context, rootOverlay: true);
-    debugPrint('🎯 Inserting overlay...');
-    overlay.insert(_currentOverlay!);
-    debugPrint('🎯 Popup shown successfully');
+    try {
+      final overlay = Overlay.of(context, rootOverlay: true);
+      debugPrint('🎯 Inserting overlay into root...');
+      overlay.insert(_currentOverlay!);
+      debugPrint('🎯 ✅ Popup shown successfully');
+    } catch (e) {
+      debugPrint('🎯 ❌ ERROR showing popup: $e');
+      _currentOverlay = null;
+    }
   }
 
   static void dismiss() {
