@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../core/config/secrets.dart';
@@ -110,5 +111,48 @@ class EmailService {
       subject: 'Your iPILA Account Has Been Approved',
       htmlBody: html,
     );
+  }
+
+  /// Send an in-app notification as an email too.
+  /// Looks up the user's email from Firestore by [userId].
+  Future<void> sendNotificationEmail({
+    required String userId,
+    required String title,
+    required String body,
+    String? reportId,
+  }) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      if (!doc.exists) return;
+
+      final data = doc.data()!;
+      final toEmail = data['email'] as String?;
+      final fullName = data['fullName'] as String? ?? 'Resident';
+      if (toEmail == null || toEmail.isEmpty) return;
+
+      final reportSection = reportId != null
+          ? '<p style="color:#444;font-size:13px;">Report ID: <code>$reportId</code></p>'
+          : '';
+
+      final html = '''
+<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+  <h2 style="color:#111;font-size:20px;margin-bottom:4px;">$title</h2>
+  <p style="color:#888;font-size:13px;margin-top:0;">Municipality of Pila, Laguna</p>
+  <p style="color:#444;font-size:15px;margin-top:16px;">Hi <b>$fullName</b>,</p>
+  <p style="color:#444;font-size:15px;line-height:1.6;">$body</p>
+  $reportSection
+  <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
+  <p style="color:#bbb;font-size:11px;text-align:center;">
+    iPILA — Integrated Public Information &amp; Local Access
+  </p>
+</div>''';
+
+      await _send(to: toEmail, subject: title, htmlBody: html);
+    } catch (e) {
+      debugPrint('EmailService.sendNotificationEmail error: $e');
+    }
   }
 }
