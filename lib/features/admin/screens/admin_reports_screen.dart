@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/widgets/app_ui.dart';
+import '../../../core/widgets/notification_popup.dart';
 import '../../../core/utils/report_export_service.dart';
 import '../../../data/models/report_model.dart';
 import '../../../data/services/report_service.dart';
@@ -752,6 +753,31 @@ class _AdminReportsScreenState extends State<AdminReportsScreen>
           const AdminPageHeader(
             title: 'Reports',
             subtitle: 'Municipality of Pila, Laguna',
+          ),
+          // TEST BUTTON - REMOVE AFTER TESTING
+          Container(
+            color: Colors.amber[100],
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              children: [
+                const Text('TEST POPUP: '),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    debugPrint('🧪 TEST BUTTON CLICKED');
+                    NotificationPopup.show(
+                      context: context,
+                      title: 'Test New Report',
+                      message: 'Testing popup with looping sound!',
+                      type: 'new_report',
+                      reportId: 'test-123',
+                    );
+                  },
+                  icon: const Icon(Icons.notifications_active),
+                  label: const Text('Show Test Popup'),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                ),
+              ],
+            ),
           ),
           // Tabs
           Container(
