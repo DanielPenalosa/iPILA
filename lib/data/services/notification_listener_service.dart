@@ -84,36 +84,59 @@ class NotificationListenerService {
           if (type == 'new_report' || type == 'assignment') {
             debugPrint('🔔   📢 Triggering popup...');
             
-            // Use post frame callback to ensure context is valid
+            // Try to get context from multiple sources
             WidgetsBinding.instance.addPostFrameCallback((_) {
               debugPrint('🔔   🎯 Post-frame callback executing...');
               
-              // Try multiple ways to get a valid context
               BuildContext? validContext;
               
-              // Try navigator context first
-              final navigatorContext = Navigator.maybeOf(context)?.context;
-              if (navigatorContext != null && navigatorContext.mounted) {
-                validContext = navigatorContext;
-                debugPrint('🔔   ✅ Using navigator context');
-              } else if (context.mounted) {
+              // Try 1: Use global navigator key (best option)
+              try {
+                final globalContext = (WidgetsBinding.instance as dynamic).rootElement?.context;
+                if (globalContext != null && globalContext.mounted) {
+                  validContext = globalContext;
+                  debugPrint('🔔   ✅ Using global root context');
+                }
+              } catch (e) {
+                debugPrint('🔔   ⚠️  Could not get global root context: $e');
+              }
+              
+              // Try 2: Use navigator context
+              if (validContext == null) {
+                final navigatorContext = Navigator.maybeOf(context)?.context;
+                if (navigatorContext != null && navigatorContext.mounted) {
+                  validContext = navigatorContext;
+                  debugPrint('🔔   ✅ Using navigator context');
+                }
+              }
+              
+              // Try 3: Use provided context
+              if (validContext == null && context.mounted) {
                 validContext = context;
                 debugPrint('🔔   ✅ Using provided context');
               }
 
               if (validContext != null) {
                 debugPrint('🔔   🚀 Showing popup NOW!');
-                NotificationPopup.show(
-                  context: validContext,
-                  title: title,
-                  message: body,
-                  type: type,
-                  reportId: reportId,
-                );
+                debugPrint('🔔   Context hash: ${validContext.hashCode}');
+                debugPrint('🔔   Context mounted: ${validContext.mounted}');
+                
+                try {
+                  NotificationPopup.show(
+                    context: validContext,
+                    title: title,
+                    message: body,
+                    type: type,
+                    reportId: reportId,
+                  );
+                  debugPrint('🔔   ✅✅✅ Popup.show() called successfully!');
+                } catch (e, stack) {
+                  debugPrint('🔔   ❌❌❌ Error showing popup: $e');
+                  debugPrint('🔔   Stack: $stack');
+                }
               } else {
                 debugPrint('🔔   ❌ ERROR: No valid context available!');
                 debugPrint('🔔   ❌ Context mounted: ${context.mounted}');
-                debugPrint('🔔   ❌ Navigator context: ${navigatorContext != null}');
               }
             });
           } else {
