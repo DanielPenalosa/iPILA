@@ -9,6 +9,7 @@ import 'core/theme/app_theme.dart';
 import 'core/utils/app_router.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/reports/providers/report_provider.dart';
+import 'data/services/notification_listener_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -61,6 +62,31 @@ class _AppRouterState extends State<_AppRouter> {
     super.initState();
     final authProvider = context.read<AuthProvider>();
     _router = createRouter(authProvider);
+    
+    // Listen for auth changes and start notification listener when user logs in
+    authProvider.addListener(_onAuthChanged);
+    _onAuthChanged(); // Check initial auth state
+  }
+
+  void _onAuthChanged() {
+    final authProvider = context.read<AuthProvider>();
+    final user = authProvider.user;
+    
+    if (user != null) {
+      // User logged in - start listening for notifications
+      NotificationListenerService.startListening(user.uid);
+    } else {
+      // User logged out - stop listening
+      NotificationListenerService.stopListening();
+    }
+  }
+
+  @override
+  void dispose() {
+    final authProvider = context.read<AuthProvider>();
+    authProvider.removeListener(_onAuthChanged);
+    NotificationListenerService.stopListening();
+    super.dispose();
   }
 
   @override
