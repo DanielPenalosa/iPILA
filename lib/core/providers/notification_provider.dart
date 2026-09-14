@@ -29,12 +29,14 @@ class NotificationProvider extends ChangeNotifier {
     debugPrint('🔄 ===== STARTING NOTIFICATION POLLING =====');
     debugPrint('🔄 User ID: $userId');
     debugPrint('🔄 Check interval: 3 seconds');
+    debugPrint('🔄 Last check time initialized to: $_lastCheckTime');
 
     // Check immediately
     _checkForNewNotifications();
 
     // Then poll every 3 seconds
     _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      debugPrint('🔄 ⏰ Polling check triggered...');
       _checkForNewNotifications();
     });
   }
@@ -54,6 +56,10 @@ class NotificationProvider extends ChangeNotifier {
   Future<void> _checkForNewNotifications() async {
     if (_userId == null || !_isActive) return;
 
+    debugPrint('🔄 Checking for new notifications...');
+    debugPrint('🔄   UserId: $_userId');
+    debugPrint('🔄   Last check time: $_lastCheckTime');
+
     try {
       // Query using the existing Firestore index (userId ASC, createdAt ASC)
       final snapshot = await FirebaseFirestore.instance
@@ -63,15 +69,17 @@ class NotificationProvider extends ChangeNotifier {
           .limit(10)
           .get();
 
+      debugPrint('🔄 Query completed - found ${snapshot.docs.length} total notifications');
+
       if (snapshot.docs.isEmpty) {
+        debugPrint('🔄 No notifications found for this user');
         return;
       }
-
-      debugPrint('🔄 Found ${snapshot.docs.length} notifications (checking for new ones)');
 
       // Reverse the list since we're getting oldest first but want to process newest
       final docs = snapshot.docs.reversed.toList();
 
+      int newNotificationCount = 0;
       for (final doc in docs) {
         final data = doc.data();
         final notifId = doc.id;
@@ -79,11 +87,13 @@ class NotificationProvider extends ChangeNotifier {
 
         // Skip if already processed
         if (_processedNotificationIds.contains(notifId)) {
+          debugPrint('🔄   Skipping $notifId (already processed)');
           continue;
         }
 
         // Only process if newer than last check
         if (_lastCheckTime != null && !createdAt.isAfter(_lastCheckTime!)) {
+          debugPrint('🔄   Skipping $notifId (older than last check: $createdAt vs $_lastCheckTime)');
           continue;
         }
 
@@ -92,33 +102,45 @@ class NotificationProvider extends ChangeNotifier {
         final type = data['type'] as String? ?? 'info';
         final reportId = data['reportId'] as String?;
 
-        debugPrint('🔄 New notification found:');
+        newNotificationCount++;
+        debugPrint('🔄 ✨ NEW NOTIFICATION DETECTED! (#$newNotificationCount)');
         debugPrint('🔄   ID: $notifId');
         debugPrint('🔄   Title: $title');
         debugPrint('🔄   Type: $type');
         debugPrint('🔄   ReportId: $reportId');
+        debugPrint('🔄   Created: $createdAt');
 
         // Mark as processed
         _processedNotificationIds.add(notifId);
 
         // Show popup for important notifications
         if (type == 'new_report' || type == 'assignment') {
-          debugPrint('🔄   📢 Triggering popup via GlobalNotificationManager');
+          debugPrint('🔄   ✅ Type matches - triggering popup!');
           GlobalNotificationManager.showNotification(
             title: title,
             message: body,
             type: type,
             reportId: reportId,
           );
+        } else {
+          debugPrint('🔄   ⏭️  Type ($type) doesn\'t match - skipping popup');
         }
 
         // Update last check time
         if (_lastCheckTime == null || createdAt.isAfter(_lastCheckTime!)) {
           _lastCheckTime = createdAt;
+          debugPrint('🔄   Updated last check time to: $_lastCheckTime');
         }
       }
-    } catch (e) {
+
+      if (newNotificationCount == 0) {
+        debugPrint('🔄 No NEW notifications (all were already processed or too old)');
+      } else {
+        debugPrint('🔄 Processed $newNotificationCount new notifications');
+      }
+    } catch (e, stackTrace) {
       debugPrint('🔄 ❌ Error checking notifications: $e');
+      debugPrint('🔄 Stack trace: $stackTrace');
     }
   }
 
