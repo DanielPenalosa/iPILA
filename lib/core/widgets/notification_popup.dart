@@ -153,132 +153,146 @@ class _NotificationPopupWidgetState extends State<_NotificationPopupWidget>
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.black.withValues(alpha: 0.5),
-      child: Center(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: ScaleTransition(
-            scale: _scaleAnimation,
+    debugPrint('🎯 Building popup widget');
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Material(
+            type: MaterialType.transparency,
+            color: Colors.black.withValues(alpha: 0.7),
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 40),
-              constraints: const BoxConstraints(maxWidth: 500),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 30,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Header with animated icon
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: _color.withValues(alpha: 0.1),
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        topRight: Radius.circular(20),
+              color: Colors.black.withValues(alpha: 0.7),
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: Center(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: ScaleTransition(
+                scale: _scaleAnimation,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 40),
+                  constraints: const BoxConstraints(maxWidth: 500),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 30,
+                        spreadRadius: 5,
+                        offset: const Offset(0, 10),
                       ),
-                    ),
-                    child: Column(
-                      children: [
-                        _PulsingIcon(icon: _icon, color: _color),
-                        const SizedBox(height: 16),
-                        Text(
-                          widget.title,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: _color,
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header with animated icon
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: _color.withValues(alpha: 0.1),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(20),
+                            topRight: Radius.circular(20),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-
-                  // Message
-                  Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(
-                      widget.message,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: Color(0xFF374151),
-                        height: 1.5,
-                      ),
-                    ),
-                  ),
-
-                  // Action Buttons
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: widget.onDismiss,
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              side: BorderSide(color: Colors.grey[300]!),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: const Text(
-                              'Dismiss',
+                        child: Column(
+                          children: [
+                            _PulsingIcon(icon: _icon, color: _color),
+                            const SizedBox(height: 16),
+                            Text(
+                              widget.title,
+                              textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF6B7280),
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: _color,
                               ),
                             ),
+                          ],
+                        ),
+                      ),
+
+                      // Message
+                      Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          widget.message,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: Color(0xFF374151),
+                            height: 1.5,
                           ),
                         ),
-                        if (widget.reportId != null &&
-                            widget.reportId!.isNotEmpty) ...[
-                          const SizedBox(width: 12),
-                          Expanded(
-                            flex: 2,
-                            child: ElevatedButton(
-                              onPressed: _handleTap,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _color,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                      ),
+
+                      // Action Buttons
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: widget.onDismiss,
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  side: BorderSide(color: Colors.grey[300]!),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
                                 ),
-                                elevation: 0,
-                              ),
-                              child: const Text(
-                                'View Report',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
+                                child: const Text(
+                                  'Dismiss',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF6B7280),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ],
-                    ),
+                            if (widget.reportId != null &&
+                                widget.reportId!.isNotEmpty) ...[
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 2,
+                                child: ElevatedButton(
+                                  onPressed: _handleTap,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _color,
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: const Text(
+                                    'View Report',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 }
