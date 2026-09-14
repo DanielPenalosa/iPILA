@@ -653,22 +653,14 @@ class ReportService {
         );
       }
       
-      debugPrint('📣 Firestore notifications created');
+      debugPrint('📣 Firestore notifications created for admins');
+      debugPrint('📣 Admins will see popup via their polling system');
       
-      // IMMEDIATELY show popup to all online admins via GlobalNotificationManager
-      // This doesn't rely on Firestore listeners
-      if (type == 'new_report' || type == 'assignment') {
-        debugPrint('📣 Type matches - triggering immediate popup via GlobalNotificationManager');
-        GlobalNotificationManager.showNotification(
-          title: title,
-          message: body,
-          type: type,
-          reportId: reportId.isNotEmpty ? reportId : null,
-        );
-        debugPrint('📣 GlobalNotificationManager.showNotification called');
-      } else {
-        debugPrint('📣 Type does NOT match (type=$type) - skipping popup');
-      }
+      // NOTE: We DON'T call GlobalNotificationManager here because it would
+      // show the popup in the USER's browser (whoever submitted the report).
+      // Instead, admins have NotificationProvider polling that will detect
+      // the new Firestore notification and show the popup in THEIR browser.
+      
     } catch (e) {
       debugPrint('📣 ❌ Error notifying admins: $e');
     }
