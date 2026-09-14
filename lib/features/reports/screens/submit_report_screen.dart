@@ -101,6 +101,8 @@ class _SubmitReportScreenState extends State<SubmitReportScreen> {
         throw Exception(result.error);
       }
 
+      // Accept location from anywhere - no boundary restrictions
+      // This allows admins to see and track reports from any location
       setState(() {
         _latitude = result.latitude;
         _longitude = result.longitude;

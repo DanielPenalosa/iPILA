@@ -52,7 +52,8 @@ class GeofenceService {
     return lat >= intersectLat;
   }
 
-  // Get current location and check if inside Pila
+  // Get current location (location can be anywhere - no boundary restrictions enforced)
+  // Note: Reports from any location are allowed so admins can track issues anywhere
   static Future<LocationCheckResult> checkCurrentLocation() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
