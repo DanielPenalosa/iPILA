@@ -115,13 +115,13 @@ class _NotificationDialogState extends State<_NotificationDialog>
   Color get _color {
     switch (widget.type) {
       case 'new_report':
-        return const Color(0xFF0284C7); // Professional Blue
+        return const Color(0xFFE04A17); // iPILA Primary Orange
       case 'assignment':
-        return const Color(0xFF0891B2); // Cyan
+        return const Color(0xFFF2B705); // iPILA Primary Yellow
       case 'progress':
-        return const Color(0xFF059669); // Green
+        return const Color(0xFF22C55E); // Success Green
       default:
-        return const Color(0xFF6366F1); // Indigo
+        return const Color(0xFFF2B705); // iPILA Primary Yellow
     }
   }
 
@@ -271,14 +271,16 @@ class _NotificationDialogState extends State<_NotificationDialog>
                     ),
                     if (widget.reportId != null && widget.reportId!.isNotEmpty) ...[
                       const SizedBox(width: 12),
-                      // View Report button - professional blue
+                      // View Report button - iPILA colors
                       Expanded(
                         flex: 2,
                         child: ElevatedButton.icon(
                           onPressed: _handleViewReport,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _color,
-                            foregroundColor: Colors.white,
+                            foregroundColor: widget.type == 'assignment' 
+                                ? const Color(0xFF111111) // Black text for yellow
+                                : Colors.white, // White text for orange/green
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
