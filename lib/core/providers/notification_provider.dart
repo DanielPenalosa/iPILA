@@ -55,10 +55,10 @@ class NotificationProvider extends ChangeNotifier {
     if (_userId == null || !_isActive) return;
 
     try {
+      // Use a simpler query that doesn't require an index
       final snapshot = await FirebaseFirestore.instance
           .collection(AppConstants.notificationsCollection)
           .where('userId', isEqualTo: _userId)
-          .where('createdAt', isGreaterThan: Timestamp.fromDate(_lastCheckTime!))
           .orderBy('createdAt', descending: true)
           .limit(10)
           .get();
@@ -67,14 +67,20 @@ class NotificationProvider extends ChangeNotifier {
         return;
       }
 
-      debugPrint('🔄 Found ${snapshot.docs.length} new notifications');
+      debugPrint('🔄 Found ${snapshot.docs.length} notifications (checking for new ones)');
 
       for (final doc in snapshot.docs) {
         final data = doc.data();
         final notifId = doc.id;
+        final createdAt = (data['createdAt'] as Timestamp).toDate();
 
         // Skip if already processed
         if (_processedNotificationIds.contains(notifId)) {
+          continue;
+        }
+
+        // Only process if newer than last check
+        if (_lastCheckTime != null && !createdAt.isAfter(_lastCheckTime!)) {
           continue;
         }
 
@@ -82,7 +88,6 @@ class NotificationProvider extends ChangeNotifier {
         final body = data['body'] as String? ?? '';
         final type = data['type'] as String? ?? 'info';
         final reportId = data['reportId'] as String?;
-        final createdAt = (data['createdAt'] as Timestamp).toDate();
 
         debugPrint('🔄 New notification found:');
         debugPrint('🔄   ID: $notifId');
