@@ -72,9 +72,9 @@ class _AppRouterState extends State<_AppRouter> {
     final authProvider = context.read<AuthProvider>();
     final user = authProvider.user;
     
-    if (user != null) {
+    if (user != null && mounted) {
       // User logged in - start listening for notifications
-      NotificationListenerService.startListening(user.uid);
+      NotificationListenerService.startListening(user.uid, context);
     } else {
       // User logged out - stop listening
       NotificationListenerService.stopListening();
@@ -91,6 +91,12 @@ class _AppRouterState extends State<_AppRouter> {
 
   @override
   Widget build(BuildContext context) {
+    // Update context for notification listener
+    final user = context.watch<AuthProvider>().user;
+    if (user != null) {
+      NotificationListenerService.updateContext(context);
+    }
+    
     return MaterialApp.router(
       title: 'iPILA',
       debugShowCheckedModeBanner: false,
