@@ -84,6 +84,9 @@ class ReportService {
         .doc(reportId)
         .set(report.toMap());
 
+    debugPrint('🚀 Report submitted successfully: $reportId');
+    debugPrint('🚀 About to call _notifyAdmins...');
+    
     // Notify all admins of the new report
     await _notifyAdmins(
       title: 'New Report: $category',
@@ -93,6 +96,7 @@ class ReportService {
       reportId: reportId,
     );
 
+    debugPrint('🚀 _notifyAdmins completed');
     return reportId;
   }
 
@@ -623,6 +627,11 @@ class ReportService {
     required String type,
     String reportId = '',
   }) async {
+    debugPrint('📣 ===== _notifyAdmins CALLED =====');
+    debugPrint('📣 Title: $title');
+    debugPrint('📣 Type: $type');
+    debugPrint('📣 ReportId: $reportId');
+    
     try {
       final adminsSnap = await _db
           .collection(AppConstants.usersCollection)
@@ -644,19 +653,24 @@ class ReportService {
         );
       }
       
+      debugPrint('📣 Firestore notifications created');
+      
       // IMMEDIATELY show popup to all online admins via GlobalNotificationManager
       // This doesn't rely on Firestore listeners
       if (type == 'new_report' || type == 'assignment') {
-        debugPrint('📣 Triggering immediate popup via GlobalNotificationManager');
+        debugPrint('📣 Type matches - triggering immediate popup via GlobalNotificationManager');
         GlobalNotificationManager.showNotification(
           title: title,
           message: body,
           type: type,
           reportId: reportId.isNotEmpty ? reportId : null,
         );
+        debugPrint('📣 GlobalNotificationManager.showNotification called');
+      } else {
+        debugPrint('📣 Type does NOT match (type=$type) - skipping popup');
       }
     } catch (e) {
-      debugPrint('Error notifying admins: $e');
+      debugPrint('📣 ❌ Error notifying admins: $e');
     }
   }
 
