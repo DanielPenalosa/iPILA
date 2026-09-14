@@ -20,11 +20,13 @@ class GlobalNotificationManager {
     required String message,
     required String type,
     String? reportId,
+    String? notificationId,  // NEW: notification ID to mark as read
   }) {
     debugPrint('📢 GlobalNotificationManager.showNotification called');
     debugPrint('📢   Title: $title');
     debugPrint('📢   Type: $type');
     debugPrint('📢   ReportId: $reportId');
+    debugPrint('📢   NotificationId: $notificationId');
 
     if (_navigatorKey == null) {
       debugPrint('📢 ⚠️  Navigator key not set, queueing notification');
@@ -33,6 +35,7 @@ class GlobalNotificationManager {
         message: message,
         type: type,
         reportId: reportId,
+        notificationId: notificationId,
       ));
       return;
     }
@@ -45,6 +48,7 @@ class GlobalNotificationManager {
         message: message,
         type: type,
         reportId: reportId,
+        notificationId: notificationId,
       ));
       return;
     }
@@ -57,6 +61,7 @@ class GlobalNotificationManager {
         message: message,
         type: type,
         reportId: reportId,
+        notificationId: notificationId,  // Pass it to the popup
       );
       debugPrint('📢 ✅ Popup call completed');
     } catch (e, stackTrace) {
@@ -82,6 +87,7 @@ class GlobalNotificationManager {
             message: notification.message,
             type: notification.type,
             reportId: notification.reportId,
+            notificationId: notification.notificationId,  // Pass it
           );
         } catch (e) {
           debugPrint('📢 ❌ Error showing pending notification: $e');
@@ -99,11 +105,13 @@ class _PendingNotification {
   final String message;
   final String type;
   final String? reportId;
+  final String? notificationId;
 
   _PendingNotification({
     required this.title,
     required this.message,
     required this.type,
     this.reportId,
+    this.notificationId,
   });
 }

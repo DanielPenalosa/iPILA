@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/services/sound_service.dart';
+import '../../data/services/notification_service.dart';
 
 /// Simple, reliable notification popup that uses showDialog instead of Overlay
 class SimpleNotificationPopup {
@@ -11,11 +12,13 @@ class SimpleNotificationPopup {
     required String message,
     required String type,
     String? reportId,
+    String? notificationId,  // NEW: to mark as read
   }) {
     debugPrint('🔔 SimpleNotificationPopup.show called');
     debugPrint('🔔   Title: $title');
     debugPrint('🔔   Type: $type');
     debugPrint('🔔   ReportId: $reportId');
+    debugPrint('🔔   NotificationId: $notificationId');
 
     if (!context.mounted) {
       debugPrint('🔔 ❌ Context not mounted');
@@ -36,6 +39,10 @@ class SimpleNotificationPopup {
           onWillPop: () async {
             debugPrint('🔔 Dialog dismissed by barrier tap');
             SoundService.stopNotificationLoop();
+            // Mark as read when dismissed by barrier
+            if (notificationId != null && notificationId.isNotEmpty) {
+              _markNotificationAsRead(notificationId);
+            }
             return true;
           },
           child: _NotificationDialog(
@@ -43,6 +50,7 @@ class SimpleNotificationPopup {
             message: message,
             type: type,
             reportId: reportId,
+            notificationId: notificationId,
           ),
         );
       },
@@ -53,6 +61,18 @@ class SimpleNotificationPopup {
 
     debugPrint('🔔 ✅ Dialog shown successfully');
   }
+
+  /// Mark notification as read in Firestore
+  static Future<void> _markNotificationAsRead(String notificationId) async {
+    try {
+      debugPrint('🔔 Marking notification as read: $notificationId');
+      final notificationService = NotificationService();
+      await notificationService.markAsRead(notificationId);
+      debugPrint('🔔 ✅ Notification marked as read');
+    } catch (e) {
+      debugPrint('🔔 ❌ Error marking notification as read: $e');
+    }
+  }
 }
 
 class _NotificationDialog extends StatefulWidget {
@@ -60,12 +80,14 @@ class _NotificationDialog extends StatefulWidget {
   final String message;
   final String type;
   final String? reportId;
+  final String? notificationId;
 
   const _NotificationDialog({
     required this.title,
     required this.message,
     required this.type,
     this.reportId,
+    this.notificationId,
   });
 
   @override
@@ -127,6 +149,12 @@ class _NotificationDialogState extends State<_NotificationDialog>
 
   void _handleViewReport() {
     SoundService.stopNotificationLoop();
+    
+    // Mark as read when viewing
+    if (widget.notificationId != null && widget.notificationId!.isNotEmpty) {
+      SimpleNotificationPopup._markNotificationAsRead(widget.notificationId!);
+    }
+    
     Navigator.of(context).pop(); // Close dialog
 
     if (widget.reportId != null && widget.reportId!.isNotEmpty) {
@@ -147,6 +175,12 @@ class _NotificationDialogState extends State<_NotificationDialog>
 
   void _handleDismiss() {
     SoundService.stopNotificationLoop();
+    
+    // Mark as read when acknowledging
+    if (widget.notificationId != null && widget.notificationId!.isNotEmpty) {
+      SimpleNotificationPopup._markNotificationAsRead(widget.notificationId!);
+    }
+    
     Navigator.of(context).pop();
   }
 

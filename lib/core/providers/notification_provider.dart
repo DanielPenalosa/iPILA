@@ -62,18 +62,19 @@ class NotificationProvider extends ChangeNotifier {
     debugPrint('🔄   Last check time: $_lastCheckTime');
 
     try {
-      // Query using descending order to get newest notifications first
+      // Query for UNREAD notifications only
       final snapshot = await FirebaseFirestore.instance
           .collection(AppConstants.notificationsCollection)
           .where('userId', isEqualTo: _userId)
+          .where('isRead', isEqualTo: false)  // Only unread notifications
           .orderBy('createdAt', descending: true)  // Get newest first
           .limit(20)  // Increased limit to catch more recent notifications
           .get();
 
-      debugPrint('🔄 Query completed - found ${snapshot.docs.length} total notifications');
+      debugPrint('🔄 Query completed - found ${snapshot.docs.length} unread notifications');
 
       if (snapshot.docs.isEmpty) {
-        debugPrint('🔄 No notifications found for this user');
+        debugPrint('🔄 No unread notifications found for this user');
         return;
       }
 
@@ -83,9 +84,9 @@ class NotificationProvider extends ChangeNotifier {
         final notifId = doc.id;
         final createdAt = (data['createdAt'] as Timestamp).toDate();
 
-        // Skip if already processed
+        // Skip if already processed in this session
         if (_processedNotificationIds.contains(notifId)) {
-          debugPrint('🔄   Skipping $notifId (already processed)');
+          debugPrint('🔄   Skipping $notifId (already processed in this session)');
           continue;
         }
 
@@ -108,7 +109,7 @@ class NotificationProvider extends ChangeNotifier {
         debugPrint('🔄   ReportId: $reportId');
         debugPrint('🔄   Created: $createdAt');
 
-        // Mark as processed
+        // Mark as processed in this session
         _processedNotificationIds.add(notifId);
 
         // Show popup for important notifications
@@ -119,6 +120,7 @@ class NotificationProvider extends ChangeNotifier {
             message: body,
             type: type,
             reportId: reportId,
+            notificationId: notifId,  // Pass the ID so we can mark it as read
           );
         } else {
           debugPrint('🔄   ⏭️  Type ($type) doesn\'t match - skipping popup');
