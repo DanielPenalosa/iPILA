@@ -55,5 +55,6 @@ Desktop.ini
 # Temp files
 cd
 
-# App secrets — never commit real credentials
-lib/core/config/secrets.dart
+# App secrets — never commit REAL credentials
+# Keep a placeholder version tracked for CI/CD builds
+# Real values go in this file locally but are NOT committed
