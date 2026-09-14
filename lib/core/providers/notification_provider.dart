@@ -23,13 +23,14 @@ class NotificationProvider extends ChangeNotifier {
 
     _userId = userId;
     _isActive = true;
-    _lastCheckTime = DateTime.now();
+    // Initialize to a time 5 minutes in the past to catch recent notifications
+    _lastCheckTime = DateTime.now().subtract(const Duration(minutes: 5));
     _processedNotificationIds.clear();
 
     debugPrint('🔄 ===== STARTING NOTIFICATION POLLING =====');
     debugPrint('🔄 User ID: $userId');
     debugPrint('🔄 Check interval: 3 seconds');
-    debugPrint('🔄 Last check time initialized to: $_lastCheckTime');
+    debugPrint('🔄 Last check time initialized to: $_lastCheckTime (5 min ago)');
 
     // Check immediately
     _checkForNewNotifications();
@@ -61,12 +62,12 @@ class NotificationProvider extends ChangeNotifier {
     debugPrint('🔄   Last check time: $_lastCheckTime');
 
     try {
-      // Query using the existing Firestore index (userId ASC, createdAt ASC)
+      // Query using descending order to get newest notifications first
       final snapshot = await FirebaseFirestore.instance
           .collection(AppConstants.notificationsCollection)
           .where('userId', isEqualTo: _userId)
-          .orderBy('createdAt', descending: false)  // Changed to false to match index
-          .limit(10)
+          .orderBy('createdAt', descending: true)  // Get newest first
+          .limit(20)  // Increased limit to catch more recent notifications
           .get();
 
       debugPrint('🔄 Query completed - found ${snapshot.docs.length} total notifications');
@@ -76,11 +77,8 @@ class NotificationProvider extends ChangeNotifier {
         return;
       }
 
-      // Reverse the list since we're getting oldest first but want to process newest
-      final docs = snapshot.docs.reversed.toList();
-
       int newNotificationCount = 0;
-      for (final doc in docs) {
+      for (final doc in snapshot.docs) {
         final data = doc.data();
         final notifId = doc.id;
         final createdAt = (data['createdAt'] as Timestamp).toDate();
@@ -126,7 +124,7 @@ class NotificationProvider extends ChangeNotifier {
           debugPrint('🔄   ⏭️  Type ($type) doesn\'t match - skipping popup');
         }
 
-        // Update last check time
+        // Update last check time to the newest notification
         if (_lastCheckTime == null || createdAt.isAfter(_lastCheckTime!)) {
           _lastCheckTime = createdAt;
           debugPrint('🔄   Updated last check time to: $_lastCheckTime');
@@ -136,7 +134,7 @@ class NotificationProvider extends ChangeNotifier {
       if (newNotificationCount == 0) {
         debugPrint('🔄 No NEW notifications (all were already processed or too old)');
       } else {
-        debugPrint('🔄 Processed $newNotificationCount new notifications');
+        debugPrint('🔄 ✅ Processed $newNotificationCount new notifications');
       }
     } catch (e, stackTrace) {
       debugPrint('🔄 ❌ Error checking notifications: $e');
