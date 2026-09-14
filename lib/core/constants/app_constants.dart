@@ -77,7 +77,7 @@ class AppConstants {
     'Other',
   ];
 
-  // Barangays of Pila, Laguna
+  // Barangays of Pila, Laguna (Official List)
   static const List<String> barangays = [
     'Aplaya',
     'Bagong Pook',
@@ -92,10 +92,10 @@ class AppConstants {
     'Pansol',
     'Pinagbayanan',
     'San Antonio',
-    'San Pedro',
+    'San Miguel',
     'Santa Clara Norte',
     'Santa Clara Sur',
-    'Tibig',
+    'Tubuan',
   ];
 
   // Municipal departments
