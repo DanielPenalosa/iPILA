@@ -55,11 +55,11 @@ class NotificationProvider extends ChangeNotifier {
     if (_userId == null || !_isActive) return;
 
     try {
-      // Use a simpler query that doesn't require an index
+      // Query using the existing Firestore index (userId ASC, createdAt ASC)
       final snapshot = await FirebaseFirestore.instance
           .collection(AppConstants.notificationsCollection)
           .where('userId', isEqualTo: _userId)
-          .orderBy('createdAt', descending: true)
+          .orderBy('createdAt', descending: false)  // Changed to false to match index
           .limit(10)
           .get();
 
@@ -69,7 +69,10 @@ class NotificationProvider extends ChangeNotifier {
 
       debugPrint('🔄 Found ${snapshot.docs.length} notifications (checking for new ones)');
 
-      for (final doc in snapshot.docs) {
+      // Reverse the list since we're getting oldest first but want to process newest
+      final docs = snapshot.docs.reversed.toList();
+
+      for (final doc in docs) {
         final data = doc.data();
         final notifId = doc.id;
         final createdAt = (data['createdAt'] as Timestamp).toDate();
