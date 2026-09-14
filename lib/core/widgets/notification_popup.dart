@@ -18,31 +18,47 @@ class NotificationPopup {
     debugPrint('🎯   ReportId: $reportId');
     debugPrint('🎯   Context mounted: ${context.mounted}');
     
-    // Remove existing popup if any
-    dismiss();
-
-    // Start looping sound
-    debugPrint('🎯 Starting sound loop...');
-    SoundService.playNotificationLoop();
-
-    _currentOverlay = OverlayEntry(
-      builder: (context) => _NotificationPopupWidget(
-        title: title,
-        message: message,
-        type: type,
-        reportId: reportId,
-        onDismiss: dismiss,
-      ),
-    );
+    // Validate context first
+    if (!context.mounted) {
+      debugPrint('🎯 ❌ Context not mounted, aborting');
+      return;
+    }
 
     try {
-      final overlay = Overlay.of(context, rootOverlay: true);
-      debugPrint('🎯 Inserting overlay into root...');
+      // Remove existing popup if any (without stopping sound yet)
+      if (_currentOverlay != null) {
+        debugPrint('🎯 Removing existing overlay...');
+        _currentOverlay?.remove();
+        _currentOverlay = null;
+      }
+
+      // Create new overlay entry
+      _currentOverlay = OverlayEntry(
+        builder: (overlayContext) => _NotificationPopupWidget(
+          title: title,
+          message: message,
+          type: type,
+          reportId: reportId,
+          onDismiss: dismiss,
+        ),
+      );
+
+      // Get overlay and insert
+      final overlay = Overlay.of(context);
+      debugPrint('🎯 Inserting overlay...');
       overlay.insert(_currentOverlay!);
-      debugPrint('🎯 ✅ Popup shown successfully');
-    } catch (e) {
+      debugPrint('🎯 ✅ Overlay inserted successfully');
+
+      // Only start sound after successful overlay insertion
+      debugPrint('🎯 Starting sound loop...');
+      SoundService.playNotificationLoop();
+      debugPrint('🎯 ✅ Popup shown successfully with sound');
+    } catch (e, stackTrace) {
       debugPrint('🎯 ❌ ERROR showing popup: $e');
+      debugPrint('🎯 ❌ Stack trace: $stackTrace');
       _currentOverlay = null;
+      // Stop sound if popup failed
+      SoundService.stopNotificationLoop();
     }
   }
 
