@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/notification_sound_listener.dart';
 import '../../../data/models/report_model.dart';
 import '../../../data/services/report_service.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -65,9 +66,11 @@ class _AdminScaffoldState extends State<AdminScaffold> {
     final user = auth.user;
     final currentIndex = widget.navigationShell.currentIndex;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
-      body: Row(
+    return NotificationSoundListener(
+      userId: user?.uid ?? '',
+      child: Scaffold(
+        backgroundColor: const Color(0xFFFAFAFA),
+        body: Row(
         children: [
           // ── Minimalist Sidebar ──────────────────────────────────
           AnimatedContainer(
@@ -340,7 +343,7 @@ class _AdminScaffoldState extends State<AdminScaffold> {
           ),
         ],
       ),
-    );
+    ));
   }
 }
 
