@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
-import '../../../core/config/secrets.local.dart';
+import '../../../core/config/secrets.dart';
 import '../../../core/theme/app_theme.dart';
 
 // ── Gmail OAuth credentials loaded from secrets.dart (git-ignored) ───────────
