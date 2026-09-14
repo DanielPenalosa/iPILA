@@ -43,6 +43,9 @@ import '../../features/barangay/screens/barangay_settings_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
+// Export the root navigator key for notification service
+GlobalKey<NavigatorState> get rootNavigatorKey => _rootNavigatorKey;
+
 CustomTransitionPage<void> _fadePage(Widget child, GoRouterState state) {
   return CustomTransitionPage<void>(
     key: state.pageKey,

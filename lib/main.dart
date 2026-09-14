@@ -11,9 +11,6 @@ import 'features/auth/providers/auth_provider.dart';
 import 'features/reports/providers/report_provider.dart';
 import 'data/services/notification_listener_service.dart';
 
-// Global navigator key for accessing context anywhere
-final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>();
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -66,36 +63,22 @@ class _AppRouterState extends State<_AppRouter> {
     final authProvider = context.read<AuthProvider>();
     _router = createRouter(authProvider);
     
+    // Set the navigator key for notification service
+    NotificationListenerService.setNavigatorKey(rootNavigatorKey);
+    
     // Listen for auth changes
     authProvider.addListener(_onAuthChanged);
-    
-    // Check initial auth state after a delay
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) _onAuthChanged();
-    });
   }
 
   void _onAuthChanged() {
     final authProvider = context.read<AuthProvider>();
     final user = authProvider.user;
     
-    debugPrint('🔔 Auth changed - User: ${user?.uid ?? "null"}');
-    
-    if (user != null && mounted) {
-      // Start listener with global context
-      Future.delayed(const Duration(milliseconds: 300), () {
-        final ctx = globalNavigatorKey.currentContext;
-        if (ctx != null && ctx.mounted) {
-          debugPrint('🔔 Starting listener with global context');
-          NotificationListenerService.startListening(user.uid, ctx);
-        } else {
-          debugPrint('🔔 ❌ Global context not available yet');
-        }
-      });
-    } else {
+    if (user == null) {
       // User logged out - stop listening
       NotificationListenerService.stopListening();
     }
+    // Don't start here - will start in the builder when context is available
   }
 
   @override
@@ -113,17 +96,15 @@ class _AppRouterState extends State<_AppRouter> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       routerConfig: _router,
-      // Use global navigator key so we can access context anywhere
       builder: (context, child) {
-        return Navigator(
-          key: globalNavigatorKey,
-          onPopPage: (route, result) => false,
-          pages: [
-            MaterialPage(
-              child: child ?? const SizedBox.shrink(),
-            ),
-          ],
-        );
+        // Start notification listener when we have a valid context
+        final user = context.watch<AuthProvider>().user;
+        if (user != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            NotificationListenerService.startListening(user.uid, context);
+          });
+        }
+        return child ?? const SizedBox.shrink();
       },
     );
   }

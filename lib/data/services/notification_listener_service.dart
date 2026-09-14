@@ -10,6 +10,13 @@ class NotificationListenerService {
   static bool _isInitialized = false;
   static String? _currentUserId;
   static Set<String> _processedNotificationIds = {};
+  static GlobalKey<NavigatorState>? _globalNavigatorKey;
+
+  /// Set the global navigator key for reliable context access
+  static void setNavigatorKey(GlobalKey<NavigatorState> key) {
+    _globalNavigatorKey = key;
+    debugPrint('🔔 Global navigator key set');
+  }
 
   /// Start listening for new notifications for a user
   static void startListening(String userId, BuildContext context) {
@@ -84,59 +91,40 @@ class NotificationListenerService {
           if (type == 'new_report' || type == 'assignment') {
             debugPrint('🔔   📢 Triggering popup...');
             
-            // Try to get context from multiple sources
+            // Use post frame callback to ensure overlay is ready
             WidgetsBinding.instance.addPostFrameCallback((_) {
               debugPrint('🔔   🎯 Post-frame callback executing...');
               
-              BuildContext? validContext;
-              
-              // Try 1: Use global navigator key (best option)
-              try {
-                final globalContext = (WidgetsBinding.instance as dynamic).rootElement?.context;
-                if (globalContext != null && globalContext.mounted) {
-                  validContext = globalContext;
-                  debugPrint('🔔   ✅ Using global root context');
-                }
-              } catch (e) {
-                debugPrint('🔔   ⚠️  Could not get global root context: $e');
-              }
-              
-              // Try 2: Use navigator context
-              if (validContext == null) {
-                final navigatorContext = Navigator.maybeOf(context)?.context;
-                if (navigatorContext != null && navigatorContext.mounted) {
-                  validContext = navigatorContext;
-                  debugPrint('🔔   ✅ Using navigator context');
-                }
-              }
-              
-              // Try 3: Use provided context
-              if (validContext == null && context.mounted) {
-                validContext = context;
-                debugPrint('🔔   ✅ Using provided context');
-              }
-
-              if (validContext != null) {
+              // Get the root navigator context which is always available
+              final navigatorKey = _globalNavigatorKey;
+              if (navigatorKey != null && navigatorKey.currentContext != null) {
+                final rootContext = navigatorKey.currentContext!;
+                debugPrint('🔔   ✅ Using global navigator context');
                 debugPrint('🔔   🚀 Showing popup NOW!');
-                debugPrint('🔔   Context hash: ${validContext.hashCode}');
-                debugPrint('🔔   Context mounted: ${validContext.mounted}');
                 
-                try {
+                NotificationPopup.show(
+                  context: rootContext,
+                  title: title,
+                  message: body,
+                  type: type,
+                  reportId: reportId,
+                );
+              } else {
+                debugPrint('🔔   ⚠️  Global navigator key not set, trying provided context...');
+                
+                // Fallback to provided context
+                if (context.mounted) {
+                  debugPrint('🔔   ✅ Using provided context as fallback');
                   NotificationPopup.show(
-                    context: validContext,
+                    context: context,
                     title: title,
                     message: body,
                     type: type,
                     reportId: reportId,
                   );
-                  debugPrint('🔔   ✅✅✅ Popup.show() called successfully!');
-                } catch (e, stack) {
-                  debugPrint('🔔   ❌❌❌ Error showing popup: $e');
-                  debugPrint('🔔   Stack: $stack');
+                } else {
+                  debugPrint('🔔   ❌ ERROR: No valid context available!');
                 }
-              } else {
-                debugPrint('🔔   ❌ ERROR: No valid context available!');
-                debugPrint('🔔   ❌ Context mounted: ${context.mounted}');
               }
             });
           } else {
