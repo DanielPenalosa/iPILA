@@ -83,9 +83,17 @@ class NotificationListenerService {
         // Check if this is a new notification
         final isNew = _lastNotificationTime != null &&
             createdAt.isAfter(_lastNotificationTime!);
+        
+        // Also consider very recent notifications (within 30 seconds) as new
+        // This helps catch notifications that were created just before listener started
+        final isVeryRecent = DateTime.now().difference(createdAt).inSeconds < 30;
 
-        if (isNew) {
-          debugPrint('🔔   🆕 NEW NOTIFICATION DETECTED!');
+        if (isNew || isVeryRecent) {
+          if (isVeryRecent && !isNew) {
+            debugPrint('🔔   🆕 VERY RECENT NOTIFICATION (within 30s)');
+          } else {
+            debugPrint('🔔   🆕 NEW NOTIFICATION DETECTED!');
+          }
           debugPrint('🔔   Will show popup: ${type == 'new_report' || type == 'assignment'}');
 
           // Mark as processed
