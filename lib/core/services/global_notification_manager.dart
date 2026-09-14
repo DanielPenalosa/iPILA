@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../widgets/notification_popup.dart';
+import '../widgets/simple_notification_popup.dart';
 
 /// Global notification manager that can show popups from anywhere
 /// This uses a static overlay key approach that doesn't depend on Firestore listeners
@@ -50,13 +50,19 @@ class GlobalNotificationManager {
     }
 
     debugPrint('📢 ✅ Showing notification popup now');
-    NotificationPopup.show(
-      context: context,
-      title: title,
-      message: message,
-      type: type,
-      reportId: reportId,
-    );
+    try {
+      SimpleNotificationPopup.show(
+        context: context,
+        title: title,
+        message: message,
+        type: type,
+        reportId: reportId,
+      );
+      debugPrint('📢 ✅ Popup call completed');
+    } catch (e, stackTrace) {
+      debugPrint('📢 ❌ Error showing popup: $e');
+      debugPrint('📢 Stack trace: $stackTrace');
+    }
   }
 
   /// Process any pending notifications
@@ -69,13 +75,17 @@ class GlobalNotificationManager {
     final context = _navigatorKey?.currentContext;
     if (context != null && context.mounted) {
       for (final notification in _pendingNotifications) {
-        NotificationPopup.show(
-          context: context,
-          title: notification.title,
-          message: notification.message,
-          type: notification.type,
-          reportId: notification.reportId,
-        );
+        try {
+          SimpleNotificationPopup.show(
+            context: context,
+            title: notification.title,
+            message: notification.message,
+            type: notification.type,
+            reportId: notification.reportId,
+          );
+        } catch (e) {
+          debugPrint('📢 ❌ Error showing pending notification: $e');
+        }
       }
       _pendingNotifications.clear();
     }
