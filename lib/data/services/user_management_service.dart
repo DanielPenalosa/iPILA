@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 
 class UserManagementService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseFunctions _functions = FirebaseFunctions.instance;
 
   Future<void> approveUser(String uid) async {
     await _db.collection('users').doc(uid).update({
@@ -24,6 +26,12 @@ class UserManagementService {
   }
 
   Future<void> deleteUser(String uid) async {
+    // Delete from Firebase Authentication first (via Cloud Function)
+    await _functions
+        .httpsCallable('deleteAuthUser')
+        .call({'uid': uid});
+
+    // Then soft-delete the Firestore record
     await _db.collection('users').doc(uid).update({
       'isActive': false,
       'isDeleted': true,
@@ -70,6 +78,12 @@ class UserManagementService {
   }
 
   Future<void> bulkDeleteUsers(List<String> uids) async {
+    // Delete from Firebase Authentication first (via Cloud Function)
+    await _functions
+        .httpsCallable('bulkDeleteAuthUsers')
+        .call({'uids': uids});
+
+    // Then soft-delete the Firestore records
     final batch = _db.batch();
     final now = FieldValue.serverTimestamp();
     for (final uid in uids) {

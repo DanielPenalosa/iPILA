@@ -98,10 +98,8 @@ class GeofenceService {
             onTimeout: () => throw Exception('Location request timed out.'),
           );
 
-      final isInside = isInsidePila(position.latitude, position.longitude);
-
       return LocationCheckResult(
-        isInsidePila: isInside,
+        isInsidePila: true, // no boundary restriction — allow GPS from anywhere
         latitude: position.latitude,
         longitude: position.longitude,
         error: null,
