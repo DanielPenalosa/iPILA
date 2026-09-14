@@ -30,7 +30,7 @@ class SimpleNotificationPopup {
     showDialog(
       context: context,
       barrierDismissible: true,
-      barrierColor: Colors.black.withOpacity(0.7),
+      barrierColor: Colors.black.withOpacity(0.5),
       builder: (BuildContext dialogContext) {
         return WillPopScope(
           onWillPop: () async {
@@ -115,11 +115,11 @@ class _NotificationDialogState extends State<_NotificationDialog>
   Color get _color {
     switch (widget.type) {
       case 'new_report':
-        return const Color(0xFFDC2626); // Red
+        return const Color(0xFF0284C7); // Professional Blue
       case 'assignment':
-        return const Color(0xFFF59E0B); // Orange
+        return const Color(0xFF0891B2); // Cyan
       case 'progress':
-        return const Color(0xFF3B82F6); // Blue
+        return const Color(0xFF059669); // Green
       default:
         return const Color(0xFF6366F1); // Indigo
     }
@@ -154,85 +154,115 @@ class _NotificationDialogState extends State<_NotificationDialog>
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
+      elevation: 0,
       child: ScaleTransition(
         scale: _scaleAnimation,
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 500),
+          constraints: const BoxConstraints(maxWidth: 480),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 30,
-                spreadRadius: 5,
-                offset: const Offset(0, 10),
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 40,
+                spreadRadius: 0,
+                offset: const Offset(0, 20),
               ),
             ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header with pulsing icon
+              // Clean header with icon
               Container(
-                padding: const EdgeInsets.all(24),
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(32, 32, 32, 24),
                 decoration: BoxDecoration(
-                  color: _color.withOpacity(0.1),
+                  color: Colors.white,
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
                   ),
                 ),
                 child: Column(
                   children: [
-                    _PulsingIcon(icon: _icon, color: _color),
-                    const SizedBox(height: 16),
+                    // Icon without pulsing - cleaner look
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: _color.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _icon,
+                        size: 40,
+                        color: _color,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // Title
                     Text(
                       widget.title,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: _color,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF111827),
+                        letterSpacing: -0.5,
                       ),
                     ),
                   ],
                 ),
               ),
 
-              // Message
-              Padding(
-                padding: const EdgeInsets.all(24),
+              // Message section with subtle divider
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF9FAFB),
+                  border: Border(
+                    top: BorderSide(color: Colors.grey[200]!, width: 1),
+                    bottom: BorderSide(color: Colors.grey[200]!, width: 1),
+                  ),
+                ),
                 child: Text(
                   widget.message,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 15,
-                    color: Color(0xFF374151),
-                    height: 1.5,
+                    fontSize: 14,
+                    color: Color(0xFF6B7280),
+                    height: 1.6,
                   ),
                 ),
               ),
 
-              // Action Buttons
+              // Action Buttons - cleaner spacing
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                padding: const EdgeInsets.all(24),
                 child: Row(
                   children: [
+                    // Acknowledge button (previously Dismiss)
                     Expanded(
-                      child: OutlinedButton(
+                      child: OutlinedButton.icon(
                         onPressed: _handleDismiss,
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: BorderSide(color: Colors.grey[300]!),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: BorderSide(color: Colors.grey[300]!, width: 1.5),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text(
-                          'Dismiss',
+                        icon: const Icon(
+                          Icons.check_circle_outline,
+                          size: 18,
+                          color: Color(0xFF6B7280),
+                        ),
+                        label: const Text(
+                          'Acknowledge',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: Color(0xFF6B7280),
                           ),
@@ -241,24 +271,26 @@ class _NotificationDialogState extends State<_NotificationDialog>
                     ),
                     if (widget.reportId != null && widget.reportId!.isNotEmpty) ...[
                       const SizedBox(width: 12),
+                      // View Report button - professional blue
                       Expanded(
                         flex: 2,
-                        child: ElevatedButton(
+                        child: ElevatedButton.icon(
                           onPressed: _handleViewReport,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _color,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             elevation: 0,
                           ),
-                          child: const Text(
+                          icon: const Icon(Icons.open_in_new, size: 18),
+                          label: const Text(
                             'View Report',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white,
                             ),
                           ),
                         ),
