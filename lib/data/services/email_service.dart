@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../core/constants/app_constants.dart';
-import '../../core/config/secrets.dart';
+import '../../core/config/secrets.local.dart';
 
 /// Sends email notifications via Gmail API using OAuth2.
 /// Credentials are stored in lib/core/config/secrets.dart (git-ignored).
