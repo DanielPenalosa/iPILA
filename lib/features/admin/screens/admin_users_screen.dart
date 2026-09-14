@@ -11,7 +11,6 @@ import '../../../data/models/user_model.dart';
 import '../../../data/services/department_service.dart';
 import '../../../data/services/barangay_service.dart';
 import '../../../data/services/user_management_service.dart';
-import '../../../data/services/email_service.dart';
 import '../../../firebase_options.dart';
 import 'admin_shell.dart';
 
@@ -721,16 +720,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         debugPrint('=== APPROVE USER DEBUG === Calling approveUser service');
         await _userService.approveUser(user.uid);
         debugPrint('=== APPROVE USER DEBUG === Success!');
-
-        // Send approval notification email (non-blocking)
-        EmailService.sendApprovalEmail(
-          toEmail: user.email,
-          fullName: user.fullName,
-        ).catchError((e) {
-          debugPrint('Approval email error: $e');
-          return false;
-        });
-
         if (mounted) {
           _userService.showSuccessMessage(
             context,

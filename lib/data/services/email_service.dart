@@ -2,157 +2,198 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../../core/constants/app_constants.dart';
 import '../../core/config/secrets.dart';
 
+/// Sends email notifications via Gmail API using OAuth2.
+/// Credentials are stored in lib/core/config/secrets.dart (git-ignored).
 class EmailService {
-  static const _clientId = kGmailClientId;
-  static const _clientSecret = kGmailClientSecret;
-  static const _refreshToken = kGmailRefreshToken;
-  static const _senderEmail = kGmailSenderEmail;
+  static const _tokenUrl = 'https://oauth2.googleapis.com/token';
+  static const _gmailSendUrl =
+      'https://gmail.googleapis.com/gmail/v1/users/me/messages/send';
 
-  /// Exchange refresh token for a fresh access token.
-  static Future<String?> _getAccessToken() async {
-    final res = await http.post(
-      Uri.parse('https://oauth2.googleapis.com/token'),
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: {
-        'client_id': _clientId,
-        'client_secret': _clientSecret,
-        'refresh_token': _refreshToken,
-        'grant_type': 'refresh_token',
-      },
-    );
-    if (res.statusCode != 200) {
-      debugPrint('EmailService: token error ${res.body}');
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  // ── Get a fresh access token ──────────────────────────────────────────────
+
+  Future<String?> _getAccessToken() async {
+    try {
+      final res = await http.post(
+        Uri.parse(_tokenUrl),
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: {
+          'client_id':     kGmailClientId,
+          'client_secret': kGmailClientSecret,
+          'refresh_token': kGmailRefreshToken,
+          'grant_type':    'refresh_token',
+        },
+      );
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body)['access_token'] as String?;
+      }
+      debugPrint('[EmailService] Token error: ${res.body}');
+      return null;
+    } catch (e) {
+      debugPrint('[EmailService] Token exception: $e');
       return null;
     }
-    return (jsonDecode(res.body) as Map<String, dynamic>)['access_token']
-        as String?;
   }
 
-  /// Send a raw HTML email via Gmail API.
-  static Future<bool> _send({
-    required String to,
+  // ── Build & send a raw Gmail message ─────────────────────────────────────
+
+  Future<bool> sendEmail({
+    required String toEmail,
+    required String toName,
     required String subject,
     required String htmlBody,
   }) async {
-    final accessToken = await _getAccessToken();
-    if (accessToken == null) return false;
+    try {
+      final accessToken = await _getAccessToken();
+      if (accessToken == null) return false;
 
-    final raw = [
-      'From: iPILA <$_senderEmail>',
-      'To: $to',
-      'Subject: $subject',
-      'MIME-Version: 1.0',
-      'Content-Type: text/html; charset=UTF-8',
-      '',
-      htmlBody,
-    ].join('\r\n');
+      final message = [
+        'From: iPILA Notifications <$kGmailSenderEmail>',
+        'To: $toName <$toEmail>',
+        'Subject: $subject',
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset=UTF-8',
+        '',
+        htmlBody,
+      ].join('\r\n');
 
-    final encoded = base64Url.encode(utf8.encode(raw)).replaceAll('=', '');
+      final encoded = base64Url
+          .encode(utf8.encode(message))
+          .replaceAll('+', '-')
+          .replaceAll('/', '_')
+          .replaceAll('=', '');
 
-    final res = await http.post(
-      Uri.parse('https://gmail.googleapis.com/gmail/v1/users/me/messages/send'),
-      headers: {
-        'Authorization': 'Bearer $accessToken',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({'raw': encoded}),
-    );
+      final res = await http.post(
+        Uri.parse(_gmailSendUrl),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'raw': encoded}),
+      );
 
-    debugPrint('EmailService: send status ${res.statusCode}');
-    return res.statusCode == 200;
+      debugPrint('[EmailService] Send: ${res.statusCode}');
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('[EmailService] Send error: $e');
+      return false;
+    }
   }
 
-  /// Send account approval notification email.
-  static Future<bool> sendApprovalEmail({
-    required String toEmail,
-    required String fullName,
-  }) async {
-    final html = '''
-<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
-  <div style="text-align:center;margin-bottom:24px;">
-    <div style="display:inline-block;background:#FFF7E0;border-radius:50%;padding:16px;">
-      <span style="font-size:40px;">✅</span>
-    </div>
-  </div>
-  <h2 style="color:#111;font-size:22px;margin-bottom:4px;text-align:center;">
-    Account Approved!
-  </h2>
-  <p style="color:#888;font-size:13px;margin-top:0;text-align:center;">
-    Municipality of Pila, Laguna
-  </p>
-  <p style="color:#444;font-size:15px;margin-top:24px;">
-    Hi <b>$fullName</b>,
-  </p>
-  <p style="color:#444;font-size:15px;line-height:1.6;">
-    Great news! Your iPILA account has been reviewed and 
-    <b style="color:#2E7D32;">approved</b> by the LGU Admin.
-    You can now log in and use the app.
-  </p>
-  <div style="background:#F1F8E9;border:2px solid #81C784;border-radius:12px;
-              padding:20px;text-align:center;margin:24px 0;">
-    <p style="margin:0;font-size:15px;color:#2E7D32;font-weight:700;">
-      Your account is now active 🎉
-    </p>
-    <p style="margin:8px 0 0;font-size:13px;color:#555;">
-      Open the iPILA app and log in with your registered email.
-    </p>
-  </div>
-  <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
-  <p style="color:#bbb;font-size:11px;text-align:center;">
-    iPILA — Integrated Public Information &amp; Local Access<br>
-    Municipality of Pila, Laguna
-  </p>
-</div>''';
+  // ── Lookup user email by userId ───────────────────────────────────────────
 
-    return _send(
-      to: toEmail,
-      subject: 'Your iPILA Account Has Been Approved',
-      htmlBody: html,
-    );
+  Future<Map<String, String>?> _getUserInfo(String userId) async {
+    try {
+      final doc = await _db
+          .collection(AppConstants.usersCollection)
+          .doc(userId)
+          .get();
+      if (!doc.exists) return null;
+      final data = doc.data()!;
+      final email = data['email'] as String?;
+      final name  = data['fullName'] as String? ?? 'Citizen';
+      if (email == null || email.isEmpty) return null;
+      return {'email': email, 'name': name};
+    } catch (_) {
+      return null;
+    }
   }
 
-  /// Send an in-app notification as an email too.
-  /// Looks up the user's email from Firestore by [userId].
+  // ── Send notification email to a user ────────────────────────────────────
+
   Future<void> sendNotificationEmail({
     required String userId,
     required String title,
     required String body,
     String? reportId,
   }) async {
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .get();
-      if (!doc.exists) return;
+    final userInfo = await _getUserInfo(userId);
+    if (userInfo == null) return;
 
-      final data = doc.data()!;
-      final toEmail = data['email'] as String?;
-      final fullName = data['fullName'] as String? ?? 'Resident';
-      if (toEmail == null || toEmail.isEmpty) return;
+    final html = _buildNotificationHtml(
+      name:     userInfo['name']!,
+      title:    title,
+      body:     body,
+      reportId: reportId,
+    );
 
-      final reportSection = reportId != null
-          ? '<p style="color:#444;font-size:13px;">Report ID: <code>$reportId</code></p>'
-          : '';
+    await sendEmail(
+      toEmail:  userInfo['email']!,
+      toName:   userInfo['name']!,
+      subject:  'iPILA: $title',
+      htmlBody: html,
+    );
+  }
 
-      final html = '''
-<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
-  <h2 style="color:#111;font-size:20px;margin-bottom:4px;">$title</h2>
-  <p style="color:#888;font-size:13px;margin-top:0;">Municipality of Pila, Laguna</p>
-  <p style="color:#444;font-size:15px;margin-top:16px;">Hi <b>$fullName</b>,</p>
-  <p style="color:#444;font-size:15px;line-height:1.6;">$body</p>
-  $reportSection
-  <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
-  <p style="color:#bbb;font-size:11px;text-align:center;">
-    iPILA — Integrated Public Information &amp; Local Access
-  </p>
-</div>''';
+  // ── HTML template ─────────────────────────────────────────────────────────
 
-      await _send(to: toEmail, subject: title, htmlBody: html);
-    } catch (e) {
-      debugPrint('EmailService.sendNotificationEmail error: $e');
-    }
+  String _buildNotificationHtml({
+    required String name,
+    required String title,
+    required String body,
+    String? reportId,
+  }) {
+    final reportSection = reportId != null
+        ? '''<p style="text-align:center;margin-top:20px;">
+             <a href="https://ipila-9016a.web.app/home"
+                style="background:#F2B705;color:#111;padding:12px 28px;
+                       border-radius:8px;text-decoration:none;font-weight:700;
+                       font-size:14px;">
+               View Report
+             </a>
+           </p>'''
+        : '';
+
+    return '''
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#FFFDF5;font-family:Arial,sans-serif;">
+  <div style="max-width:520px;margin:32px auto;background:#fff;
+              border-radius:14px;overflow:hidden;
+              box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+
+    <!-- Header -->
+    <div style="background:#F2B705;padding:24px 32px;">
+      <h1 style="margin:0;color:#111;font-size:20px;font-weight:800;">iPILA</h1>
+      <p style="margin:4px 0 0;color:#333;font-size:12px;">
+        Municipality of Pila, Laguna
+      </p>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:28px 32px;">
+      <p style="color:#555;font-size:14px;margin:0 0 16px;">
+        Hello, <strong>$name</strong>
+      </p>
+
+      <div style="background:#FFF7E0;border-left:4px solid #F2B705;
+                  border-radius:0 8px 8px 0;padding:16px 20px;margin-bottom:20px;">
+        <h2 style="margin:0 0 8px;color:#111;font-size:16px;
+                   font-weight:700;">$title</h2>
+        <p style="margin:0;color:#444;font-size:14px;line-height:1.6;">
+          $body
+        </p>
+      </div>
+
+      $reportSection
+    </div>
+
+    <!-- Footer -->
+    <div style="background:#F9F9F9;padding:16px 32px;text-align:center;">
+      <p style="margin:0;color:#aaa;font-size:11px;">
+        This is an automated notification from iPILA — Municipality of Pila, Laguna.<br>
+        Do not reply to this email.
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>
+''';
   }
 }

@@ -1,10 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 
 class UserManagementService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseFunctions _functions = FirebaseFunctions.instance;
 
   Future<void> approveUser(String uid) async {
     await _db.collection('users').doc(uid).update({
@@ -26,18 +24,6 @@ class UserManagementService {
   }
 
   Future<void> deleteUser(String uid) async {
-    // Attempt to delete from Firebase Authentication via Cloud Function.
-    // If the function isn't deployed yet, log and continue so the
-    // Firestore soft-delete still succeeds.
-    try {
-      await _functions
-          .httpsCallable('deleteAuthUser')
-          .call({'uid': uid});
-    } catch (e) {
-      debugPrint('deleteAuthUser cloud function error (non-fatal): $e');
-    }
-
-    // Soft-delete the Firestore record regardless
     await _db.collection('users').doc(uid).update({
       'isActive': false,
       'isDeleted': true,
@@ -84,16 +70,6 @@ class UserManagementService {
   }
 
   Future<void> bulkDeleteUsers(List<String> uids) async {
-    // Attempt to delete from Firebase Authentication via Cloud Function.
-    try {
-      await _functions
-          .httpsCallable('bulkDeleteAuthUsers')
-          .call({'uids': uids});
-    } catch (e) {
-      debugPrint('bulkDeleteAuthUsers cloud function error (non-fatal): $e');
-    }
-
-    // Soft-delete the Firestore records regardless
     final batch = _db.batch();
     final now = FieldValue.serverTimestamp();
     for (final uid in uids) {

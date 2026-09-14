@@ -31,6 +31,14 @@ class NotificationService {
           'isRead': false,
           'createdAt': Timestamp.fromDate(DateTime.now()),
         });
+
+    // Also send an email to the user's registered Gmail — fire and forget
+    _email.sendNotificationEmail(
+      userId:   userId,
+      title:    title,
+      body:     body,
+      reportId: reportId,
+    ).catchError((_) {}); // silent fail — never block the main flow
   }
 
   /// Create a broadcast notification for all users
