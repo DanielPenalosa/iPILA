@@ -24,12 +24,12 @@ class UserManagementService {
   }
 
   Future<void> deleteUser(String uid) async {
-    await _db.collection('users').doc(uid).update({
-      'isActive': false,
-      'isDeleted': true,
-      'deletedAt': FieldValue.serverTimestamp(),
-      'approvalStatus': 'deleted',
-    });
+    // Completely delete the user document from Firestore
+    // This removes them from the Users list in admin panel
+    await _db.collection('users').doc(uid).delete();
+
+    // Note: Firebase Auth account will remain but cannot access the system
+    // without a corresponding Firestore user document
   }
 
   // ── Bulk actions ─────────────────────────────────────────────────────────
@@ -71,14 +71,9 @@ class UserManagementService {
 
   Future<void> bulkDeleteUsers(List<String> uids) async {
     final batch = _db.batch();
-    final now = FieldValue.serverTimestamp();
     for (final uid in uids) {
-      batch.update(_db.collection('users').doc(uid), {
-        'isActive': false,
-        'isDeleted': true,
-        'deletedAt': now,
-        'approvalStatus': 'deleted',
-      });
+      // Completely delete the user documents
+      batch.delete(_db.collection('users').doc(uid));
     }
     await batch.commit();
   }

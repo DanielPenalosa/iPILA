@@ -696,9 +696,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         .map(
           (s) => s.docs
               .map((d) => UserModel.fromFirestore(d))
-              .where(
-                (user) => user.approvalStatus != 'deleted',
-              ) // Filter out deleted users
               .toList(),
         );
   }
@@ -817,7 +814,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     final confirmed = await _showConfirmDialog(
       title: 'Delete Account',
       message:
-          'Permanently delete ${user.fullName}\'s account? This action cannot be undone. All their data including reports will remain but will be orphaned.',
+          'Permanently delete ${user.fullName}\'s account? This will remove the account from the system. Note: Their Firebase Auth account and any associated reports will remain in the database.',
       confirmText: 'Delete Account',
       isDestructive: true,
     );
