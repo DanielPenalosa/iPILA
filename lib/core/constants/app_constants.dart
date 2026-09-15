@@ -98,17 +98,9 @@ class AppConstants {
     'Tubuan',
   ];
 
-  // Municipal departments
+  // Municipal departments (Official only)
   static const List<String> departments = [
     'Engineering Office',
-    'Health Office',
-    'Social Welfare Office',
-    'Environment & Natural Resources',
-    'Public Works',
-    'Disaster Risk Reduction',
-    'Agriculture Office',
-    'Business Permit & Licensing',
-    'Treasurer\'s Office',
-    'General Services',
+    'MENRO',
   ];
 }
