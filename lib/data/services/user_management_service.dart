@@ -78,6 +78,24 @@ class UserManagementService {
     await batch.commit();
   }
 
+  /// One-time cleanup: Remove users marked as deleted by old code
+  Future<int> cleanupMarkedAsDeletedUsers() async {
+    final deletedUsers = await _db
+        .collection('users')
+        .where('approvalStatus', isEqualTo: 'deleted')
+        .get();
+
+    if (deletedUsers.docs.isEmpty) return 0;
+
+    final batch = _db.batch();
+    for (final doc in deletedUsers.docs) {
+      batch.delete(doc.reference);
+    }
+    await batch.commit();
+
+    return deletedUsers.docs.length;
+  }
+
   void showSuccessMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
